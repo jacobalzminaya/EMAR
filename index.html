@@ -3430,4 +3430,486 @@ function updateMainPredictionWithAnticipation(scenarios, preSignal) {
   const confDisplay = document.getElementById('confidence-display');
   const detail = document.getElementById('prediction-detail');
   
-  const bestScenario = scenarios.green.probability > scenarios.red.probability ?
+  const bestScenario = scenarios.green.probability > scenarios.red.probability ? 
+    scenarios.green : scenarios.red;
+  
+  predMain.className = 'pred-main pred-pre-' + bestScenario.signalType;
+  predMain.innerHTML = `<span style="font-size:0.6em;display:block;margin-bottom:5px;">${preSignal}</span>${bestScenario.signal}`;
+  
+  predSeq.style.display = 'block';
+  seqNext.innerHTML = `
+    <span style="color:var(--green)">${scenarios.green.fullSequence}</span> 
+    <span style="color:var(--text-dim)">|</span> 
+    <span style="color:var(--red)">${scenarios.red.fullSequence}</span>
+  `;
+  
+  const confidenceDiff = Math.abs(scenarios.green.probability - scenarios.red.probability);
+  const confidence = Math.round(confidenceDiff * 100);
+  confDisplay.textContent = confidence + '%';
+  confDisplay.style.color = confidence > 60 ? 'var(--green)' : 
+                            confidence > 40 ? 'var(--gold)' : 'var(--text-dim)';
+  
+  // Incluir info de cruce MA si existe
+  let maInfo = '';
+  if (lastCrossType) {
+    maInfo = `<br><strong>Último Cruce MA:</strong> <span style="color:${lastCrossType === 'golden' ? 'var(--green)' : 'var(--red)'}">${lastCrossType === 'golden' ? '🚀 GOLDEN' : '💀 DEATH'}</span>`;
+  }
+  
+  detail.innerHTML = `
+    <strong style="color:var(--gold)">🎯 ANÁLISIS PREDICTIVO:</strong><br>
+    <strong>Patrón Actual:</strong> ${history[history.length-2].color}${history[history.length-1].color}<br>
+    <strong>Escenario Verde:</strong> ${scenarios.green.description} (${Math.round(scenarios.green.probability*100)}%)<br>
+    <strong>Escenario Rojo:</strong> ${scenarios.red.description} (${Math.round(scenarios.red.probability*100)}%)<br>
+    <strong>Recomendación:</strong> <span style="color:${bestScenario.signalType === 'buy' ? 'var(--green)' : 'var(--red)'}">${preSignal}</span>${maInfo}
+  `;
+}
+
+function addCandle(color) {
+  if (crashDetected) return;
+  
+  const node = {
+    color: color,
+    x: history.length * 60 + 50,
+    y: CENTER_Y + (Math.random() - 0.5) * 100,
+    radius: NODE_RADIUS,
+    id: Date.now()
+  };
+  
+  history.push(node);
+  
+  if (history.length > 15) {
+    history.shift();
+    history.forEach((h, i) => h.x = i * 60 + 50);
+  }
+  
+  detectPattern();
+  updateVisualization();
+  performTechnicalAnalysis();
+  updateAnticipationPanel();
+  
+  // NUEVO: Verificar cruce automático después de añadir vela
+  if (history.length >= 10) {
+    const ma = calculateMA2MA10();
+    if (ma.crossed) {
+      registerCross(ma.crossType, ma.strength, 'auto');
+      updateMAVisuals(ma.crossType, ma.strength, true);
+      showNotification(`🚨 CRUCE ${ma.crossType === 'golden' ? 'GOLDEN' : 'DEATH'} AUTO-DETECTADO`, "success");
+      
+      // NUEVO: Verificar si activa análisis de 8 velas
+      setTimeout(() => {
+          const eightCandleResult = analyzeEightCandlesOnCross();
+          if (eightCandleResult) {
+              showNotification('📊 Análisis de 8 velas activado: Cruce + Ruptura detectados', 'success');
+          }
+      }, 500);
+    }
+    updateMAStatus(ma);
+  }
+  
+  if (detectTechnicalRupture()) {
+    handleTechnicalRupture();
+  }
+}
+
+function detectPattern() {
+  if (history.length < 2) return;
+  
+  const lastTwo = history.slice(-2);
+  const pattern = lastTwo[0].color + lastTwo[1].color;
+  
+  if (pattern === 'GG' || pattern === 'RR') {
+    const isPhase3 = currentPhase === '3';
+    const cycleType = isPhase3 ? '3' : '2';
+    
+    cycles.push({
+      pattern: pattern,
+      type: cycleType,
+      index: history.length - 2,
+      timestamp: Date.now()
+    });
+    
+    lastPattern = pattern;
+    
+    generateProjections(pattern);
+    
+    updateStats();
+    updateBlocks();
+    updateEnergy();
+  }
+}
+
+function generateProjections(basePattern) {
+  projectedPaths = [];
+  
+  const projections = [
+    new PatternProjection('Continuación', basePattern + basePattern[0], 0.4, 
+      basePattern === 'GG' ? 'COMPRA' : 'VENTA', 
+      basePattern === 'GG' ? 'buy' : 'sell',
+      'Continuación de tendencia actual'),
+    new PatternProjection('Reversión', basePattern === 'GG' ? 'GR' : 'RG', 0.3,
+      basePattern === 'GG' ? 'VENTA' : 'COMPRA',
+      basePattern === 'GG' ? 'sell' : 'buy',
+      'Reversión de tendencia'),
+    new PatternProjection('Consolidación', 'GR', 0.2, 'MANTENER', 'hold',
+      'Rango de consolidación'),
+    new PatternProjection('Ruptura', basePattern === 'GG' ? 'RR' : 'GG', 0.1,
+      basePattern === 'GG' ? 'VENTA FUERTE' : 'COMPRA FUERTE',
+      basePattern === 'GG' ? 'sell' : 'buy',
+      'Ruptura de estructura')
+  ];
+  
+  projectedPaths = projections;
+  activeProjection = projections[0];
+  
+  updateProjectionUI();
+}
+
+function updateProjectionUI() {
+  const container = document.getElementById('path-container');
+  const panel = document.getElementById('projection-panel');
+  const lastPatternEl = document.getElementById('last-pattern');
+  
+  if (!lastPattern || !panel) return;
+  
+  panel.style.display = 'block';
+  lastPatternEl.textContent = lastPattern;
+  
+  if (!container) return;
+  
+  container.innerHTML = projectedPaths.map((path, idx) => {
+    const isActive = idx === 0;
+    const isBroken = path.isBroken;
+    
+    return `
+      <div class="path-item ${isBroken ? 'broken' : isActive ? 'valid' : 'alternate'}">
+        <div class="path-signal ${path.signalType}">${path.signal}</div>
+        <div class="path-label">${path.name}</div>
+        <div class="path-sequence">
+          ${path.sequence.split('').map((c, i) => 
+            `<div class="path-dot ${c.toLowerCase()} ${i === path.sequence.length - 1 ? 'current' : ''}">${c}</div>`
+          ).join('')}
+        </div>
+        <div class="path-status ${isBroken ? 'broken' : isActive ? 'valid' : 'alternate'}">
+          ${isBroken ? 'ROTO' : isActive ? 'ACTIVO' : 'ALT'}
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  updateMainPrediction();
+}
+
+function updateMainPrediction() {
+  const predMain = document.getElementById('prediction-main');
+  const predSeq = document.getElementById('pred-sequence');
+  const seqNext = document.getElementById('sequence-next');
+  const confDisplay = document.getElementById('confidence-display');
+  const detail = document.getElementById('prediction-detail');
+  
+  if (!activeProjection) return;
+  
+  predMain.className = 'pred-main pred-' + activeProjection.signalType;
+  predMain.textContent = activeProjection.signal;
+  
+  predSeq.style.display = 'block';
+  seqNext.innerHTML = activeProjection.sequence.split('').map((c, i) => {
+    if (i < activeProjection.sequence.length - 1) {
+      return `<span style="color: var(--text-dim)">${c}</span>`;
+    }
+    return `<span class="exp-${c.toLowerCase()}">${c}</span>`;
+  }).join('');
+  
+  const confidence = Math.round(activeProjection.probability * 100);
+  confDisplay.textContent = confidence + '%';
+  
+  detail.innerHTML = `
+    <strong>Patrón Base:</strong> <span style="color: var(--gold)">${lastPattern || '--'}</span><br>
+    <strong>Proyección:</strong> ${activeProjection.name}<br>
+    <strong>Descripción:</strong> ${activeProjection.description}
+  `;
+}
+
+function updateVisualization() {
+  const svg = d3.select("#dna-svg");
+  
+  svg.selectAll("*").remove();
+  
+  for (let i = 0; i < history.length - 1; i++) {
+    const curr = history[i];
+    const next = history[i + 1];
+    
+    svg.append("line")
+      .attr("x1", curr.x)
+      .attr("y1", curr.y)
+      .attr("x2", next.x)
+      .attr("y2", next.y)
+      .attr("stroke", curr.color === 'G' ? 'var(--green)' : 'var(--red)')
+      .attr("stroke-width", 3)
+      .attr("opacity", 0.6);
+  }
+  
+  const nodes = svg.selectAll(".node")
+    .data(history)
+    .enter()
+    .append("g")
+    .attr("class", "dna-node")
+    .attr("transform", d => `translate(${d.x},${d.y})`);
+  
+  nodes.append("circle")
+    .attr("r", d => d.radius)
+    .attr("fill", d => d.color === 'G' ? 'var(--green)' : 'var(--red)')
+    .attr("stroke", "var(--gold)")
+    .attr("stroke-width", 2)
+    .attr("filter", d => d.color === 'G' ? 
+      "drop-shadow(0 0 10px var(--green))" : 
+      "drop-shadow(0 0 10px var(--red))");
+  
+  nodes.append("text")
+    .attr("text-anchor", "middle")
+    .attr("dy", "0.35em")
+    .attr("fill", d => d.color === 'G' ? '#000' : '#fff')
+    .attr("font-size", "14px")
+    .attr("font-weight", "bold")
+    .text(d => d.color);
+  
+  const cycleDisplay = document.getElementById('cycle-display');
+  const cycleMode = document.getElementById('cycle-mode');
+  
+  if (cycles.length > 0) {
+    const lastCycle = cycles[cycles.length - 1];
+    cycleDisplay.textContent = lastCycle.pattern;
+    cycleMode.textContent = `Fase ${lastCycle.type}+1`;
+    cycleMode.className = `cycle-mode phase-${lastCycle.type}`;
+  } else {
+    cycleDisplay.textContent = history.length > 0 ? 
+      history[history.length-1].color : '--';
+    cycleMode.textContent = 'Acumulando...';
+  }
+}
+
+function updateStats() {
+  const cycles3 = cycles.filter(c => c.type === '3').length;
+  const cycles2 = cycles.filter(c => c.type === '2').length;
+  
+  document.getElementById('stat-cycles-3').textContent = cycles3;
+  document.getElementById('stat-cycles-2').textContent = cycles2;
+  document.getElementById('stat-recalcs').textContent = recalcCount;
+  
+  const confidence = activeProjection ? 
+    Math.round(activeProjection.probability * 100) : 0;
+  document.getElementById('stat-confidence').textContent = confidence + '%';
+}
+
+function updateBlocks() {
+  const container = document.getElementById('blocks-display');
+  if (!container) return;
+  
+  container.innerHTML = cycles.slice(-10).reverse().map((cycle, idx) => {
+    const pattern = cycle.pattern;
+    const isPerfect3 = cycle.type === '3';
+    const isPhase2 = cycle.type === '2';
+    
+    return `
+      <div class="block-item ${isPerfect3 ? 'perfect-3' : isPhase2 ? 'phase-2' : ''}">
+        <div class="block-info">
+          <div class="block-number ${isPhase2 ? 'phase-2' : ''}">#${cycles.length - idx}</div>
+          <div class="block-type">Patrón ${cycle.type}+1</div>
+        </div>
+        <div class="block-visual">
+          ${pattern.split('').map(c => 
+            `<div class="v-dot ${c.toLowerCase()} main"></div>`
+          ).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateEnergy() {
+  const energyBar = document.getElementById('energy-bar');
+  const energyText = document.getElementById('energy-text');
+  
+  const recentPatterns = patternHistory.slice(-5);
+  let consistency = 0;
+  
+  if (recentPatterns.length >= 2) {
+    const values = recentPatterns.map(p => p.value);
+    const avg = values.reduce((a,b) => a+b, 0) / values.length;
+    const variance = values.reduce((a,b) => a + Math.pow(b - avg, 2), 0) / values.length;
+    consistency = Math.max(0, 100 - variance);
+  }
+  
+  energy = consistency;
+  
+  energyBar.style.width = energy + '%';
+  
+  if (energy > 70) {
+    energyBar.className = 'energy-bar-fill energy-phase3';
+    energyText.textContent = 'Energía Óptima - Patrón Estable';
+  } else if (energy > 40) {
+    energyBar.className = 'energy-bar-fill energy-phase2';
+    energyText.textContent = 'Energía Moderada - Fase 2+1';
+  } else {
+    energyBar.className = 'energy-bar-fill energy-broken';
+    energyText.textContent = 'Energía Baja - Inestabilidad Detectada';
+  }
+}
+
+function handleTechnicalRupture() {
+  ruptureDetected = true;
+  
+  const warning = document.getElementById('rupture-warning');
+  if (warning) warning.classList.add('active');
+  
+  const badge = document.getElementById('pattern-badge');
+  if (badge) {
+    badge.className = 'pattern-indicator pattern-broken';
+    badge.textContent = 'MODO: RUPTURA TÉCNICA';
+  }
+  
+  const status = document.getElementById('status-badge');
+  status.className = 'status-badge status-alert';
+  status.textContent = 'RUPTURA DETECTADA';
+  
+  const phaseAlert = document.getElementById('phase-alert');
+  phaseAlert.classList.add('active', 'broken');
+  document.getElementById('phase-title').textContent = '⚠ RUPTURA TÉCNICA CRÍTICA';
+  document.getElementById('phase-title').classList.add('broken');
+  document.getElementById('phase-desc').innerHTML = `
+    Los indicadores técnicos detectan desviación severa en la secuencia.<br>
+    <strong>Se requiere recalibración del sistema.</strong>
+  `;
+}
+
+function clearAll() {
+  history = [];
+  cycles = [];
+  patternHistory = [];
+  currentPhase = '3';
+  transitionCount = 0;
+  recalcCount = 0;
+  energy = 0;
+  crashDetected = false;
+  ruptureDetected = false;
+  lastPattern = null;
+  projectedPaths = [];
+  activeProjection = null;
+  lastUpdateTime = null;
+  
+  // NUEVO: Limpiar estado de cruces MA
+  maCrossHistory = [];
+  lastCrossType = null;
+  isCrossing = false;
+  crossStrength = 0;
+  
+  // NUEVO: Limpiar estado de 8 velas
+  eightCandleAnalysis = {
+      window: [],
+      ma2: null,
+      ma8: null,
+      crossDetected: false,
+      ruptureDetected: false,
+      trendProjection: null,
+      lastAnalysis: null,
+      active: false
+  };
+  
+  document.getElementById('sequenceInput').value = '';
+  document.getElementById('prediction-main').textContent = '---';
+  document.getElementById('prediction-main').className = 'pred-main pred-hold';
+  document.getElementById('pred-sequence').style.display = 'none';
+  document.getElementById('confidence-display').textContent = '0%';
+  document.getElementById('prediction-detail').textContent = 'Ingresa una secuencia para detectar el patrón base y generar proyecciones dinámicas.';
+  document.getElementById('projection-panel').style.display = 'none';
+  document.getElementById('anticipation-panel').style.display = 'none';
+  document.getElementById('rupture-warning').classList.remove('active');
+  document.getElementById('phase-alert').classList.remove('active', 'broken');
+  document.getElementById('phase-title').classList.remove('broken');
+  
+  const badge = document.getElementById('pattern-badge');
+  if (badge) {
+    badge.className = 'pattern-indicator pattern-3';
+    badge.textContent = 'MODO: ANÁLISIS DE PATRÓN';
+  }
+  
+  document.getElementById('status-badge').className = 'status-badge status-fractal';
+  document.getElementById('status-badge').textContent = 'ANALIZANDO';
+  document.getElementById('cycle-display').textContent = '--';
+  document.getElementById('cycle-mode').textContent = 'Esperando datos...';
+  document.getElementById('cycle-mode').className = 'cycle-mode';
+  
+  // NUEVO: Resetear UI de MA
+  document.getElementById('ma-status-indicator').className = 'ma-status-indicator ma-status-waiting';
+  document.getElementById('ma-status-text').textContent = 'ESPERANDO CRUCE MA2/MA10';
+  document.getElementById('ma-line-fast').style.transform = 'translateY(0)';
+  document.getElementById('ma-line-slow').style.transform = 'translateY(0)';
+  document.getElementById('ma-line-fast').classList.remove('crossing');
+  document.getElementById('ma-line-slow').classList.remove('crossing');
+  document.getElementById('ma-cross-alert').classList.remove('active');
+  document.getElementById('strength-meter').style.display = 'none';
+  document.getElementById('ma-history-list').innerHTML = '<div style="text-align: center; color: var(--text-dim); font-size: 10px; padding: 10px;">Sin cruces registrados</div>';
+  
+  document.getElementById('tech-status').textContent = 'ANALIZANDO';
+  document.getElementById('tech-status').className = 'tech-status validating';
+  document.getElementById('rupture-tech-alert').classList.remove('active');
+  
+  // Remover alerta de 8 velas si existe
+  const eightAlert = document.getElementById('eight-candle-alert');
+  if (eightAlert) eightAlert.remove();
+  
+  d3.select("#dna-svg").selectAll("*").remove();
+  
+  updateStats();
+  updateBlocks();
+  performTechnicalAnalysis();
+}
+
+function dismissCrash() {
+  document.getElementById('crash-alert').classList.remove('active');
+  clearAll();
+}
+
+document.getElementById('sequenceInput')?.addEventListener('input', function(e) {
+  const val = e.target.value.toUpperCase().replace(/[^GR]/g, '');
+  
+  if (val.length >= 2) {
+    history = [];
+    for (let char of val) {
+      history.push({
+        color: char,
+        x: history.length * 60 + 50,
+        y: CENTER_Y + (Math.random() - 0.5) * 50,
+        radius: NODE_RADIUS,
+        id: Date.now() + Math.random()
+      });
+    }
+    
+    detectPattern();
+    updateVisualization();
+    performTechnicalAnalysis();
+    updateAnticipationPanel();
+  }
+});
+
+// NUEVO: CSS para notificaciones
+const style = document.createElement('style');
+style.textContent += `
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+  }
+`;
+document.head.appendChild(style);
+
+document.addEventListener('DOMContentLoaded', function() {
+  updateStats();
+  performTechnicalAnalysis();
+});
+</script>
+
+</body>
+</html>
