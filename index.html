@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>🧬 ADN FRACTAL | Proyección Dinámica + Validadores Técnicos</title>
+  <title>🧬 ADN FRACTAL | Cruce MA2/MA10 + Proyección Dinámica</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   
   <style>
@@ -24,7 +24,10 @@
       --path-broken: #ff1144;
       --path-alternate: #aa00ff;
       --hold: #ffd700;
-      --rsi-neutral: #888;
+      --ma-fast: #00ffff;
+      --ma-slow: #ff00ff;
+      --cross-bullish: #00ff88;
+      --cross-bearish: #ff1144;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -72,19 +75,28 @@
       letter-spacing: 2px;
     }
 
-    .pattern-indicator {
-      display: inline-block;
-      padding: 5px 15px;
-      border-radius: 15px;
-      font-size: 10px;
+    .ma-status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      border-radius: 20px;
+      font-size: 11px;
       margin-top: 10px;
       font-weight: bold;
       letter-spacing: 1px;
+      border: 2px solid;
+      transition: all 0.3s;
     }
 
-    .pattern-3 { background: rgba(255, 215, 0, 0.2); border: 1px solid var(--gold); color: var(--gold); }
-    .pattern-2 { background: rgba(255, 102, 0, 0.2); border: 1px solid var(--phase2); color: var(--phase2); }
-    .pattern-broken { background: rgba(255, 17, 68, 0.2); border: 1px solid var(--alert-red); color: var(--alert-red); animation: alert-blink 0.5s infinite; }
+    .ma-status-waiting { background: rgba(100,100,100,0.2); border-color: var(--text-dim); color: var(--text-dim); }
+    .ma-status-bullish { background: rgba(0,255,136,0.2); border-color: var(--cross-bullish); color: var(--cross-bullish); animation: pulse-green 1s infinite; }
+    .ma-status-bearish { background: rgba(255,17,68,0.2); border-color: var(--cross-bearish); color: var(--cross-bearish); animation: pulse-red 1s infinite; }
+    .ma-status-detected { background: rgba(255,215,0,0.2); border-color: var(--gold); color: var(--gold); animation: pulse-gold 0.8s infinite; }
+
+    @keyframes pulse-green { 0%, 100% { box-shadow: 0 0 10px rgba(0,255,136,0.4); } 50% { box-shadow: 0 0 25px rgba(0,255,136,0.8); } }
+    @keyframes pulse-red { 0%, 100% { box-shadow: 0 0 10px rgba(255,17,68,0.4); } 50% { box-shadow: 0 0 25px rgba(255,17,68,0.8); } }
+    @keyframes pulse-gold { 0%, 100% { box-shadow: 0 0 10px rgba(255,215,0,0.4); } 50% { box-shadow: 0 0 25px rgba(255,215,0,0.8); } }
 
     .container {
       max-width: 1600px;
@@ -113,6 +125,250 @@
       flex-direction: column;
       gap: 20px;
     }
+
+    /* NUEVO: Panel de Cruce MA */
+    .ma-crossover-panel {
+      background: linear-gradient(135deg, rgba(0,212,255,0.1), rgba(255,0,255,0.1));
+      border: 2px solid rgba(0,212,255,0.3);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .ma-crossover-panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--ma-fast), var(--ma-slow));
+      animation: scan 3s linear infinite;
+    }
+
+    @keyframes scan {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .ma-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .ma-panel-title {
+      font-size: 14px;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: bold;
+    }
+
+    .ma-cross-alert {
+      background: rgba(255,215,0,0.15);
+      border: 2px solid var(--gold);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
+      text-align: center;
+      display: none;
+      animation: alert-pulse 1s infinite;
+    }
+
+    .ma-cross-alert.active {
+      display: block;
+    }
+
+    @keyframes alert-pulse {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 20px rgba(255,215,0,0.3); }
+      50% { transform: scale(1.02); box-shadow: 0 0 30px rgba(255,215,0,0.6); }
+    }
+
+    .ma-cross-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: var(--gold);
+      margin-bottom: 5px;
+    }
+
+    .ma-cross-subtitle {
+      font-size: 11px;
+      color: var(--text);
+    }
+
+    .ma-visualization {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin: 15px 0;
+      padding: 15px;
+      background: rgba(0,0,0,0.3);
+      border-radius: 10px;
+    }
+
+    .ma-line-indicator {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .ma-line {
+      width: 60px;
+      height: 4px;
+      border-radius: 2px;
+      position: relative;
+      transition: all 0.3s;
+    }
+
+    .ma-line.fast { background: var(--ma-fast); box-shadow: 0 0 10px var(--ma-fast); }
+    .ma-line.slow { background: var(--ma-slow); box-shadow: 0 0 10px var(--ma-slow); }
+
+    .ma-line.crossing {
+      animation: cross-flash 0.5s infinite;
+    }
+
+    @keyframes cross-flash {
+      0%, 100% { opacity: 1; transform: scaleY(1); }
+      50% { opacity: 0.6; transform: scaleY(2); }
+    }
+
+    .ma-label {
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .ma-cross-icon {
+      font-size: 24px;
+      color: var(--gold);
+      animation: bounce 1s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    .ma-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .ma-btn {
+      padding: 12px;
+      border: 2px solid;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.5);
+      font-family: inherit;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .ma-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    }
+
+    .ma-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .ma-btn-bullish {
+      border-color: var(--cross-bullish);
+      color: var(--cross-bullish);
+    }
+    .ma-btn-bullish:hover:not(:disabled) {
+      background: rgba(0,255,136,0.2);
+      box-shadow: 0 0 20px rgba(0,255,136,0.4);
+    }
+
+    .ma-btn-bearish {
+      border-color: var(--cross-bearish);
+      color: var(--cross-bearish);
+    }
+    .ma-btn-bearish:hover:not(:disabled) {
+      background: rgba(255,17,68,0.2);
+      box-shadow: 0 0 20px rgba(255,17,68,0.4);
+    }
+
+    .ma-btn-detect {
+      border-color: var(--gold);
+      color: var(--gold);
+      grid-column: 1 / -1;
+    }
+    .ma-btn-detect:hover:not(:disabled) {
+      background: rgba(255,215,0,0.2);
+      box-shadow: 0 0 20px rgba(255,215,0,0.4);
+    }
+
+    .ma-btn.active {
+      animation: btn-pulse 1s infinite;
+    }
+
+    @keyframes btn-pulse {
+      0%, 100% { box-shadow: 0 0 10px currentColor; }
+      50% { box-shadow: 0 0 25px currentColor; }
+    }
+
+    .ma-history {
+      margin-top: 15px;
+      max-height: 120px;
+      overflow-y: auto;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      padding: 10px;
+    }
+
+    .ma-history-title {
+      font-size: 9px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .ma-cross-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px;
+      margin-bottom: 4px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px;
+      font-size: 10px;
+      border-left: 3px solid;
+    }
+
+    .ma-cross-item.golden { border-left-color: var(--cross-bullish); }
+    .ma-cross-item.death { border-left-color: var(--cross-bearish); }
+
+    .cross-time {
+      color: var(--text-dim);
+      font-size: 9px;
+    }
+
+    .cross-type {
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+
+    .cross-type.golden { color: var(--cross-bullish); }
+    .cross-type.death { color: var(--cross-bearish); }
 
     .phase-transition-alert {
       background: linear-gradient(90deg, rgba(255,102,0,0.2), rgba(255,17,68,0.2));
@@ -417,6 +673,28 @@
     .pred-buy { color: var(--green); text-shadow: 0 0 30px rgba(0,255,136,0.5); }
     .pred-sell { color: var(--red); text-shadow: 0 0 30px rgba(255,51,102,0.5); }
     .pred-hold { color: var(--hold); text-shadow: 0 0 30px rgba(255,215,0,0.5); }
+    
+    .pred-pre-buy { 
+      color: var(--green); 
+      text-shadow: 0 0 30px rgba(0,255,136,0.5);
+      animation: pulse-pre 1s infinite;
+      border: 2px dashed var(--green);
+      padding: 10px;
+      border-radius: 10px;
+    }
+    .pred-pre-sell { 
+      color: var(--red); 
+      text-shadow: 0 0 30px rgba(255,51,102,0.5);
+      animation: pulse-pre 1s infinite;
+      border: 2px dashed var(--red);
+      padding: 10px;
+      border-radius: 10px;
+    }
+    
+    @keyframes pulse-pre {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.8; transform: scale(1.02); }
+    }
 
     .pred-sequence {
       font-size: 14px;
@@ -826,8 +1104,7 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.5; }
     }
-
-    /* NUEVOS ESTILOS PANEL TÉCNICO */
+    
     .tech-panel {
       background: var(--bg-panel);
       border: 1px solid rgba(0, 212, 255, 0.3);
@@ -958,7 +1235,7 @@
       margin-top: 10px;
     }
 
-    .ma-line {
+    .ma-line-display {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -968,17 +1245,17 @@
       border-radius: 4px;
     }
 
-    .ma-label {
+    .ma-display-label {
       color: var(--text-dim);
     }
 
-    .ma-value {
+    .ma-display-value {
       font-weight: bold;
       font-family: 'Courier New', monospace;
     }
 
-    .ma-value.above { color: var(--green); }
-    .ma-value.below { color: var(--red); }
+    .ma-display-value.above { color: var(--green); }
+    .ma-display-value.below { color: var(--red); }
 
     .bollinger-bands {
       position: relative;
@@ -991,8 +1268,7 @@
 
     .bb-band {
       position: absolute;
-      left: 0;
-      right: 0;
+      left: 0; right: 0;
       height: 2px;
       opacity: 0.6;
     }
@@ -1003,8 +1279,7 @@
 
     .bb-price {
       position: absolute;
-      left: 0;
-      right: 0;
+      left: 0; right: 0;
       height: 4px;
       background: var(--primary);
       box-shadow: 0 0 10px var(--primary);
@@ -1199,6 +1474,216 @@
       0%, 100% { opacity: 1; }
       50% { opacity: 0.6; }
     }
+    
+    .anticipation-panel {
+      background: linear-gradient(135deg, rgba(0,212,255,0.1), rgba(170,0,255,0.1));
+      border: 2px solid rgba(0,212,255,0.4);
+      border-radius: 12px;
+      padding: 15px;
+      margin-top: 15px;
+      animation: border-pulse 2s infinite;
+    }
+    
+    @keyframes border-pulse {
+      0%, 100% { border-color: rgba(0,212,255,0.4); }
+      50% { border-color: rgba(0,212,255,0.8); }
+    }
+    
+    .anticipation-title {
+      font-size: 11px;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+      text-align: center;
+      font-weight: bold;
+    }
+    
+    .scenario-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    
+    .scenario-box {
+      background: rgba(0,0,0,0.4);
+      border-radius: 8px;
+      padding: 12px;
+      text-align: center;
+      border: 2px solid transparent;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    
+    .scenario-box:hover {
+      transform: translateY(-2px);
+    }
+    
+    .scenario-box.green-scenario {
+      border-color: rgba(0,255,136,0.3);
+    }
+    .scenario-box.green-scenario:hover {
+      border-color: var(--green);
+      box-shadow: 0 0 15px rgba(0,255,136,0.3);
+    }
+    
+    .scenario-box.red-scenario {
+      border-color: rgba(255,51,102,0.3);
+    }
+    .scenario-box.red-scenario:hover {
+      border-color: var(--red);
+      box-shadow: 0 0 15px rgba(255,51,102,0.3);
+    }
+    
+    .scenario-label {
+      font-size: 9px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    
+    .scenario-sequence {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 8px;
+      letter-spacing: 3px;
+    }
+    
+    .green-scenario .scenario-sequence { color: var(--green); }
+    .red-scenario .scenario-sequence { color: var(--red); }
+    
+    .scenario-signal {
+      font-size: 12px;
+      font-weight: bold;
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    
+    .green-scenario .scenario-signal {
+      background: rgba(0,255,136,0.2);
+      color: var(--green);
+    }
+    .red-scenario .scenario-signal {
+      background: rgba(255,51,102,0.2);
+      color: var(--red);
+    }
+    
+    .scenario-probability {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 6px;
+    }
+    
+    .recommendation-box {
+      background: rgba(0,0,0,0.5);
+      border: 1px solid var(--gold);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+      margin-top: 10px;
+    }
+    
+    .recommendation-label {
+      font-size: 9px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    
+    .recommendation-action {
+      font-size: 16px;
+      font-weight: bold;
+      color: var(--gold);
+    }
+    
+    .update-timestamp {
+      text-align: center;
+      font-size: 9px;
+      color: var(--text-dim);
+      margin-top: 8px;
+      font-style: italic;
+    }
+    
+    .live-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      margin-right: 6px;
+      animation: live-pulse 1s infinite;
+    }
+    
+    @keyframes live-pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 5px var(--green); }
+      50% { opacity: 0.5; box-shadow: 0 0 15px var(--green); }
+    }
+
+    /* NUEVO: Indicador de fuerza del cruce */
+    .cross-strength-meter {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 8px;
+    }
+
+    .strength-label {
+      font-size: 9px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .strength-bar {
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .strength-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: all 0.5s ease;
+      background: linear-gradient(90deg, var(--red), var(--gold), var(--green));
+      position: relative;
+    }
+
+    .strength-marker {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: #fff;
+      box-shadow: 0 0 5px #fff;
+      transition: left 0.5s ease;
+    }
+
+    .strength-value {
+      position: absolute;
+      right: 5px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 9px;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 0 0 3px rgba(0,0,0,0.8);
+    }
+
+    /* NUEVO: Alerta de 8 velas */
+    @keyframes slideInRight {
+      from { transform: translateX(400px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOutRight {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(400px); opacity: 0; }
+    }
   </style>
 </head>
 <body>
@@ -1206,14 +1691,79 @@
   <div class="bg-grid"></div>
 
   <div class="header">
-    <h1>🧬 ADN FRACTAL DINÁMICO + VALIDADORES TÉCNICOS</h1>
-    <div class="subtitle">Proyección Recalculada | Confirmación Técnica sobre Secuencias de Patrones</div>
-    <div id="pattern-badge" class="pattern-indicator pattern-3">MODO: ANÁLISIS DE PATRÓN</div>
+    <h1>🧬 ADN FRACTAL + CRUCE MA2/MA10</h1>
+    <div class="subtitle">Detección de Cruces de Medias Móviles | Proyección Fortalecida</div>
+    <div id="ma-status-indicator" class="ma-status-indicator ma-status-waiting">
+      <span id="ma-status-text">ESPERANDO CRUCE MA2/MA10</span>
+    </div>
   </div>
 
   <div class="container">
     <div class="viz-panel">
       
+      <!-- NUEVO: Panel de Cruce MA -->
+      <div class="ma-crossover-panel">
+        <div class="ma-panel-header">
+          <div class="ma-panel-title">⚡ Detector de Cruce MA2/MA10</div>
+          <div style="font-size: 10px; color: var(--text-dim);">AUTO + MANUAL</div>
+        </div>
+
+        <div class="ma-cross-alert" id="ma-cross-alert">
+          <div class="ma-cross-title" id="ma-cross-title">🚨 CRUCE DETECTADO</div>
+          <div class="ma-cross-subtitle" id="ma-cross-subtitle">Golden Cross - Momentum Alcista Fuerte</div>
+        </div>
+
+        <div class="ma-visualization">
+          <div class="ma-line-indicator">
+            <div class="ma-line fast" id="ma-line-fast"></div>
+            <div class="ma-label">MA2 (Rápida)</div>
+          </div>
+          <div class="ma-cross-icon" id="ma-cross-icon">⚔️</div>
+          <div class="ma-line-indicator">
+            <div class="ma-line slow" id="ma-line-slow"></div>
+            <div class="ma-label">MA10 (Lenta)</div>
+          </div>
+        </div>
+
+        <!-- Medidor de fuerza del cruce -->
+        <div class="cross-strength-meter" id="strength-meter" style="display:none;">
+          <div class="strength-label">
+            <span>Fuerza del Cruce</span>
+            <span id="strength-text">Moderada</span>
+          </div>
+          <div class="strength-bar">
+            <div class="strength-fill" id="strength-fill" style="width: 0%">
+              <div class="strength-marker" id="strength-marker" style="left: 0%"></div>
+              <span class="strength-value" id="strength-value">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ma-controls">
+          <button class="ma-btn ma-btn-bullish" id="btn-golden" onclick="manualCross('golden')">
+            <span>🚀 GOLDEN CROSS</span>
+            <small style="font-size:9px;opacity:0.7;">MA2 > MA10</small>
+          </button>
+          <button class="ma-btn ma-btn-bearish" id="btn-death" onclick="manualCross('death')">
+            <span>💀 DEATH CROSS</span>
+            <small style="font-size:9px;opacity:0.7;">MA2 < MA10</small>
+          </button>
+          <button class="ma-btn ma-btn-detect" id="btn-detect" onclick="autoDetectCross()">
+            <span>🔍 DETECTAR AUTOMÁTICO</span>
+            <small style="font-size:9px;opacity:0.7;">Analizar patrones</small>
+          </button>
+        </div>
+
+        <div class="ma-history" id="ma-history">
+          <div class="ma-history-title">📋 Historial de Cruces</div>
+          <div id="ma-history-list">
+            <div style="text-align: center; color: var(--text-dim); font-size: 10px; padding: 10px;">
+              Sin cruces registrados
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="phase-transition-alert" id="phase-alert">
         <div class="phase-title" id="phase-title">⚠ TRANSICIÓN DE FASE DETECTADA</div>
         <div class="phase-desc" id="phase-desc">
@@ -1278,6 +1828,23 @@
           Ingresa una secuencia para detectar el patrón base y generar proyecciones dinámicas.
         </div>
 
+        <div class="anticipation-panel" id="anticipation-panel" style="display:none;">
+          <div class="anticipation-title">
+            <span class="live-indicator"></span>PROYECCIONES EN TIEMPO REAL
+          </div>
+          
+          <div class="scenario-container" id="scenario-container">
+            <!-- Escenarios generados dinámicamente -->
+          </div>
+          
+          <div class="recommendation-box" id="recommendation-box">
+            <div class="recommendation-label">Recomendación Prioritaria</div>
+            <div class="recommendation-action" id="recommendation-action">Esperando...</div>
+          </div>
+          
+          <div class="update-timestamp" id="update-timestamp">Actualizado: --:--:--</div>
+        </div>
+
         <div class="projection-panel" id="projection-panel" style="display:none;">
           <div class="projection-title">🎯 Proyecciones desde Último Patrón</div>
           
@@ -1332,7 +1899,6 @@
 
     </div>
 
-    <!-- NUEVO PANEL TÉCNICO -->
     <div class="tech-panel-wrapper">
       <div class="tech-panel">
         <div class="tech-header">
@@ -1340,7 +1906,6 @@
           <div class="tech-status validating" id="tech-status">ANALIZANDO</div>
         </div>
 
-        <!-- RSI sobre Patrones -->
         <div class="indicator-block rsi">
           <div class="indicator-header">
             <span class="indicator-name">RSI de Patrones</span>
@@ -1357,30 +1922,28 @@
           <div class="indicator-signal hold" id="rsi-signal">Esperando datos...</div>
         </div>
 
-        <!-- Medias Móviles sobre Patrones -->
         <div class="indicator-block ma">
           <div class="indicator-header">
             <span class="indicator-name">Medias Móviles de Patrones</span>
             <span class="indicator-value neutral" id="ma-signal">--</span>
           </div>
           <div class="ma-lines">
-            <div class="ma-line">
-              <span class="ma-label">MA3 (Rápida)</span>
-              <span class="ma-value" id="ma3-value">--</span>
+            <div class="ma-line-display">
+              <span class="ma-display-label">MA3 (Rápida)</span>
+              <span class="ma-display-value" id="ma3-value">--</span>
             </div>
-            <div class="ma-line">
-              <span class="ma-label">MA5 (Media)</span>
-              <span class="ma-value" id="ma5-value">--</span>
+            <div class="ma-line-display">
+              <span class="ma-display-label">MA5 (Media)</span>
+              <span class="ma-display-value" id="ma5-value">--</span>
             </div>
-            <div class="ma-line">
-              <span class="ma-label">MA8 (Lenta)</span>
-              <span class="ma-value" id="ma8-value">--</span>
+            <div class="ma-line-display">
+              <span class="ma-display-label">MA8 (Lenta)</span>
+              <span class="ma-display-value" id="ma8-value">--</span>
             </div>
           </div>
           <div class="indicator-signal hold" id="ma-signal-text">Tendencia sin definir</div>
         </div>
 
-        <!-- Bandas de Bollinger sobre Patrones -->
         <div class="indicator-block bollinger">
           <div class="indicator-header">
             <span class="indicator-name">Bandas de Bollinger (Patrones)</span>
@@ -1400,7 +1963,6 @@
           <div class="indicator-signal hold" id="bb-signal">Volatilidad normal</div>
         </div>
 
-        <!-- Análisis de Tendencia de Patrones -->
         <div class="indicator-block trend">
           <div class="indicator-header">
             <span class="indicator-name">Tendencia de Secuencia</span>
@@ -1412,7 +1974,6 @@
           <div class="indicator-signal hold" id="trend-signal">Sin tendencia clara</div>
         </div>
 
-        <!-- Confluencia Total -->
         <div class="confluence-box">
           <div class="confluence-title">🎯 Confluencia de Indicadores</div>
           <div class="confluence-meter">
@@ -1428,7 +1989,6 @@
           </div>
         </div>
 
-        <!-- Alerta de Ruptura Técnica -->
         <div class="rupture-tech-alert" id="rupture-tech-alert">
           <div class="rupture-tech-title">⚠️ RUPTURA TÉCNICA DETECTADA</div>
           <div class="rupture-tech-desc">
@@ -1442,7 +2002,6 @@
           </div>
         </div>
 
-        <!-- Secuencia de Patrones Visual -->
         <div class="pattern-sequence-display" id="pattern-sequence-display">
           <!-- Chips de patrones -->
         </div>
@@ -1481,7 +2040,28 @@ let ruptureDetected = false;
 let lastPattern = null;
 let projectedPaths = [];
 let activeProjection = null;
-let patternHistory = []; // Historial de patrones detectados para indicadores técnicos
+let patternHistory = [];
+let lastUpdateTime = null;
+
+// NUEVO: Sistema de Cruces MA
+let maCrossHistory = [];
+let lastCrossType = null; // 'golden', 'death', o null
+let isCrossing = false;
+let crossStrength = 0; // 0-100 fuerza del cruce
+
+// NUEVO: Sistema de 8 Velas (se activa en cruce + ruptura)
+let eightCandleAnalysis = {
+    window: [],
+    ma2: null,
+    ma8: null,
+    crossDetected: false,
+    ruptureDetected: false,
+    trendProjection: null,
+    lastAnalysis: null,
+    active: false
+};
+const EIGHT_CANDLE_WINDOW = 8;
+const RUPTURE_THRESHOLD = 0.15;
 
 const dnaSvg = d3.select("#dna-svg");
 
@@ -1498,11 +2078,811 @@ class PatternProjection {
   }
 }
 
-// Convertir patrón a valor numérico para análisis técnico
+// ============================================================
+// SISTEMA DE 8 VELAS - SE ACTIVA EN CRUCE + RUPTURA
+// ============================================================
+
+function checkEightCandleCondition() {
+    // Se activa solo si hay al menos 8 velas Y hay un cruce detectado
+    if (history.length < EIGHT_CANDLE_WINDOW) {
+        return { shouldAnalyze: false, reason: 'insufficient_data' };
+    }
+    
+    if (!lastCrossType) {
+        return { shouldAnalyze: false, reason: 'no_cross' };
+    }
+    
+    // Verificar si hay ruptura en las últimas 8 velas
+    const window = history.slice(-EIGHT_CANDLE_WINDOW);
+    const hasRupture = detectRuptureInWindowSimple(window);
+    
+    if (hasRupture) {
+        return { shouldAnalyze: true, reason: 'cross_and_rupture' };
+    }
+    
+    return { shouldAnalyze: false, reason: 'no_rupture' };
+}
+
+function detectRuptureInWindowSimple(window) {
+    const values = window.map(c => c.color === 'G' ? 1 : 0);
+    const firstAvg = values.slice(0, 5).reduce((a,b) => a+b, 0) / 5;
+    const secondAvg = values.slice(5).reduce((a,b) => a+b, 0) / 3;
+    const change = Math.abs(secondAvg - firstAvg);
+    
+    // También detectar cambio de patrón dominante
+    const firstPattern = detectDominantPattern(window.slice(0, 4));
+    const secondPattern = detectDominantPattern(window.slice(-4));
+    const patternRupture = firstPattern !== secondPattern && 
+                          (firstPattern === 'GG' || firstPattern === 'RR') &&
+                          (secondPattern === 'GG' || secondPattern === 'RR');
+    
+    return change > RUPTURE_THRESHOLD || patternRupture;
+}
+
+function analyzeEightCandlesOnCross() {
+    const condition = checkEightCandleCondition();
+    
+    if (!condition.shouldAnalyze) {
+        eightCandleAnalysis.active = false;
+        return null;
+    }
+    
+    // Realizar análisis completo de 8 velas
+    const window = history.slice(-EIGHT_CANDLE_WINDOW);
+    eightCandleAnalysis.window = window;
+    
+    const ma2 = calculateMA(window, 2);
+    const ma8 = calculateMA(window, 8);
+    
+    eightCandleAnalysis.ma2 = ma2;
+    eightCandleAnalysis.ma8 = ma8;
+    
+    const crossInfo = detectCrossInWindow(window, ma2, ma8);
+    const ruptureInfo = detectRuptureInWindow(window, ma2, ma8);
+    const projection = generateEightCandleProjection(window, crossInfo, ruptureInfo);
+    
+    eightCandleAnalysis.crossDetected = crossInfo.detected;
+    eightCandleAnalysis.ruptureDetected = ruptureInfo.detected;
+    eightCandleAnalysis.trendProjection = projection;
+    eightCandleAnalysis.active = true;
+    
+    const result = {
+        valid: true,
+        cross: crossInfo,
+        rupture: ruptureInfo,
+        projection: projection,
+        ma2: ma2,
+        ma8: ma8,
+        window: window,
+        triggeredBy: lastCrossType
+    };
+    
+    eightCandleAnalysis.lastAnalysis = result;
+    
+    // Mostrar en panel principal
+    displayEightCandleRupture(result);
+    
+    return result;
+}
+
+function calculateMA(data, period) {
+    if (data.length < period) return null;
+    const slice = data.slice(-period);
+    const sum = slice.reduce((acc, candle) => acc + (candle.color === 'G' ? 1 : 0), 0);
+    return (sum / period) * 100;
+}
+
+function detectCrossInWindow(window, ma2, ma8) {
+    if (window.length < 3) return { detected: false };
+    
+    for (let i = 2; i < window.length; i++) {
+        const prevWindow = window.slice(0, i);
+        const currWindow = window.slice(0, i + 1);
+        
+        const prevMA2 = calculateMA(prevWindow, 2);
+        const prevMA8 = calculateMA(prevWindow, Math.min(8, prevWindow.length));
+        const currMA2 = calculateMA(currWindow, 2);
+        const currMA8 = calculateMA(currWindow, Math.min(8, currWindow.length));
+        
+        if (prevMA2 && prevMA8 && currMA2 && currMA8) {
+            const wasBelow = prevMA2 <= prevMA8;
+            const isAbove = currMA2 > currMA8;
+            const wasAbove = prevMA2 >= prevMA8;
+            const isBelow = currMA2 < currMA8;
+            
+            if ((wasBelow && isAbove) || (wasAbove && isBelow)) {
+                return {
+                    detected: true,
+                    type: isAbove ? 'golden' : 'death',
+                    position: i,
+                    strength: Math.abs(currMA2 - currMA8),
+                    prevMA2, prevMA8, currMA2, currMA8
+                };
+            }
+        }
+    }
+    return { detected: false };
+}
+
+function detectRuptureInWindow(window, ma2, ma8) {
+    const values = window.map(c => c.color === 'G' ? 1 : 0);
+    const firstAvg = values.slice(0, 5).reduce((a,b) => a+b, 0) / 5;
+    const secondAvg = values.slice(5).reduce((a,b) => a+b, 0) / 3;
+    const change = Math.abs(secondAvg - firstAvg);
+    
+    const firstPattern = detectDominantPattern(window.slice(0, 4));
+    const secondPattern = detectDominantPattern(window.slice(-4));
+    const patternRupture = firstPattern !== secondPattern && 
+                          (firstPattern === 'GG' || firstPattern === 'RR') &&
+                          (secondPattern === 'GG' || secondPattern === 'RR');
+    
+    return {
+        detected: change > RUPTURE_THRESHOLD || patternRupture,
+        type: change > RUPTURE_THRESHOLD ? 'volatilidad' : 'estructural',
+        change: change,
+        firstAvg, secondAvg, firstPattern, secondPattern,
+        severity: change > 0.3 ? 'alta' : change > 0.15 ? 'media' : 'baja'
+    };
+}
+
+function detectDominantPattern(subset) {
+    if (subset.length < 2) return 'NEUTRAL';
+    let gg = 0, rr = 0, gr = 0, rg = 0;
+    for (let i = 1; i < subset.length; i++) {
+        const pair = subset[i-1].color + subset[i].color;
+        if (pair === 'GG') gg++;
+        else if (pair === 'RR') rr++;
+        else if (pair === 'GR') gr++;
+        else if (pair === 'RG') rg++;
+    }
+    const max = Math.max(gg, rr, gr, rg);
+    if (max === gg) return 'GG';
+    if (max === rr) return 'RR';
+    if (max === gr) return 'GR';
+    return 'RG';
+}
+
+function generateEightCandleProjection(window, crossInfo, ruptureInfo) {
+    const lastCandle = window[window.length - 1].color;
+    const recentTrend = calculateRecentTrend(window);
+    
+    let direction, confidence, scenarios, recommendation;
+
+    if (ruptureInfo.detected) {
+        if (ruptureInfo.type === 'estructural') {
+            direction = ruptureInfo.secondPattern === 'GG' ? 'ALCISTA' : 
+                       ruptureInfo.secondPattern === 'RR' ? 'BAJISTA' : 'INDEFINIDO';
+            confidence = 0.75;
+            scenarios = generateRuptureScenarios(ruptureInfo, 'estructural');
+            recommendation = direction === 'ALCISTA' ? 'COMPRA FUERTE' : 
+                           direction === 'BAJISTA' ? 'VENTA FUERTE' : 'ESPERAR';
+        } else {
+            direction = recentTrend > 0 ? 'ALCISTA' : 'BAJISTA';
+            confidence = 0.60;
+            scenarios = generateRuptureScenarios(ruptureInfo, 'volatilidad');
+            recommendation = recentTrend > 0 ? 'COMPRA MODERADA' : 'VENTA MODERADA';
+        }
+    } else if (crossInfo.detected) {
+        direction = crossInfo.type === 'golden' ? 'ALCISTA' : 'BAJISTA';
+        confidence = 0.70;
+        scenarios = generateCrossScenarios(crossInfo);
+        recommendation = crossInfo.type === 'golden' ? 'COMPRA' : 'VENTA';
+    } else {
+        direction = recentTrend > 0.2 ? 'ALCISTA' : recentTrend < -0.2 ? 'BAJISTA' : 'LATERAL';
+        confidence = 0.50;
+        scenarios = generateNeutralScenarios(window);
+        recommendation = 'MANTENER';
+    }
+
+    return {
+        direction, confidence, scenarios, recommendation,
+        nextCandles: predictNextThreeCandles(window, direction, confidence),
+        targetLevels: calculateTargetLevels(window, direction),
+        timeEstimate: estimateTimeToTarget(window, direction),
+        basedOn: '8_velas',
+        triggeredByCross: lastCrossType
+    };
+}
+
+function calculateRecentTrend(window) {
+    let weightedSum = 0, weights = 0;
+    window.forEach((candle, idx) => {
+        const weight = idx + 1;
+        weightedSum += (candle.color === 'G' ? 1 : -1) * weight;
+        weights += weight;
+    });
+    return weightedSum / weights;
+}
+
+function generateRuptureScenarios(ruptureInfo, ruptureType) {
+    const scenarios = [];
+    if (ruptureType === 'estructural') {
+        scenarios.push({
+            probability: 0.50,
+            description: 'Continuación nueva tendencia',
+            candles: ruptureInfo.secondPattern === 'GG' ? ['G', 'G', 'G'] : ['R', 'R', 'R'],
+            target: ruptureInfo.secondPattern === 'GG' ? '+3-5%' : '-3-5%'
+        });
+        scenarios.push({
+            probability: 0.30,
+            description: 'Consolidación antes de continuar',
+            candles: ruptureInfo.secondPattern === 'GG' ? ['G', 'R', 'G'] : ['R', 'G', 'R'],
+            target: ruptureInfo.secondPattern === 'GG' ? '+2-3%' : '-2-3%'
+        });
+        scenarios.push({
+            probability: 0.20,
+            description: 'Falsa ruptura - retorno',
+            candles: ruptureInfo.secondPattern === 'GG' ? ['R', 'R', 'G'] : ['G', 'G', 'R'],
+            target: '±1%'
+        });
+    } else {
+        scenarios.push({
+            probability: 0.40,
+            description: 'Alta volatilidad continúa',
+            candles: ['G', 'R', 'G'],
+            target: '±4%'
+        });
+        scenarios.push({
+            probability: 0.35,
+            description: 'Normalización gradual',
+            candles: ['G', 'G', 'R'],
+            target: '±2%'
+        });
+        scenarios.push({
+            probability: 0.25,
+            description: 'Reversión completa',
+            candles: ['R', 'R', 'R'],
+            target: '-3%'
+        });
+    }
+    return scenarios;
+}
+
+function generateCrossScenarios(crossInfo) {
+    const isGolden = crossInfo.type === 'golden';
+    return [
+        {
+            probability: 0.55,
+            description: `Continuación ${isGolden ? 'alcista' : 'bajista'} confirmada`,
+            candles: isGolden ? ['G', 'G', 'G'] : ['R', 'R', 'R'],
+            target: isGolden ? '+4-6%' : '-4-6%'
+        },
+        {
+            probability: 0.30,
+            description: 'Consolidación con sesgo',
+            candles: isGolden ? ['G', 'R', 'G'] : ['R', 'G', 'R'],
+            target: isGolden ? '+2-4%' : '-2-4%'
+        },
+        {
+            probability: 0.15,
+            description: `Falso ${isGolden ? 'golden' : 'death'} cross`,
+            candles: isGolden ? ['R', 'G', 'R'] : ['G', 'R', 'G'],
+            target: '±1-2%'
+        }
+    ];
+}
+
+function generateNeutralScenarios(window) {
+    return [
+        { probability: 0.40, description: 'Rango continúa', candles: ['G', 'R', 'G'], target: '±1%' },
+        { probability: 0.35, description: 'Ligero sesgo alcista', candles: ['G', 'G', 'R'], target: '+1-2%' },
+        { probability: 0.25, description: 'Ligero sesgo bajista', candles: ['R', 'R', 'G'], target: '-1-2%' }
+    ];
+}
+
+function predictNextThreeCandles(window, direction, confidence) {
+    const predictions = [];
+    for (let i = 0; i < 3; i++) {
+        let probG, probR;
+        if (direction === 'ALCISTA') {
+            probG = 0.5 + (confidence * 0.4) - (i * 0.05);
+            probR = 1 - probG;
+        } else if (direction === 'BAJISTA') {
+            probR = 0.5 + (confidence * 0.4) - (i * 0.05);
+            probG = 1 - probR;
+        } else {
+            probG = 0.5; probR = 0.5;
+        }
+        predictions.push({
+            candle: i + 1,
+            probG: Math.round(probG * 100),
+            probR: Math.round(probR * 100),
+            expected: probG > probR ? 'G' : 'R',
+            confidence: Math.round(Math.abs(probG - probR) * 100)
+        });
+    }
+    return predictions;
+}
+
+function calculateTargetLevels(window, direction) {
+    const base = 100;
+    if (direction === 'ALCISTA') {
+        return { entry: base, target1: base * 1.02, target2: base * 1.05, stop: base * 0.985 };
+    } else if (direction === 'BAJISTA') {
+        return { entry: base, target1: base * 0.98, target2: base * 0.95, stop: base * 1.015 };
+    }
+    return { entry: base, target1: base * 1.01, target2: base * 0.99, stop: base * 0.98 };
+}
+
+function estimateTimeToTarget(window, direction) {
+    return direction === 'LATERAL' ? '3-5 velas' : '2-4 velas';
+}
+
+function displayEightCandleRupture(analysis) {
+    const predMain = document.getElementById('prediction-main');
+    const predSeq = document.getElementById('pred-sequence');
+    const seqNext = document.getElementById('sequence-next');
+    const confDisplay = document.getElementById('confidence-display');
+    const detail = document.getElementById('prediction-detail');
+    const statusBadge = document.getElementById('status-badge');
+    
+    statusBadge.className = 'status-badge status-alert';
+    statusBadge.textContent = 'RUPTURA 8 VELAS';
+    
+    const ruptureType = analysis.rupture.type === 'estructural' ? 'ESTRUCTURAL' : 'VOLATILIDAD';
+    const severity = analysis.rupture.severity.toUpperCase();
+    const crossType = analysis.triggeredBy === 'golden' ? '🚀 GOLDEN' : '💀 DEATH';
+    
+    predMain.className = 'pred-main pred-' + (analysis.projection.direction === 'ALCISTA' ? 'buy' : 
+                                             analysis.projection.direction === 'BAJISTA' ? 'sell' : 'hold');
+    predMain.innerHTML = `
+        <div style="font-size: 0.5em; margin-bottom: 5px; color: var(--alert-red);">
+            ⚠️ RUPTURA BASADA EN LAS OCHO VELAS
+        </div>
+        <div style="font-size: 0.8em;">${analysis.projection.recommendation}</div>
+        <div style="font-size: 0.4em; margin-top: 5px; color: var(--phase2);">
+            ${crossType} + ${ruptureType} | Severidad: ${severity}
+        </div>
+    `;
+    
+    predSeq.style.display = 'block';
+    const nextCandles = analysis.projection.nextCandles;
+    seqNext.innerHTML = nextCandles.map((c, i) => `
+        <span style="color: ${c.expected === 'G' ? 'var(--green)' : 'var(--red)'}; 
+                     opacity: ${1 - (i * 0.2)}; font-size: ${1 - (i * 0.1)}em;">
+            ${c.expected}<sub style="font-size: 0.6em; color: var(--text-dim);">${c.confidence}%</sub>
+        </span>
+    `).join(' → ');
+    
+    const confidence = Math.round(analysis.projection.confidence * 100);
+    confDisplay.textContent = confidence + '%';
+    confDisplay.style.color = confidence > 70 ? 'var(--green)' : 
+                              confidence > 50 ? 'var(--gold)' : 'var(--red)';
+    
+    const scenarios = analysis.projection.scenarios;
+    const targets = analysis.projection.targetLevels;
+    
+    detail.innerHTML = `
+        <div style="border: 2px solid var(--alert-red); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+            <strong style="color: var(--alert-red); font-size: 1.1em;">
+                🚨 RUPTURA DETECTADA EN VENTANA DE 8 VELAS
+            </strong><br><br>
+            <strong>Cruce Activador:</strong> <span style="color: ${analysis.triggeredBy === 'golden' ? 'var(--green)' : 'var(--red)'}">${crossType}</span><br>
+            <strong>Tipo de Ruptura:</strong> ${ruptureType}<br>
+            <strong>Severidad:</strong> <span style="color: ${analysis.rupture.severity === 'alta' ? 'var(--alert-red)' : 'var(--phase2)'}">${severity}</span><br>
+            <strong>Cambio Estructural:</strong> ${(analysis.rupture.change * 100).toFixed(1)}%<br>
+            <strong>Patrón Previo:</strong> <span style="color: var(--text-dim)">${analysis.rupture.firstPattern}</span> → 
+            <strong style="color: var(--gold)">${analysis.rupture.secondPattern}</strong>
+        </div>
+        
+        <div style="background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 10px;">
+            <strong style="color: var(--gold);">📊 PROYECCIÓN DE TENDENCIA FUTURA:</strong><br><br>
+            <strong>Dirección Principal:</strong> 
+            <span style="color: ${analysis.projection.direction === 'ALCISTA' ? 'var(--green)' : 
+                                  analysis.projection.direction === 'BAJISTA' ? 'var(--red)' : 'var(--text-dim)'}; font-size: 1.2em;">
+                ${analysis.projection.direction}
+            </span><br>
+            <strong>Confianza:</strong> ${confidence}%<br>
+            <strong>Tiempo Estimado:</strong> ${analysis.projection.timeEstimate}<br><br>
+            <strong>🎯 Niveles Objetivo:</strong><br>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px;">
+                <div style="color: var(--green);">TP1: ${targets.target1.toFixed(2)}</div>
+                <div style="color: var(--gold);">TP2: ${targets.target2.toFixed(2)}</div>
+                <div style="color: var(--red); grid-column: 1/-1;">SL: ${targets.stop.toFixed(2)}</div>
+            </div>
+        </div>
+        
+        <div style="background: rgba(0,212,255,0.1); padding: 10px; border-radius: 8px;">
+            <strong style="color: var(--primary);">📈 Escenarios Probables:</strong><br>
+            ${scenarios.map((s, i) => `
+                <div style="margin: 8px 0; padding: 8px; background: rgba(0,0,0,0.3); border-radius: 4px; border-left: 3px solid ${i === 0 ? 'var(--green)' : i === 1 ? 'var(--gold)' : 'var(--text-dim)'};">
+                    <div style="display: flex; justify-content: space-between;">
+                        <strong>${(s.probability * 100).toFixed(0)}%</strong>
+                        <span style="color: var(--text-dim); font-size: 0.9em;">${s.target}</span>
+                    </div>
+                    <div style="font-size: 0.9em; margin-top: 3px;">${s.description}</div>
+                    <div style="margin-top: 5px; letter-spacing: 3px;">
+                        ${s.candles.map(c => `<span style="color: ${c === 'G' ? 'var(--green)' : 'var(--red)'}">${c}</span>`).join(' ')}
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+        
+        ${analysis.cross.detected ? `
+        <div style="margin-top: 10px; padding: 8px; background: rgba(255,215,0,0.1); border-radius: 4px; border: 1px solid var(--gold);">
+            <strong style="color: var(--gold);">⚔️ Cruce MA en Ventana:</strong> 
+            ${analysis.cross.type === 'golden' ? '🚀 Golden Cross' : '💀 Death Cross'} 
+            (Fuerza: ${analysis.cross.strength.toFixed(1)}%)
+        </div>
+        ` : ''}
+    `;
+    
+    showEightCandleAlert(analysis);
+}
+
+function showEightCandleAlert(analysis) {
+    let alertDiv = document.getElementById('eight-candle-alert');
+    if (!alertDiv) {
+        alertDiv = document.createElement('div');
+        alertDiv.id = 'eight-candle-alert';
+        alertDiv.style.cssText = `
+            position: fixed; top: 100px; right: 20px;
+            background: linear-gradient(135deg, rgba(255,17,68,0.95), rgba(255,102,0,0.9));
+            border: 2px solid var(--alert-red); border-radius: 12px;
+            padding: 20px; max-width: 350px; z-index: 1000;
+            box-shadow: 0 0 40px rgba(255,17,68,0.6);
+            animation: slideInRight 0.5s ease;
+        `;
+        document.body.appendChild(alertDiv);
+    }
+    
+    const proj = analysis.projection;
+    const crossType = analysis.triggeredBy === 'golden' ? '🚀 GOLDEN' : '💀 DEATH';
+    
+    alertDiv.innerHTML = `
+        <div style="text-align: center; margin-bottom: 15px;">
+            <div style="font-size: 24px; margin-bottom: 5px;">⚠️</div>
+            <div style="font-size: 14px; font-weight: bold; color: #fff;">RUPTURA 8 VELAS</div>
+            <div style="font-size: 10px; color: rgba(255,255,255,0.7); margin-top: 3px;">
+                ${crossType} + ${analysis.rupture.type.toUpperCase()} | ${new Date().toLocaleTimeString()}
+            </div>
+        </div>
+        <div style="background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Dirección:</span>
+                <span style="color: ${proj.direction === 'ALCISTA' ? 'var(--green)' : 'var(--red)'}; 
+                           font-weight: bold; font-size: 12px;">${proj.direction}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Señal:</span>
+                <span style="color: var(--gold); font-weight: bold; font-size: 12px;">${proj.recommendation}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: rgba(255,255,255,0.7); font-size: 11px;">Confianza:</span>
+                <span style="color: #fff; font-weight: bold; font-size: 12px;">${Math.round(proj.confidence * 100)}%</span>
+            </div>
+        </div>
+        <div style="font-size: 10px; color: rgba(255,255,255,0.8); text-align: center; line-height: 1.4;">
+            Análisis de 8 velas activado por cruce MA + ruptura detectada
+        </div>
+        <button onclick="this.parentElement.remove()" 
+                style="position: absolute; top: 5px; right: 8px; background: none; border: none; 
+                       color: rgba(255,255,255,0.6); cursor: pointer; font-size: 16px;">×</button>
+    `;
+    
+    setTimeout(() => {
+        if (alertDiv && alertDiv.parentElement) {
+            alertDiv.style.animation = 'slideOutRight 0.5s ease';
+            setTimeout(() => alertDiv.remove(), 500);
+        }
+    }, 15000); // 15 segundos para dar tiempo de leer
+}
+
+// ============================================================
+// FUNCIONES DE CRUCE MA ORIGINALES (modificadas)
+// ============================================================
+
+function calculateMA2MA10() {
+  if (history.length < 10) return { ma2: null, ma10: null, crossed: false };
+  
+  const last2 = history.slice(-2);
+  const ma2 = last2.reduce((sum, h) => sum + (h.color === 'G' ? 1 : 0), 0) / 2 * 100;
+  
+  const period = Math.min(10, history.length);
+  const lastN = history.slice(-period);
+  const ma10 = lastN.reduce((sum, h) => sum + (h.color === 'G' ? 1 : 0), 0) / period * 100;
+  
+  const prevMa2 = history.length > 2 ? 
+    (history[history.length-3].color === 'G' ? 100 : 0 + history[history.length-2].color === 'G' ? 100 : 0) / 2 : ma2;
+  const prevMa10 = history.length > 10 ?
+    history.slice(-11, -1).reduce((sum, h) => sum + (h.color === 'G' ? 1 : 0), 0) / 10 * 100 : ma10;
+  
+  const crossed = (prevMa2 <= prevMa10 && ma2 > ma10) || (prevMa2 >= prevMa10 && ma2 < ma10);
+  const crossType = ma2 > ma10 ? 'golden' : 'death';
+  const strength = Math.min(100, Math.abs(ma2 - ma10) * 2);
+  
+  return { 
+    ma2, 
+    ma10, 
+    crossed, 
+    crossType, 
+    strength,
+    diff: ma2 - ma10 
+  };
+}
+
+function autoDetectCross() {
+  const ma = calculateMA2MA10();
+  
+  if (!ma.ma2 || !ma.ma10) {
+    showNotification("Se necesitan al menos 10 velas para detectar cruce MA2/MA10", "warning");
+    return;
+  }
+  
+  if (ma.crossed) {
+    registerCross(ma.crossType, ma.strength, 'auto');
+    updateMAVisuals(ma.crossType, ma.strength, true);
+    showNotification(`🚨 CRUCE ${ma.crossType === 'golden' ? 'GOLDEN' : 'DEATH'} DETECTADO (${Math.round(ma.strength)}% fuerza)`, "success");
+    
+    // NUEVO: Verificar condición de 8 velas después de registrar cruce
+    setTimeout(() => {
+        const eightCandleResult = analyzeEightCandlesOnCross();
+        if (eightCandleResult) {
+            showNotification('📊 Análisis de 8 velas activado: Cruce + Ruptura detectados', 'success');
+        }
+    }, 500);
+    
+  } else {
+    const currentType = ma.ma2 > ma.ma10 ? 'golden' : 'death';
+    updateMAVisuals(currentType, ma.strength, false);
+    showNotification(`Sin cruce detectado. MA2 ${ma.ma2 > ma.ma10 ? '>' : '<'} MA10 (${Math.round(ma.strength)}% diferencia)`, "info");
+  }
+  
+  updateMAStatus(ma);
+}
+
+function manualCross(type) {
+  let strength = 50;
+  
+  if (history.length >= 2) {
+    const recentG = history.slice(-5).filter(h => h.color === 'G').length;
+    const recentR = history.slice(-5).filter(h => h.color === 'R').length;
+    
+    if (type === 'golden' && recentG >= 3) strength = 70 + (recentG * 5);
+    else if (type === 'death' && recentR >= 3) strength = 70 + (recentR * 5);
+    else strength = 60;
+  }
+  
+  strength = Math.min(95, strength);
+  
+  registerCross(type, strength, 'manual');
+  updateMAVisuals(type, strength, true);
+  
+  const btn = document.getElementById(type === 'golden' ? 'btn-golden' : 'btn-death');
+  btn.classList.add('active');
+  setTimeout(() => btn.classList.remove('active'), 2000);
+  
+  showNotification(`✋ CRUCE ${type === 'golden' ? 'GOLDEN' : 'DEATH'} MARCADO MANUALMENTE (${Math.round(strength)}% fuerza)`, "success");
+  
+  updateMAStatus({
+    ma2: type === 'golden' ? 70 : 30,
+    ma10: 50,
+    crossType: type,
+    strength: strength,
+    diff: type === 'golden' ? 20 : -20
+  });
+  
+  // NUEVO: Verificar condición de 8 velas después de cruce manual
+  setTimeout(() => {
+      const eightCandleResult = analyzeEightCandlesOnCross();
+      if (eightCandleResult) {
+          showNotification('📊 Análisis de 8 velas activado por cruce manual + ruptura', 'success');
+      }
+  }, 500);
+}
+
+function registerCross(type, strength, source) {
+  const cross = {
+    type: type,
+    strength: strength,
+    source: source,
+    timestamp: Date.now(),
+    pattern: lastPattern || 'N/A',
+    historyLength: history.length
+  };
+  
+  maCrossHistory.push(cross);
+  lastCrossType = type;
+  isCrossing = true;
+  crossStrength = strength;
+  
+  updateMAHistory();
+  enhanceProjectionWithMA(type, strength);
+  
+  setTimeout(() => {
+    isCrossing = false;
+  }, 3000);
+}
+
+function updateMAVisuals(type, strength, isCrossingNow) {
+  const fastLine = document.getElementById('ma-line-fast');
+  const slowLine = document.getElementById('ma-line-slow');
+  const crossIcon = document.getElementById('ma-cross-icon');
+  const alert = document.getElementById('ma-cross-alert');
+  const title = document.getElementById('ma-cross-title');
+  const subtitle = document.getElementById('ma-cross-subtitle');
+  
+  if (type === 'golden') {
+    fastLine.style.transform = 'translateY(-10px)';
+    slowLine.style.transform = 'translateY(10px)';
+    fastLine.style.opacity = '1';
+    slowLine.style.opacity = '0.6';
+  } else {
+    fastLine.style.transform = 'translateY(10px)';
+    slowLine.style.transform = 'translateY(-10px)';
+    fastLine.style.opacity = '0.6';
+    slowLine.style.opacity = '1';
+  }
+  
+  if (isCrossingNow) {
+    fastLine.classList.add('crossing');
+    slowLine.classList.add('crossing');
+    crossIcon.textContent = type === 'golden' ? '🚀' : '💀';
+    crossIcon.style.color = type === 'golden' ? 'var(--cross-bullish)' : 'var(--cross-bearish)';
+    
+    alert.classList.add('active');
+    title.textContent = type === 'golden' ? '🚀 GOLDEN CROSS DETECTADO' : '💀 DEATH CROSS DETECTADO';
+    title.style.color = type === 'golden' ? 'var(--cross-bullish)' : 'var(--cross-bearish)';
+    subtitle.textContent = type === 'golden' ? 
+      `MA2 cruza sobre MA10 con ${Math.round(strength)}% fuerza alcista` : 
+      `MA2 cruza bajo MA10 con ${Math.round(strength)}% fuerza bajista`;
+    
+    document.getElementById('strength-meter').style.display = 'block';
+    updateStrengthMeter(strength, type);
+  } else {
+    fastLine.classList.remove('crossing');
+    slowLine.classList.remove('crossing');
+    crossIcon.textContent = '⚔️';
+    crossIcon.style.color = 'var(--gold)';
+    alert.classList.remove('active');
+  }
+}
+
+function updateStrengthMeter(strength, type) {
+  const fill = document.getElementById('strength-fill');
+  const marker = document.getElementById('strength-marker');
+  const value = document.getElementById('strength-value');
+  const text = document.getElementById('strength-text');
+  
+  fill.style.width = strength + '%';
+  marker.style.left = strength + '%';
+  value.textContent = Math.round(strength) + '%';
+  
+  if (strength >= 80) {
+    text.textContent = 'Muy Fuerte';
+    text.style.color = type === 'golden' ? 'var(--green)' : 'var(--red)';
+  } else if (strength >= 60) {
+    text.textContent = 'Fuerte';
+    text.style.color = 'var(--gold)';
+  } else if (strength >= 40) {
+    text.textContent = 'Moderada';
+    text.style.color = 'var(--orange)';
+  } else {
+    text.textContent = 'Débil';
+    text.style.color = 'var(--text-dim)';
+  }
+}
+
+function updateMAHistory() {
+  const container = document.getElementById('ma-history-list');
+  
+  if (maCrossHistory.length === 0) {
+    container.innerHTML = '<div style="text-align: center; color: var(--text-dim); font-size: 10px; padding: 10px;">Sin cruces registrados</div>';
+    return;
+  }
+  
+  container.innerHTML = maCrossHistory.slice(-5).reverse().map(cross => {
+    const time = new Date(cross.timestamp).toLocaleTimeString();
+    const isGolden = cross.type === 'golden';
+    return `
+      <div class="ma-cross-item ${isGolden ? 'golden' : 'death'}">
+        <div>
+          <span class="cross-type ${isGolden ? 'golden' : 'death'}">
+            ${isGolden ? '🚀 GOLDEN' : '💀 DEATH'}
+          </span>
+          <span style="color: var(--text-dim); margin-left: 5px;">
+            ${Math.round(cross.strength)}%
+          </span>
+          ${cross.source === 'manual' ? '<span style="color: var(--gold); font-size: 8px;">[MANUAL]</span>' : ''}
+        </div>
+        <div class="cross-time">${time}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateMAStatus(ma) {
+  const indicator = document.getElementById('ma-status-indicator');
+  const text = document.getElementById('ma-status-text');
+  
+  if (!ma || !ma.ma2) {
+    indicator.className = 'ma-status-indicator ma-status-waiting';
+    text.textContent = 'ESPERANDO CRUCE MA2/MA10';
+    return;
+  }
+  
+  if (isCrossing) {
+    indicator.className = `ma-status-indicator ${ma.crossType === 'golden' ? 'ma-status-bullish' : 'ma-status-bearish'}`;
+    text.textContent = `CRUCE ${ma.crossType === 'golden' ? 'GOLDEN' : 'DEATH'} ACTIVO`;
+  } else if (ma.ma2 > ma.ma10) {
+    indicator.className = 'ma-status-indicator ma-status-bullish';
+    text.textContent = `MA2 > MA10 (${Math.round(ma.diff)}%)`;
+  } else {
+    indicator.className = 'ma-status-indicator ma-status-bearish';
+    text.textContent = `MA2 < MA10 (${Math.round(Math.abs(ma.diff))}%)`;
+  }
+}
+
+function enhanceProjectionWithMA(type, strength) {
+  if (!activeProjection) return;
+  
+  const multiplier = strength / 100;
+  
+  if (type === 'golden') {
+    if (activeProjection.signalType === 'buy') {
+      activeProjection.probability = Math.min(0.95, activeProjection.probability + (0.15 * multiplier));
+      activeProjection.description += ` [+CRUCE GOLDEN ${Math.round(strength)}%]`;
+    } else if (activeProjection.signalType === 'sell') {
+      activeProjection.probability = Math.max(0.1, activeProjection.probability - (0.2 * multiplier));
+      activeProjection.description = `Conflicto: ${activeProjection.description} vs CRUCE GOLDEN`;
+    }
+  } else {
+    if (activeProjection.signalType === 'sell') {
+      activeProjection.probability = Math.min(0.95, activeProjection.probability + (0.15 * multiplier));
+      activeProjection.description += ` [+CRUCE DEATH ${Math.round(strength)}%]`;
+    } else if (activeProjection.signalType === 'buy') {
+      activeProjection.probability = Math.max(0.1, activeProjection.probability - (0.2 * multiplier));
+      activeProjection.description = `Conflicto: ${activeProjection.description} vs CRUCE DEATH`;
+    }
+  }
+  
+  updateProjectionUI();
+  updateMainPrediction();
+}
+
+function showNotification(message, type) {
+  const notif = document.createElement('div');
+  notif.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 10000;
+    animation: slideIn 0.3s ease;
+    max-width: 300px;
+    word-wrap: break-word;
+  `;
+  
+  if (type === 'success') {
+    notif.style.background = 'rgba(0,255,136,0.9)';
+    notif.style.color = '#000';
+    notif.style.boxShadow = '0 0 20px rgba(0,255,136,0.5)';
+  } else if (type === 'warning') {
+    notif.style.background = 'rgba(255,102,0,0.9)';
+    notif.style.color = '#fff';
+  } else {
+    notif.style.background = 'rgba(0,212,255,0.9)';
+    notif.style.color = '#000';
+  }
+  
+  notif.textContent = message;
+  document.body.appendChild(notif);
+  
+  setTimeout(() => {
+    notif.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => notif.remove(), 300);
+  }, 3000);
+}
+
+// ============================================================
+// FUNCIONES ORIGINALES DEL SISTEMA ADN
+// ============================================================
+
 function patternToValue(pattern) {
   if (!pattern) return 50;
-  // G = alcista (valores altos), R = bajista (valores bajos)
-  // GG = muy alcista, RR = muy bajista, GR/RG = mixto/neutral
   const map = {
     'GG': 80, 'GR': 60, 'RG': 40, 'RR': 20,
     'GGG': 90, 'RRR': 10, 'GGR': 70, 'GRR': 30,
@@ -1511,7 +2891,6 @@ function patternToValue(pattern) {
   return map[pattern] || 50;
 }
 
-// Calcular RSI sobre secuencia de patrones
 function calculatePatternRSI(periods = 6) {
   if (patternHistory.length < 2) return { value: 50, signal: 'neutral' };
   
@@ -1542,7 +2921,6 @@ function calculatePatternRSI(periods = 6) {
   return { value: Math.round(rsi), signal };
 }
 
-// Calcular Medias Móviles sobre patrones
 function calculatePatternMA() {
   if (patternHistory.length < 2) return { ma3: null, ma5: null, ma8: null, trend: 'neutral' };
   
@@ -1558,7 +2936,6 @@ function calculatePatternMA() {
   const ma5 = ma(values, Math.min(5, values.length));
   const ma8 = ma(values, Math.min(8, values.length));
   
-  // Determinar tendencia
   let trend = 'neutral';
   if (ma3 && ma5 && ma8) {
     if (ma3 > ma5 && ma5 > ma8) trend = 'strong_up';
@@ -1570,7 +2947,6 @@ function calculatePatternMA() {
   return { ma3, ma5, ma8, trend };
 }
 
-// Calcular Bandas de Bollinger sobre patrones
 function calculatePatternBollinger(period = 5) {
   if (patternHistory.length < period) {
     return { upper: 80, middle: 50, lower: 20, position: 50, width: 'normal' };
@@ -1585,7 +2961,6 @@ function calculatePatternBollinger(period = 5) {
   const lower = mean - (2 * stdDev);
   const current = values[values.length - 1];
   
-  // Normalizar posición actual (0-100)
   const position = ((current - lower) / (upper - lower)) * 100;
   
   let width = 'normal';
@@ -1601,17 +2976,13 @@ function calculatePatternBollinger(period = 5) {
   };
 }
 
-// Detectar ruptura técnica
 function detectTechnicalRupture() {
   if (patternHistory.length < 4) return false;
   
   const recent = patternHistory.slice(-4);
   const values = recent.map(p => patternToValue(p.pattern));
   
-  // Ruptura si hay cambio brusco de >40 puntos en valor de patrón
   const maxChange = Math.max(...values) - Math.min(...values);
-  
-  // O si el último patrón rompe la secuencia establecida
   const lastPattern = recent[recent.length - 1].pattern;
   const prevPattern = recent[recent.length - 2].pattern;
   
@@ -1620,7 +2991,6 @@ function detectTechnicalRupture() {
   return Math.abs(drasticChange) > 35 || maxChange > 50;
 }
 
-// Generar escenarios post-ruptura
 function generatePostRuptureScenarios() {
   if (patternHistory.length < 2) return [];
   
@@ -1629,7 +2999,6 @@ function generatePostRuptureScenarios() {
   
   const scenarios = [];
   
-  // Escenario 1: Continuación del último momentum (40%)
   const momentumDir = lastValue > 50 ? 'ALCISTA' : 'BAJISTA';
   scenarios.push({
     probability: '40%',
@@ -1638,7 +3007,6 @@ function generatePostRuptureScenarios() {
     desc: `Continuación ${momentumDir.toLowerCase()}`
   });
   
-  // Escenario 2: Reversión a la media (35%)
   scenarios.push({
     probability: '35%',
     direction: lastValue > 50 ? 'BAJISTA' : 'ALCISTA',
@@ -1646,7 +3014,6 @@ function generatePostRuptureScenarios() {
     desc: 'Reversión técnica'
   });
   
-  // Escenario 3: Consolidación lateral (25%)
   scenarios.push({
     probability: '25%',
     direction: 'LATERAL',
@@ -1657,12 +3024,9 @@ function generatePostRuptureScenarios() {
   return scenarios;
 }
 
-// Actualizar panel técnico completo
 function updateTechnicalPanel() {
-  // Actualizar historial de patrones
   updatePatternHistory();
   
-  // RSI
   const rsi = calculatePatternRSI();
   const rsiEl = document.getElementById('rsi-value');
   const rsiBar = document.getElementById('rsi-bar');
@@ -1677,7 +3041,6 @@ function updateTechnicalPanel() {
                           '✓ Zona neutral';
   rsiSignal.className = `indicator-signal ${rsi.signal === 'overbought' ? 'sell' : rsi.signal === 'oversold' ? 'buy' : 'hold'}`;
   
-  // Medias Móviles
   const ma = calculatePatternMA();
   document.getElementById('ma3-value').textContent = ma.ma3 ? ma.ma3.toFixed(1) : '--';
   document.getElementById('ma5-value').textContent = ma.ma5 ? ma.ma5.toFixed(1) : '--';
@@ -1702,7 +3065,6 @@ function updateTechnicalPanel() {
                              'Sin tendencia definida';
   maSignalText.className = `indicator-signal ${maTrend.signal}`;
   
-  // Bandas de Bollinger
   const bb = calculatePatternBollinger();
   document.getElementById('bb-upper-val').textContent = bb.upper;
   document.getElementById('bb-middle-val').textContent = bb.middle;
@@ -1742,7 +3104,6 @@ function updateTechnicalPanel() {
   bbSignal.textContent = bbSignalText;
   bbSignal.className = `indicator-signal ${bbSignalClass}`;
   
-  // Tendencia general
   const trendValue = ma.ma3 || 50;
   const trendBar = document.getElementById('trend-bar');
   const trendVal = document.getElementById('trend-value');
@@ -1755,10 +3116,8 @@ function updateTechnicalPanel() {
   trendSig.textContent = trendValue > 60 ? 'Momentum positivo detectado' : trendValue < 40 ? 'Momentum negativo detectado' : 'Sin momentum claro';
   trendSig.className = `indicator-signal ${trendValue > 60 ? 'buy' : trendValue < 40 ? 'sell' : 'hold'}`;
   
-  // Confluencia
   updateConfluence(rsi, ma, bb);
   
-  // Ruptura técnica
   const techRupture = detectTechnicalRupture();
   const ruptureAlert = document.getElementById('rupture-tech-alert');
   const techStatus = document.getElementById('tech-status');
@@ -1768,7 +3127,6 @@ function updateTechnicalPanel() {
     techStatus.textContent = 'RUPTURA';
     techStatus.className = 'tech-status conflict';
     
-    // Mostrar escenarios
     const scenarios = generatePostRuptureScenarios();
     const container = document.getElementById('trend-scenarios');
     container.innerHTML = scenarios.map(s => `
@@ -1786,19 +3144,15 @@ function updateTechnicalPanel() {
     techStatus.className = 'tech-status validating';
   }
   
-  // Actualizar display de patrones
   updatePatternDisplay();
 }
 
-// Actualizar historial de patrones
 function updatePatternHistory() {
   if (history.length < 2) return;
   
-  // Detectar patrones en la secuencia actual
   const newPatterns = [];
   for (let i = 1; i < history.length; i++) {
     const pattern = history[i-1].color + history[i].color;
-    // Verificar si ya existe este patrón en esta posición
     const exists = patternHistory.some(p => p.index === i);
     if (!exists) {
       newPatterns.push({
@@ -1810,21 +3164,17 @@ function updatePatternHistory() {
     }
   }
   
-  // Agregar solo patrones nuevos
   patternHistory.push(...newPatterns);
   
-  // Limitar historial a últimos 50 patrones para rendimiento
   if (patternHistory.length > 50) {
     patternHistory = patternHistory.slice(-50);
   }
 }
 
-// Actualizar display visual de patrones
 function updatePatternDisplay() {
   const container = document.getElementById('pattern-sequence-display');
   if (!container) return;
   
-  // Mostrar últimos 20 patrones como chips visuales
   const recentPatterns = patternHistory.slice(-20);
   container.innerHTML = recentPatterns.map((p, idx) => {
     const isLast = idx === recentPatterns.length - 1;
@@ -1833,47 +3183,43 @@ function updatePatternDisplay() {
   }).join('');
 }
 
-// Actualizar confluencia de indicadores
 function updateConfluence(rsi, ma, bb) {
-  // Calcular score de confluencia (0-100)
   let buyScore = 0;
   let sellScore = 0;
   let totalWeight = 0;
   
-  // RSI (30% peso)
   if (rsi.value < 30) buyScore += 30;
   else if (rsi.value > 70) sellScore += 30;
   else if (rsi.value < 45) buyScore += 15;
   else if (rsi.value > 55) sellScore += 15;
   totalWeight += 30;
   
-  // MA (40% peso)
   if (ma.trend === 'strong_up') buyScore += 40;
   else if (ma.trend === 'up') buyScore += 25;
   else if (ma.trend === 'strong_down') sellScore += 40;
   else if (ma.trend === 'down') sellScore += 25;
   totalWeight += 40;
   
-  // Bollinger (30% peso)
   if (bb.position < 20) buyScore += 30;
   else if (bb.position > 80) sellScore += 30;
   else if (bb.position < 40) buyScore += 15;
   else if (bb.position > 60) sellScore += 15;
   totalWeight += 30;
   
-  // Calcular porcentaje final
+  // NUEVO: Factor de cruce MA2/MA10
+  if (lastCrossType === 'golden') buyScore += 20;
+  else if (lastCrossType === 'death') sellScore += 20;
+  
   const netScore = buyScore - sellScore;
   const confluenceValue = 50 + (netScore / totalWeight) * 50;
   const clampedValue = Math.max(0, Math.min(100, confluenceValue));
   
-  // Actualizar UI
   const fill = document.getElementById('confluence-fill');
   const value = document.getElementById('confluence-value');
   
   fill.style.width = clampedValue + '%';
   value.textContent = Math.round(clampedValue) + '%';
   
-  // Determinar clase visual
   fill.className = 'confluence-fill';
   if (clampedValue >= 75) {
     fill.classList.add('strong-buy');
@@ -1892,7 +3238,6 @@ function updateConfluence(rsi, ma, bb) {
     value.style.color = 'var(--gold)';
   }
   
-  // Actualizar items individuales
   updateConfluenceItem('conf-rsi', rsi.value < 30 ? 'active' : rsi.value > 70 ? 'danger' : rsi.value < 45 ? 'warning' : rsi.value > 55 ? 'warning' : '');
   updateConfluenceItem('conf-ma', ma.trend.includes('up') ? 'active' : ma.trend.includes('down') ? 'danger' : '');
   updateConfluenceItem('conf-bb', bb.position < 20 ? 'active' : bb.position > 80 ? 'danger' : bb.position < 40 ? 'warning' : bb.position > 60 ? 'warning' : '');
@@ -1907,412 +3252,182 @@ function updateConfluenceItem(id, status) {
   else if (status === 'danger') el.classList.add('danger');
 }
 
-// Función principal de análisis técnico
 function performTechnicalAnalysis() {
   updateTechnicalPanel();
 }
 
-// Funciones existentes del sistema ADN (mantener compatibilidad)
-
-function addCandle(color) {
-  if (crashDetected) return;
+function generateAnticipationScenarios() {
+  if (history.length < 2) return null;
   
-  const node = {
-    color: color,
-    x: history.length * 60 + 50,
-    y: CENTER_Y + (Math.random() - 0.5) * 100,
-    radius: NODE_RADIUS,
-    id: Date.now()
+  const lastCandle = history[history.length - 1].color;
+  const prevCandle = history[history.length - 2].color;
+  const currentPattern = prevCandle + lastCandle;
+  
+  const scenarios = {
+    green: analyzeScenario(currentPattern, 'G'),
+    red: analyzeScenario(currentPattern, 'R')
   };
   
-  history.push(node);
-  
-  // Limitar historial visual
-  if (history.length > 15) {
-    history.shift();
-    // Recalcular posiciones X
-    history.forEach((h, i) => h.x = i * 60 + 50);
-  }
-  
-  detectPattern();
-  updateVisualization();
-  performTechnicalAnalysis(); // Actualizar panel técnico
-  
-  // Verificar ruptura técnica
-  if (detectTechnicalRupture()) {
-    handleTechnicalRupture();
-  }
+  return scenarios;
 }
 
-function detectPattern() {
-  if (history.length < 2) return;
+function analyzeScenario(currentPattern, nextCandle) {
+  const newPattern = currentPattern[1] + nextCandle;
   
-  const lastTwo = history.slice(-2);
-  const pattern = lastTwo[0].color + lastTwo[1].color;
+  let signal = 'HOLD';
+  let signalType = 'hold';
+  let probability = 0.5;
+  let description = 'Neutral';
   
-  // Detectar ciclos 3+1 o 2+1
-  if (pattern === 'GG' || pattern === 'RR') {
-    const isPhase3 = currentPhase === '3';
-    const cycleType = isPhase3 ? '3' : '2';
-    
-    cycles.push({
-      pattern: pattern,
-      type: cycleType,
-      index: history.length - 2,
-      timestamp: Date.now()
-    });
-    
-    // Actualizar último patrón detectado
-    lastPattern = pattern;
-    
-    // Generar proyecciones
-    generateProjections(pattern);
-    
-    updateStats();
-    updateBlocks();
-    updateEnergy();
+  if (currentPattern === 'GG') {
+    if (nextCandle === 'G') {
+      signal = 'COMPRA';
+      signalType = 'buy';
+      probability = 0.65;
+      description = 'Continuación alcista';
+    } else {
+      signal = 'VENTA';
+      signalType = 'sell';
+      probability = 0.55;
+      description = 'Posible reversión';
+    }
+  } else if (currentPattern === 'RR') {
+    if (nextCandle === 'R') {
+      signal = 'VENTA';
+      signalType = 'sell';
+      probability = 0.65;
+      description = 'Continuación bajista';
+    } else {
+      signal = 'COMPRA';
+      signalType = 'buy';
+      probability = 0.55;
+      description = 'Posible rebote';
+    }
+  } else if (currentPattern === 'GR') {
+    if (nextCandle === 'R') {
+      signal = 'VENTA';
+      signalType = 'sell';
+      probability = 0.60;
+      description = 'Confirmación bajista';
+    } else {
+      signal = 'COMPRA';
+      signalType = 'buy';
+      probability = 0.50;
+      description = 'Reversión alcista';
+    }
+  } else if (currentPattern === 'RG') {
+    if (nextCandle === 'G') {
+      signal = 'COMPRA';
+      signalType = 'buy';
+      probability = 0.60;
+      description = 'Confirmación alcista';
+    } else {
+      signal = 'VENTA';
+      signalType = 'sell';
+      probability = 0.50;
+      description = 'Reversión bajista';
+    }
   }
+  
+  // Ajustar según indicadores técnicos
+  if (patternHistory.length >= 3) {
+    const rsi = calculatePatternRSI();
+    const ma = calculatePatternMA();
+    
+    if (rsi.value > 70 && signalType === 'buy') {
+      probability -= 0.15;
+      description += ' (Sobrecompra)';
+    } else if (rsi.value < 30 && signalType === 'sell') {
+      probability -= 0.15;
+      description += ' (Sobreventa)';
+    }
+    
+    if (ma.trend.includes('up') && signalType === 'buy') {
+      probability += 0.10;
+    } else if (ma.trend.includes('down') && signalType === 'sell') {
+      probability += 0.10;
+    }
+  }
+  
+  // NUEVO: Ajustar según último cruce MA
+  if (lastCrossType === 'golden' && signalType === 'buy') {
+    probability += 0.10;
+    description += ' [MA:Golden]';
+  } else if (lastCrossType === 'death' && signalType === 'sell') {
+    probability += 0.10;
+    description += ' [MA:Death]';
+  }
+  
+  return {
+    pattern: newPattern,
+    signal: signal,
+    signalType: signalType,
+    probability: Math.max(0.1, Math.min(0.9, probability)),
+    description: description,
+    fullSequence: currentPattern + nextCandle
+  };
 }
 
-function generateProjections(basePattern) {
-  projectedPaths = [];
+function updateAnticipationPanel() {
+  const panel = document.getElementById('anticipation-panel');
+  const container = document.getElementById('scenario-container');
+  const recommendation = document.getElementById('recommendation-action');
+  const timestamp = document.getElementById('update-timestamp');
   
-  // Proyecciones basadas en el patrón detectado
-  const projections = [
-    new PatternProjection('Continuación', basePattern + basePattern[0], 0.4, 
-      basePattern === 'GG' ? 'COMPRA' : 'VENTA', 
-      basePattern === 'GG' ? 'buy' : 'sell',
-      'Continuación de tendencia actual'),
-    new PatternProjection('Reversión', basePattern === 'GG' ? 'GR' : 'RG', 0.3,
-      basePattern === 'GG' ? 'VENTA' : 'COMPRA',
-      basePattern === 'GG' ? 'sell' : 'buy',
-      'Reversión de tendencia'),
-    new PatternProjection('Consolidación', 'GR', 0.2, 'MANTENER', 'hold',
-      'Rango de consolidación'),
-    new PatternProjection('Ruptura', basePattern === 'GG' ? 'RR' : 'GG', 0.1,
-      basePattern === 'GG' ? 'VENTA FUERTE' : 'COMPRA FUERTE',
-      basePattern === 'GG' ? 'sell' : 'buy',
-      'Ruptura de estructura')
-  ];
-  
-  projectedPaths = projections;
-  activeProjection = projections[0]; // Más probable por defecto
-  
-  updateProjectionUI();
-}
-
-function updateProjectionUI() {
-  const container = document.getElementById('path-container');
-  const panel = document.getElementById('projection-panel');
-  const lastPatternEl = document.getElementById('last-pattern');
-  
-  if (!lastPattern || !panel) return;
+  if (history.length < 2) {
+    panel.style.display = 'none';
+    return;
+  }
   
   panel.style.display = 'block';
-  lastPatternEl.textContent = lastPattern;
   
-  if (!container) return;
+  const scenarios = generateAnticipationScenarios();
+  if (!scenarios) return;
   
-  container.innerHTML = projectedPaths.map((path, idx) => {
-    const isActive = idx === 0;
-    const isBroken = path.isBroken;
-    
-    return `
-      <div class="path-item ${isBroken ? 'broken' : isActive ? 'valid' : 'alternate'}">
-        <div class="path-signal ${path.signalType}">${path.signal}</div>
-        <div class="path-label">${path.name}</div>
-        <div class="path-sequence">
-          ${path.sequence.split('').map((c, i) => 
-            `<div class="path-dot ${c.toLowerCase()} ${i === path.sequence.length - 1 ? 'current' : ''}">${c}</div>`
-          ).join('')}
-        </div>
-        <div class="path-status ${isBroken ? 'broken' : isActive ? 'valid' : 'alternate'}">
-          ${isBroken ? 'ROTO' : isActive ? 'ACTIVO' : 'ALT'}
-        </div>
-      </div>
-    `;
-  }).join('');
+  container.innerHTML = `
+    <div class="scenario-box green-scenario" onclick="addCandle('G')">
+      <div class="scenario-label">Si siguiente es VERDE</div>
+      <div class="scenario-sequence">${scenarios.green.fullSequence}</div>
+      <div class="scenario-signal">${scenarios.green.signal}</div>
+      <div class="scenario-probability">Prob: ${Math.round(scenarios.green.probability * 100)}%</div>
+    </div>
+    <div class="scenario-box red-scenario" onclick="addCandle('R')">
+      <div class="scenario-label">Si siguiente es ROJO</div>
+      <div class="scenario-sequence">${scenarios.red.fullSequence}</div>
+      <div class="scenario-signal">${scenarios.red.signal}</div>
+      <div class="scenario-probability">Prob: ${Math.round(scenarios.red.probability * 100)}%</div>
+    </div>
+  `;
   
-  // Actualizar predicción principal
-  updateMainPrediction();
+  let bestScenario = null;
+  let preSignal = '';
+  
+  if (scenarios.green.probability > scenarios.red.probability) {
+    bestScenario = scenarios.green;
+    preSignal = 'PRE-COMPRA';
+  } else if (scenarios.red.probability > scenarios.green.probability) {
+    bestScenario = scenarios.red;
+    preSignal = 'PRE-VENTA';
+  } else {
+    preSignal = 'NEUTRAL';
+  }
+  
+  recommendation.textContent = preSignal;
+  recommendation.style.color = bestScenario ? 
+    (bestScenario.signalType === 'buy' ? 'var(--green)' : 'var(--red)') : 
+    'var(--gold)';
+  
+  lastUpdateTime = new Date();
+  timestamp.textContent = 'Actualizado: ' + lastUpdateTime.toLocaleTimeString();
+  
+  updateMainPredictionWithAnticipation(scenarios, preSignal);
 }
 
-function updateMainPrediction() {
+function updateMainPredictionWithAnticipation(scenarios, preSignal) {
   const predMain = document.getElementById('prediction-main');
   const predSeq = document.getElementById('pred-sequence');
   const seqNext = document.getElementById('sequence-next');
   const confDisplay = document.getElementById('confidence-display');
   const detail = document.getElementById('prediction-detail');
   
-  if (!activeProjection) return;
-  
-  // Determinar clase de predicción
-  predMain.className = 'pred-main pred-' + activeProjection.signalType;
-  predMain.textContent = activeProjection.signal;
-  
-  // Mostrar secuencia esperada
-  predSeq.style.display = 'block';
-  seqNext.innerHTML = activeProjection.sequence.split('').map((c, i) => {
-    if (i < activeProjection.sequence.length - 1) {
-      return `<span style="color: var(--text-dim)">${c}</span>`;
-    }
-    return `<span class="exp-${c.toLowerCase()}">${c}</span>`;
-  }).join('');
-  
-  // Confianza
-  const confidence = Math.round(activeProjection.probability * 100);
-  confDisplay.textContent = confidence + '%';
-  
-  // Detalle
-  detail.innerHTML = `
-    <strong>Patrón Base:</strong> <span style="color: var(--gold)">${lastPattern || '--'}</span><br>
-    <strong>Proyección:</strong> ${activeProjection.name}<br>
-    <strong>Descripción:</strong> ${activeProjection.description}
-  `;
-}
-
-function updateVisualization() {
-  const svg = d3.select("#dna-svg");
-  
-  // Limpiar y redibujar
-  svg.selectAll("*").remove();
-  
-  // Dibujar conexiones
-  for (let i = 0; i < history.length - 1; i++) {
-    const curr = history[i];
-    const next = history[i + 1];
-    
-    svg.append("line")
-      .attr("x1", curr.x)
-      .attr("y1", curr.y)
-      .attr("x2", next.x)
-      .attr("y2", next.y)
-      .attr("stroke", curr.color === 'G' ? 'var(--green)' : 'var(--red)')
-      .attr("stroke-width", 3)
-      .attr("opacity", 0.6);
-  }
-  
-  // Dibujar nodos
-  const nodes = svg.selectAll(".node")
-    .data(history)
-    .enter()
-    .append("g")
-    .attr("class", "dna-node")
-    .attr("transform", d => `translate(${d.x},${d.y})`);
-  
-  nodes.append("circle")
-    .attr("r", d => d.radius)
-    .attr("fill", d => d.color === 'G' ? 'var(--green)' : 'var(--red)')
-    .attr("stroke", "var(--gold)")
-    .attr("stroke-width", 2)
-    .attr("filter", d => d.color === 'G' ? 
-      "drop-shadow(0 0 10px var(--green))" : 
-      "drop-shadow(0 0 10px var(--red))");
-  
-  nodes.append("text")
-    .attr("text-anchor", "middle")
-    .attr("dy", "0.35em")
-    .attr("fill", d => d.color === 'G' ? '#000' : '#fff')
-    .attr("font-size", "14px")
-    .attr("font-weight", "bold")
-    .text(d => d.color);
-  
-  // Actualizar display de ciclo
-  const cycleDisplay = document.getElementById('cycle-display');
-  const cycleMode = document.getElementById('cycle-mode');
-  
-  if (cycles.length > 0) {
-    const lastCycle = cycles[cycles.length - 1];
-    cycleDisplay.textContent = lastCycle.pattern;
-    cycleMode.textContent = `Fase ${lastCycle.type}+1`;
-    cycleMode.className = `cycle-mode phase-${lastCycle.type}`;
-  } else {
-    cycleDisplay.textContent = history.length > 0 ? 
-      history[history.length-1].color : '--';
-    cycleMode.textContent = 'Acumulando...';
-  }
-}
-
-function updateStats() {
-  const cycles3 = cycles.filter(c => c.type === '3').length;
-  const cycles2 = cycles.filter(c => c.type === '2').length;
-  
-  document.getElementById('stat-cycles-3').textContent = cycles3;
-  document.getElementById('stat-cycles-2').textContent = cycles2;
-  document.getElementById('stat-recalcs').textContent = recalcCount;
-  
-  const confidence = activeProjection ? 
-    Math.round(activeProjection.probability * 100) : 0;
-  document.getElementById('stat-confidence').textContent = confidence + '%';
-}
-
-function updateBlocks() {
-  const container = document.getElementById('blocks-display');
-  if (!container) return;
-  
-  container.innerHTML = cycles.slice(-10).reverse().map((cycle, idx) => {
-    const pattern = cycle.pattern;
-    const isPerfect3 = cycle.type === '3';
-    const isPhase2 = cycle.type === '2';
-    
-    return `
-      <div class="block-item ${isPerfect3 ? 'perfect-3' : isPhase2 ? 'phase-2' : ''}">
-        <div class="block-info">
-          <div class="block-number ${isPhase2 ? 'phase-2' : ''}">#${cycles.length - idx}</div>
-          <div class="block-type">Patrón ${cycle.type}+1</div>
-        </div>
-        <div class="block-visual">
-          ${pattern.split('').map(c => 
-            `<div class="v-dot ${c.toLowerCase()} main"></div>`
-          ).join('')}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function updateEnergy() {
-  const energyBar = document.getElementById('energy-bar');
-  const energyText = document.getElementById('energy-text');
-  
-  // Calcular energía basada en consistencia de patrones
-  const recentPatterns = patternHistory.slice(-5);
-  let consistency = 0;
-  
-  if (recentPatterns.length >= 2) {
-    const values = recentPatterns.map(p => p.value);
-    const avg = values.reduce((a,b) => a+b, 0) / values.length;
-    const variance = values.reduce((a,b) => a + Math.pow(b - avg, 2), 0) / values.length;
-    consistency = Math.max(0, 100 - variance);
-  }
-  
-  energy = consistency;
-  
-  energyBar.style.width = energy + '%';
-  
-  if (energy > 70) {
-    energyBar.className = 'energy-bar-fill energy-phase3';
-    energyText.textContent = 'Energía Óptima - Patrón Estable';
-  } else if (energy > 40) {
-    energyBar.className = 'energy-bar-fill energy-phase2';
-    energyText.textContent = 'Energía Moderada - Fase 2+1';
-  } else {
-    energyBar.className = 'energy-bar-fill energy-broken';
-    energyText.textContent = 'Energía Baja - Inestabilidad Detectada';
-  }
-}
-
-function handleTechnicalRupture() {
-  ruptureDetected = true;
-  
-  const warning = document.getElementById('rupture-warning');
-  if (warning) warning.classList.add('active');
-  
-  // Actualizar badge de patrón
-  const badge = document.getElementById('pattern-badge');
-  badge.className = 'pattern-indicator pattern-broken';
-  badge.textContent = 'MODO: RUPTURA TÉCNICA';
-  
-  // Actualizar estado
-  const status = document.getElementById('status-badge');
-  status.className = 'status-badge status-alert';
-  status.textContent = 'RUPTURA DETECTADA';
-  
-  // Mostrar alerta de fase
-  const phaseAlert = document.getElementById('phase-alert');
-  phaseAlert.classList.add('active', 'broken');
-  document.getElementById('phase-title').textContent = '⚠ RUPTURA TÉCNICA CRÍTICA';
-  document.getElementById('phase-title').classList.add('broken');
-  document.getElementById('phase-desc').innerHTML = `
-    Los indicadores técnicos detectan desviación severa en la secuencia.<br>
-    <strong>Se requiere recalibración del sistema.</strong>
-  `;
-}
-
-function clearAll() {
-  history = [];
-  cycles = [];
-  patternHistory = [];
-  currentPhase = '3';
-  transitionCount = 0;
-  recalcCount = 0;
-  energy = 0;
-  crashDetected = false;
-  ruptureDetected = false;
-  lastPattern = null;
-  projectedPaths = [];
-  activeProjection = null;
-  
-  // Resetear UI
-  document.getElementById('sequenceInput').value = '';
-  document.getElementById('prediction-main').textContent = '---';
-  document.getElementById('prediction-main').className = 'pred-main pred-hold';
-  document.getElementById('pred-sequence').style.display = 'none';
-  document.getElementById('confidence-display').textContent = '0%';
-  document.getElementById('prediction-detail').textContent = 'Ingresa una secuencia para detectar el patrón base y generar proyecciones dinámicas.';
-  document.getElementById('projection-panel').style.display = 'none';
-  document.getElementById('rupture-warning').classList.remove('active');
-  document.getElementById('phase-alert').classList.remove('active', 'broken');
-  document.getElementById('phase-title').classList.remove('broken');
-  document.getElementById('pattern-badge').className = 'pattern-indicator pattern-3';
-  document.getElementById('pattern-badge').textContent = 'MODO: ANÁLISIS DE PATRÓN';
-  document.getElementById('status-badge').className = 'status-badge status-fractal';
-  document.getElementById('status-badge').textContent = 'ANALIZANDO';
-  document.getElementById('cycle-display').textContent = '--';
-  document.getElementById('cycle-mode').textContent = 'Esperando datos...';
-  document.getElementById('cycle-mode').className = 'cycle-mode';
-  
-  // Resetear panel técnico
-  document.getElementById('tech-status').textContent = 'ANALIZANDO';
-  document.getElementById('tech-status').className = 'tech-status validating';
-  document.getElementById('rupture-tech-alert').classList.remove('active');
-  
-  // Limpiar SVG
-  d3.select("#dna-svg").selectAll("*").remove();
-  
-  updateStats();
-  updateBlocks();
-  performTechnicalAnalysis();
-}
-
-function dismissCrash() {
-  document.getElementById('crash-alert').classList.remove('active');
-  clearAll();
-}
-
-// Input handler para secuencia manual
-document.getElementById('sequenceInput')?.addEventListener('input', function(e) {
-  const val = e.target.value.toUpperCase().replace(/[^GR]/g, '');
-  
-  if (val.length >= 2) {
-    // Procesar secuencia ingresada
-    history = [];
-    for (let char of val) {
-      history.push({
-        color: char,
-        x: history.length * 60 + 50,
-        y: CENTER_Y + (Math.random() - 0.5) * 50,
-        radius: NODE_RADIUS,
-        id: Date.now() + Math.random()
-      });
-    }
-    
-    detectPattern();
-    updateVisualization();
-    performTechnicalAnalysis();
-  }
-});
-
-// Inicialización
-document.addEventListener('DOMContentLoaded', function() {
-  updateStats();
-  performTechnicalAnalysis();
-});
-
-
-</script>
-
-</body>
-</html>
-
-
+  const bestScenario = scenarios.green.probability > scenarios.red.probability ?
