@@ -2043,13 +2043,13 @@ let activeProjection = null;
 let patternHistory = [];
 let lastUpdateTime = null;
 
-// NUEVO: Sistema de Cruces MA
+// Sistema de Cruces MA
 let maCrossHistory = [];
-let lastCrossType = null; // 'golden', 'death', o null
+let lastCrossType = null;
 let isCrossing = false;
-let crossStrength = 0; // 0-100 fuerza del cruce
+let crossStrength = 0;
 
-// NUEVO: Sistema de 8 Velas (se activa en cruce + ruptura)
+// Sistema de 8 Velas
 let eightCandleAnalysis = {
     window: [],
     ma2: null,
@@ -2063,6 +2063,529 @@ let eightCandleAnalysis = {
 const EIGHT_CANDLE_WINDOW = 8;
 const RUPTURE_THRESHOLD = 0.15;
 
+// ============================================================
+// MAPA COMPLETO DE PATRONES COMPLEJOS (4-6-8-12 velas)
+// ============================================================
+
+const COMPLEX_PATTERNS = {
+    // PATRONES DE 4 VELAS - Tendencias y Cambios Básicos
+    'GGGG': { 
+        name: 'Tendencia Alcista Fuerte', 
+        signal: 'COMPRA_FUERTE', 
+        strength: 0.82, 
+        next: 'G', 
+        type: 'trend_strong_up',
+        description: 'Momentum alcista confirmado - 4 velas verdes consecutivas indican fuerza compradora dominante'
+    },
+    'RRRR': { 
+        name: 'Tendencia Bajista Fuerte', 
+        signal: 'VENTA_FUERTE', 
+        strength: 0.82, 
+        next: 'R', 
+        type: 'trend_strong_down',
+        description: 'Momentum bajista confirmado - 4 velas rojas consecutivas indican fuerza vendedora dominante'
+    },
+    'GGRR': { 
+        name: 'Cambio a Bajista', 
+        signal: 'VENTA', 
+        strength: 0.75, 
+        next: 'R', 
+        type: 'trend_change_down',
+        description: 'Reversión de tendencia alcista - 2 verdes seguidas de 2 rojas señal de debilidad'
+    },
+    'RRGG': { 
+        name: 'Cambio a Alcista', 
+        signal: 'COMPRA', 
+        strength: 0.75, 
+        next: 'G', 
+        type: 'trend_change_up',
+        description: 'Reversión de tendencia bajista - 2 rojas seguidas de 2 verdes señal de fortaleza'
+    },
+    'GGRG': { 
+        name: 'Rechazo Bajista', 
+        signal: 'VENTA', 
+        strength: 0.65, 
+        next: 'R', 
+        type: 'rejection_down',
+        description: 'Intento de subida fallido - vela roja final rechaza continuación alcista'
+    },
+    'RRGR': { 
+        name: 'Rechazo Alcista', 
+        signal: 'COMPRA', 
+        strength: 0.65, 
+        next: 'G', 
+        type: 'rejection_up',
+        description: 'Intento de caída fallido - vela verde final rechaza continuación bajista'
+    },
+    'GRGG': { 
+        name: 'Continuación Alcista', 
+        signal: 'COMPRA', 
+        strength: 0.70, 
+        next: 'G', 
+        type: 'continuation_up',
+        description: 'Pausa en tendencia alcista - una roja intermedia pero recuperación verde'
+    },
+    'RGRR': { 
+        name: 'Continuación Bajista', 
+        signal: 'VENTA', 
+        strength: 0.70, 
+        next: 'R', 
+        type: 'continuation_down',
+        description: 'Pausa en tendencia bajista - una verde intermedia pero dominancia roja'
+    },
+    'RGGG': { 
+        name: 'Inicio Alcista', 
+        signal: 'COMPRA', 
+        strength: 0.72, 
+        next: 'G', 
+        type: 'start_up',
+        description: 'Inicio de tendencia alcista desde base - reversión desde vela roja previa'
+    },
+    'GRRR': { 
+        name: 'Inicio Bajista', 
+        signal: 'VENTA', 
+        strength: 0.72, 
+        next: 'R', 
+        type: 'start_down',
+        description: 'Inicio de tendencia bajista desde techo - reversión desde vela verde previa'
+    },
+    'GRGR': { 
+        name: 'Rango Neutro', 
+        signal: 'MANTENER', 
+        strength: 0.55, 
+        next: 'G', 
+        type: 'range_neutral',
+        description: 'Mercado sin dirección clara - alternancia verde/roja sin tendencia definida'
+    },
+    'RGRG': { 
+        name: 'Rango Neutro', 
+        signal: 'MANTENER', 
+        strength: 0.55, 
+        next: 'R', 
+        type: 'range_neutral',
+        description: 'Mercado sin dirección clara - alternancia roja/verde sin tendencia definida'
+    },
+    'RGGR': { 
+        name: 'Acumulación', 
+        signal: 'COMPRA', 
+        strength: 0.68, 
+        next: 'G', 
+        type: 'accumulation',
+        description: 'Formación de base antes de subida - doble verde tras roja inicial'
+    },
+    'GGRG': { 
+        name: 'Distribución', 
+        signal: 'VENTA', 
+        strength: 0.68, 
+        next: 'R', 
+        type: 'distribution',
+        description: 'Formación de techo antes de caída - roja final tras doble verde'
+    },
+    'RGGG': { 
+        name: 'Breakout Alcista', 
+        signal: 'COMPRA_FUERTE', 
+        strength: 0.78, 
+        next: 'G', 
+        type: 'breakout_up',
+        description: 'Ruptura alcista confirmada - triple verde tras base roja'
+    },
+    'GRRR': { 
+        name: 'Breakout Bajista', 
+        signal: 'VENTA_FUERTE', 
+        strength: 0.78, 
+        next: 'R', 
+        type: 'breakout_down',
+        description: 'Ruptura bajista confirmada - triple roja tras techo verde'
+    },
+
+    // PATRONES DE 5 VELAS - Confirmaciones y Reversiones
+    'GGRRR': { 
+        name: 'Inicio Bajista Fuerte', 
+        signal: 'VENTA_FUERTE', 
+        strength: 0.82, 
+        next: 'R', 
+        type: 'strong_start_down',
+        description: 'Cambio brusco a tendencia bajista - 2 verdes seguidas de 3 rojas momentum negativo'
+    },
+    'RRGGG': { 
+        name: 'Inicio Alcista Fuerte', 
+        signal: 'COMPRA_FUERTE', 
+        strength: 0.82, 
+        next: 'G', 
+        type: 'strong_start_up',
+        description: 'Cambio brusco a tendencia alcista - 2 rojas seguidas de 3 verdes momentum positivo'
+    },
+    'GGGRR': { 
+        name: 'Fin Alcista/Distribución', 
+        signal: 'VENTA', 
+        strength: 0.70, 
+        next: 'R', 
+        type: 'end_up',
+        description: 'Final de tendencia alcista - 3 verdes seguidas de 2 rojas toma de ganancias'
+    },
+    'RRRGG': { 
+        name: 'Fin Bajista/Acumulación', 
+        signal: 'COMPRA', 
+        strength: 0.70, 
+        next: 'G', 
+        type: 'end_down',
+        description: 'Final de tendencia bajista - 3 rojas seguidas de 2 verdes compras al débil'
+    },
+    'GRRRR': { 
+        name: 'Bajista Confirmado', 
+        signal: 'VENTA_FUERTE', 
+        strength: 0.85, 
+        next: 'R', 
+        type: 'confirmed_down',
+        description: 'Tendencia bajista fuertemente confirmada - 4 rojas tras verde inicial de rechazo'
+    },
+    'RRRRG': { 
+        name: 'Reversión desde Mínimo', 
+        signal: 'COMPRA', 
+        strength: 0.75, 
+        next: 'G', 
+        type: 'reversal_from_low',
+        description: 'Posible fin de tendencia bajista - verde final tras 4 rojas sucesivas'
+    },
+    'GGGGR': { 
+        name: 'Reversión desde Máximo', 
+        signal: 'VENTA', 
+        strength: 0.75, 
+        next: 'R', 
+        type: 'reversal_from_high',
+        description: 'Posible fin de tendencia alcista - roja final tras 4 verdes sucesivas'
+    },
+    'GGRRG': { 
+        name: 'Rechazo de Caída', 
+        signal: 'COMPRA', 
+        strength: 0.65, 
+        next: 'G', 
+        type: 'rejection_down_fail',
+        description: 'Intento de caída revertido rápidamente - verde final recupera terreno'
+    },
+    'GRRGG': { 
+        name: 'V-Shape Recuperación', 
+        signal: 'COMPRA', 
+        strength: 0.72, 
+        next: 'G', 
+        type: 'v_shape',
+        description: 'Caída y recuperación en forma de V - 2 rojas seguidas de 2 verdes fuertes'
+    },
+    'RRGGR': { 
+        name: 'M-Shape Distribución', 
+        signal: 'VENTA', 
+        strength: 0.72, 
+        next: 'R', 
+        type: 'm_shape',
+        description: 'Subida y caída en forma de M - 2 verdes seguidas de 2 rojas distribución'
+    },
+    'RGGRG': { 
+        name: 'Consolidación Mixta', 
+        signal: 'MANTENER', 
+        strength: 0.60, 
+        next: 'G', 
+        type: 'consolidation',
+        description: 'Periodo de consolidación sin dirección - mezcla de colores sin claridad'
+    },
+    'GGRGG': { 
+        name: 'Continuación con Pausa', 
+        signal: 'COMPRA', 
+        strength: 0.70, 
+        next: 'G', 
+        type: 'continuation_pause_up',
+        description: 'Tendencia alcista con pausa temporal - roja intermedia pero dominancia verde'
+    },
+    'RGRGG': { 
+        name: 'Reversión Alcista Confirmada', 
+        signal: 'COMPRA', 
+        strength: 0.74, 
+        next: 'G', 
+        type: 'confirmed_reversal_up',
+        description: 'Cambio a tendencia alcista confirmado - secuencia compleja termina en verde fuerte'
+    },
+    'GRGGR': { 
+        name: 'Reversión Bajista Confirmada', 
+        signal: 'VENTA', 
+        strength: 0.74, 
+        next: 'R', 
+        type: 'confirmed_reversal_down',
+        description: 'Cambio a tendencia bajista confirmado - secuencia compleja termina en rojo fuerte'
+    },
+
+    // PATRONES DE 6 VELAS - Ciclos Completos y Estructuras
+    'RGGRRR': { 
+        name: 'Ciclo Bajista Completo', 
+        signal: 'VENTA_FUERTE', 
+        strength: 0.88, 
+        next: 'R', 
+        type: 'cycle_bearish_complete',
+        description: 'Reversión alcista seguida de caída fuerte - patrón bajista de alta confianza'
+    },
+    'GGRRRR': { 
+        name: 'Cambio Estructural Bajista', 
+        signal: 'VENTA_FUERTE', 
+        strength: 0.87, 
+        next: 'R', 
+        type: 'structural_change_down',
+        description: 'Cambio estructural de alcista a bajista - 2 verdes seguidas de 4 rojas masivas'
+    },
+    'GRRRRG': { 
+        name: 'Fin de Ciclo Bajista', 
+        signal: 'COMPRA', 
+        strength: 0.78, 
+        next: 'G', 
+        type: 'cycle_bearish_end',
+        description: 'Final de ciclo bajista con reversión - verde final tras 4 rojas extensas'
+    },
+    'RRRRGG': { 
+        name: 'Inicio Alcista Fuerte', 
+        signal: 'COMPRA_FUERTE', 
+        strength: 0.87, 
+        next: 'G', 
+        type: 'strong_start_up_6',
+        description: 'Inicio fuerte de tendencia alcista desde base - 4 rojas seguidas de 2 verdes'
+    },
+    'RRRGGG': { 
+        name: 'Reversión Alcista Completa', 
+        signal: 'COMPRA_FUERTE', 
+        strength: 0.85, 
+        next: 'G', 
+        type: 'reversal_up_complete',
+        description: 'Cambio completo de tendencia bajista a alcista - 3 rojas seguidas de 3 verdes'
+    },
+    'RRGGGG': { 
+        name: 'Tendencia Alcista Confirmada', 
+        signal: 'COMPRA_FUERTE', 
+        strength: 0.86, 
+        next: 'G', 
+        type: 'trend_up_confirmed',
+        description: 'Tendencia alcista fuertemente establecida - 2 rojas seguidas de 4 verdes'
+    },
+    'GGGGRR': { 
+        name: 'Distribución Extendida', 
+        signal: 'VENTA_FUERTE', 
+        strength: 0.80, 
+        next: 'R', 
+        type: 'distribution_extended',
+        description: 'Periodo de distribución antes de caída - 4 verdes seguidas de 2 rojas iniciales'
+    },
+    'GGGRRG': { 
+        name: 'Rechazo Bajista Fallido', 
+        signal: 'COMPRA', 
+        strength: 0.72, 
+        next: 'G', 
+        type: 'rejection_down_failed',
+        description: 'Intento de caída fuertemente revertido - verde final tras doble roja'
+    },
+    'GGRRGG': { 
+        name: 'Doble Techo', 
+        signal: 'VENTA', 
+        strength: 0.75, 
+        next: 'R', 
+        type: 'double_top',
+        description: 'Formación de doble techo - 2 verdes, 2 rojas, 2 verdes resistencia clara'
+    },
+    'GRRGGG': { 
+        name: 'V-Shape Extendido', 
+        signal: 'COMPRA_FUERTE', 
+        strength: 0.78, 
+        next: 'G', 
+        type: 'v_shape_extended',
+        description: 'Caída profunda y recuperación fuerte - 1 verde, 2 rojas, 3 verdes'
+    },
+    'RRGGRR': { 
+        name: 'Doble Suelo', 
+        signal: 'COMPRA', 
+        strength: 0.75, 
+        next: 'G', 
+        type: 'double_bottom',
+        description: 'Formación de doble suelo - 2 rojas, 2 verdes, 2 rojas soporte claro'
+    },
+    'RGGRRG': { 
+        name: 'Consolidación Ascendente', 
+        signal: 'COMPRA', 
+        strength: 0.68, 
+        next: 'G', 
+        type: 'ascending_consolidation',
+        description: 'Consolidación con sesgo alcista - base, subida, pausa y continuación'
+    },
+    'GGRGGR': { 
+        name: 'Bandera Bajista', 
+        signal: 'VENTA', 
+        strength: 0.70, 
+        next: 'R', 
+        type: 'bearish_flag',
+        description: 'Pausa en tendencia bajista (bandera) - consolidación antes de caída'
+    },
+    'GRGGRR': { 
+        name: 'Triángulo Descendente', 
+        signal: 'VENTA', 
+        strength: 0.72, 
+        next: 'R', 
+        type: 'descending_triangle',
+        description: 'Formación de triángulo descendente - máximos decrecientes, mínimos iguales'
+    },
+    'RGRGGR': { 
+        name: 'Rango con Sesgo Bajista', 
+        signal: 'VENTA', 
+        strength: 0.65, 
+        next: 'R', 
+        type: 'range_bearish_bias',
+        description: 'Rango de consolidación con sesgo a la baja - alternancia con dirección negativa'
+    },
+    'GGRRRG': { 
+        name: 'Reversión Incompleta', 
+        signal: 'MANTENER', 
+        strength: 0.60, 
+        next: 'G', 
+        type: 'incomplete_reversal',
+        description: 'Intento de reversión sin confirmación clara - mezcla sin dirección definida'
+    },
+    'RGGRGG': { 
+        name: 'Impulso Alcista', 
+        signal: 'COMPRA_FUERTE', 
+        strength: 0.80, 
+        next: 'G', 
+        type: 'bullish_impulse',
+        description: 'Reversión y continuación alcista fuerte - patrón de impulso comprador'
+    },
+    'RGGGRR': { 
+        name: 'Rechazo en Tope', 
+        signal: 'VENTA', 
+        strength: 0.73, 
+        next: 'R', 
+        type: 'rejection_at_top',
+        description: 'Subida rápida y rechazo en máximo - triple verde seguido de doble roja'
+    },
+    'GRGRGG': { 
+        name: 'Avance Escalonado', 
+        signal: 'COMPRA', 
+        strength: 0.71, 
+        next: 'G', 
+        type: 'step_advance',
+        description: 'Subida progresiva con pequeñas pausas - avance controlado alcista'
+    },
+    'RGRGGG': { 
+        name: 'Breakout Alcista Confirmado', 
+        signal: 'COMPRA_FUERTE', 
+        strength: 0.82, 
+        next: 'G', 
+        type: 'breakout_up_confirmed',
+        description: 'Ruptura alcista desde consolidación - triple verde tras alternancia'
+    },
+    'GGGRGR': { 
+        name: 'Distribución Inicial', 
+        signal: 'VENTA', 
+        strength: 0.68, 
+        next: 'R', 
+        type: 'distribution_start',
+        description: 'Inicio de distribución - alternancia tras triple verde indica debilidad'
+    },
+    'GGRGRG': { 
+        name: 'Confusión de Mercado', 
+        signal: 'MANTENER', 
+        strength: 0.55, 
+        next: 'G', 
+        type: 'market_confusion',
+        description: 'Alta volatilidad sin dirección - mezcla compleja sin tendencia clara'
+    },
+    'RGRGRG': { 
+        name: 'Rango Perfecto', 
+        signal: 'MANTENER', 
+        strength: 0.50, 
+        next: 'G', 
+        type: 'perfect_range',
+        description: 'Mercado lateral puro - alternancia perfecta sin sesgo direccional'
+    },
+    'GRGRGR': { 
+        name: 'Rango Perfecto', 
+        signal: 'MANTENER', 
+        strength: 0.50, 
+        next: 'R', 
+        type: 'perfect_range',
+        description: 'Mercado lateral puro - alternancia perfecta sin sesgo direccional'
+    },
+    'RRGRGR': { 
+        name: 'Rango Bajista', 
+        signal: 'VENTA', 
+        strength: 0.62, 
+        next: 'R', 
+        type: 'range_bearish',
+        description: 'Rango con sesgo bajista - alternancia iniciada con roja dominante'
+    },
+    'GRGGRG': { 
+        name: 'Rango Alcista', 
+        signal: 'COMPRA', 
+        strength: 0.62, 
+        next: 'G', 
+        type: 'range_bullish',
+        description: 'Rango con sesgo alcista - alternancia iniciada con verde dominante'
+    },
+
+    // PATRONES DE 7-8 VELAS - Ciclos Extendidos
+    'GGRRRRG': { 
+        name: 'Ciclo Bajista con Reversión', 
+        signal: 'COMPRA', 
+        strength: 0.76, 
+        next: 'G', 
+        type: 'cycle_bearish_reversal',
+        description: 'Ciclo bajista completo con inicio de reversión - verde final tras 5 rojas'
+    },
+    'RRRRGGG': { 
+        name: 'Ciclo Alcista con Confirmación', 
+        signal: 'COMPRA_FUERTE', 
+        strength: 0.84, 
+        next: 'G', 
+        type: 'cycle_bullish_confirmed',
+        description: 'Ciclo alcista fuertemente confirmado - triple verde tras base extensa'
+    },
+    'GGRRRRGG': { 
+        name: 'Transición Bajista-Alcista', 
+        signal: 'COMPRA', 
+        strength: 0.78, 
+        next: 'G', 
+        type: 'cycle_transition_up',
+        description: 'Transición de ciclo bajista a alcista - doble verde final tras caída'
+    },
+    'RRRRGGRR': { 
+        name: 'Transición Alcista-Bajista', 
+        signal: 'VENTA', 
+        strength: 0.78, 
+        next: 'R', 
+        type: 'cycle_transition_down',
+        description: 'Transición de ciclo alcista a bajista - doble roja final tras subida'
+    },
+
+    // PATRONES DE 10-12 VELAS - Ciclos Repetidos (Tus Especiales)
+    'GGRRRRGGRRRR': { 
+        name: 'Ciclo Bajista Repetido', 
+        signal: 'VENTA_FUERTE', 
+        strength: 0.92, 
+        next: 'R', 
+        type: 'cycle_bearish_repeated',
+        description: '¡PATRÓN CRÍTICO! Ciclo bajista repetido identico - alta confianza en continuación bajista'
+    },
+    'RRRRGGRRRRGG': { 
+        name: 'Ciclo Alcista Repetido', 
+        signal: 'COMPRA_FUERTE', 
+        strength: 0.92, 
+        next: 'G', 
+        type: 'cycle_bullish_repeated',
+        description: '¡PATRÓN CRÍTICO! Ciclo alcista repetido identico - alta confianza en continuación alcista'
+    },
+    'GGRRRRGGRRRRGGR': { 
+        name: 'Triple Ciclo Bajista', 
+        signal: 'VENTA_FUERTE', 
+        strength: 0.95, 
+        next: 'R', 
+        type: 'triple_cycle_bearish',
+        description: '¡PATRÓN EXTREMO! Triple repetición de ciclo bajista - máxima confianza bajista'
+    }
+};
+
+let lastComplexPattern = null;
+let complexPatternHistory = [];
+
 const dnaSvg = d3.select("#dna-svg");
 
 class PatternProjection {
@@ -2075,15 +2598,15 @@ class PatternProjection {
     this.description = description;
     this.isActive = false;
     this.isBroken = false;
+    this.isComplex = false;
   }
 }
 
 // ============================================================
-// SISTEMA DE 8 VELAS - SE ACTIVA EN CRUCE + RUPTURA
+// SISTEMA DE 8 VELAS
 // ============================================================
 
 function checkEightCandleCondition() {
-    // Se activa solo si hay al menos 8 velas Y hay un cruce detectado
     if (history.length < EIGHT_CANDLE_WINDOW) {
         return { shouldAnalyze: false, reason: 'insufficient_data' };
     }
@@ -2092,7 +2615,6 @@ function checkEightCandleCondition() {
         return { shouldAnalyze: false, reason: 'no_cross' };
     }
     
-    // Verificar si hay ruptura en las últimas 8 velas
     const window = history.slice(-EIGHT_CANDLE_WINDOW);
     const hasRupture = detectRuptureInWindowSimple(window);
     
@@ -2109,7 +2631,6 @@ function detectRuptureInWindowSimple(window) {
     const secondAvg = values.slice(5).reduce((a,b) => a+b, 0) / 3;
     const change = Math.abs(secondAvg - firstAvg);
     
-    // También detectar cambio de patrón dominante
     const firstPattern = detectDominantPattern(window.slice(0, 4));
     const secondPattern = detectDominantPattern(window.slice(-4));
     const patternRupture = firstPattern !== secondPattern && 
@@ -2127,7 +2648,6 @@ function analyzeEightCandlesOnCross() {
         return null;
     }
     
-    // Realizar análisis completo de 8 velas
     const window = history.slice(-EIGHT_CANDLE_WINDOW);
     eightCandleAnalysis.window = window;
     
@@ -2158,8 +2678,6 @@ function analyzeEightCandlesOnCross() {
     };
     
     eightCandleAnalysis.lastAnalysis = result;
-    
-    // Mostrar en panel principal
     displayEightCandleRupture(result);
     
     return result;
@@ -2565,1349 +3083,1703 @@ function showEightCandleAlert(analysis) {
             alertDiv.style.animation = 'slideOutRight 0.5s ease';
             setTimeout(() => alertDiv.remove(), 500);
         }
-    }, 15000); // 15 segundos para dar tiempo de leer
+    }, 15000);
 }
 
 // ============================================================
-// FUNCIONES DE CRUCE MA ORIGINALES (modificadas)
+// SISTEMA DE DETECCIÓN DE PATRONES COMPLEJOS
+// ============================================================
+
+function detectComplexPatterns() {
+    if (history.length < 4) return null;
+    
+    // Probar patrones de mayor longitud primero (más específicos)
+    const lengths = [12, 10, 8, 7, 6, 5, 4];
+    
+    for (let length of lengths) {
+        if (history.length >= length) {
+            const recent = history.slice(-length);
+            const colors = recent.map(h => h.color).join('');
+            
+            if (COMPLEX_PATTERNS[colors]) {
+                const pattern = COMPLEX_PATTERNS[colors];
+                
+                // Verificar si es una repetición del patrón anterior
+                const isRepetition = lastComplexPattern && 
+                                   lastComplexPattern.detected === colors &&
+                                   (Date.now() - lastComplexPattern.timestamp) < 10000;
+                
+                return {
+                    ...pattern,
+                    detected: colors,
+                    length: length,
+                    startIndex: history.length - length,
+                    isRepetition: isRepetition,
+                    adjustedStrength: isRepetition ? 
+                        Math.min(0.98, pattern.strength + 0.08) : 
+                        pattern.strength
+                };
+            }
+        }
+    }
+    
+    return null;
+}
+
+function generateComplexProjection(pattern) {
+    const strength = pattern.adjustedStrength || pattern.strength;
+    const signal = pattern.isRepetition ? 
+        (pattern.signal.includes('COMPRA') ? 'COMPRA_FUERTE' : 'VENTA_FUERTE') :
+        pattern.signal;
+    
+    activeProjection = new PatternProjection(
+        pattern.name + (pattern.isRepetition ? ' (REPETIDO)' : ''),
+        pattern.detected + pattern.next,
+        strength,
+        signal,
+        signal.includes('COMPRA') ? 'buy' : signal.includes('VENTA') ? 'sell' : 'hold',
+        pattern.isRepetition ? 
+            `¡PATRÓN REPETIDO! ${pattern.name} detectado nuevamente. Confianza aumentada al ${Math.round(strength * 100)}%. ${pattern.description}` :
+            `${pattern.name} detectado. ${pattern.description}`
+    );
+    
+    activeProjection.isComplex = true;
+    activeProjection.patternLength = pattern.length;
+    activeProjection.continuation = pattern.next;
+    activeProjection.originalPattern = pattern;
+    
+    // Generar mensaje específico para trading
+    const tradingMessage = generateTradingMessage(pattern, strength, signal);
+    activeProjection.tradingMessage = tradingMessage;
+    
+    // Generar caminos alternativos
+    projectedPaths = [
+        activeProjection,
+        new PatternProjection(
+            'Reversión Temprana',
+            pattern.detected + (pattern.next === 'G' ? 'R' : 'G'),
+            0.20,
+            pattern.next === 'G' ? 'VENTA' : 'COMPRA',
+            pattern.next === 'G' ? 'sell' : 'buy',
+            'Escenario alternativo: reversión inesperada del patrón establecido'
+        ),
+        new PatternProjection(
+            'Consolidación',
+            pattern.detected + pattern.next + (pattern.next === 'G' ? 'R' : 'G'),
+            0.10,
+            'MANTENER',
+            'hold',
+            'Escenario conservador: consolidación antes de próximo movimiento'
+        )
+    ];
+    
+    updateProjectionUI();
+    updateMainPrediction();
+    
+    // Mostrar notificación especial
+    const notifType = pattern.isRepetition ? 'success' : 'info';
+    const notifIcon = pattern.isRepetition ? '🔥' : '🔍';
+    showNotification(
+        `${notifIcon} ${pattern.name}${pattern.isRepetition ? ' REPETIDO' : ''} | ${signal} (${Math.round(strength * 100)}% confianza)`,
+        notifType
+    );
+}
+
+function generateTradingMessage(pattern, strength, signal) {
+    const confidence = Math.round(strength * 100);
+    
+    let action = '';
+    let urgency = '';
+    let rationale = '';
+    
+    // Determinar urgencia
+    if (confidence >= 90) {
+        urgency = '¡ACCIÓN INMEDIATA! ';
+    } else if (confidence >= 80) {
+        urgency = 'ALTA PRIORIDAD: ';
+    } else if (confidence >= 70) {
+        urgency = 'RECOMENDADO: ';
+    } else {
+        urgency = 'CONSIDERAR: ';
+    }
+    
+    // Mensaje según tipo de patrón
+    switch (pattern.type) {
+        case 'trend_strong_up':
+        case 'strong_start_up':
+        case 'breakout_up':
+        case 'cycle_bullish_repeated':
+            action = `${urgency}COMPRA AGRESIVA`;
+            rationale = `Tendencia alcista confirmada con ${confidence}% de probabilidad. Entrada inmediata con stop bajo el mínimo reciente.`;
+            break;
+            
+        case 'trend_strong_down':
+        case 'strong_start_down':
+        case 'breakout_down':
+        case 'cycle_bearish_repeated':
+            action = `${urgency}VENTA AGRESIVA`;
+            rationale = `Tendencia bajista confirmada con ${confidence}% de probabilidad. Entrada inmediata con stop sobre el máximo reciente.`;
+            break;
+            
+        case 'trend_change_up':
+        case 'reversal_up_complete':
+        case 'double_bottom':
+            action = `${urgency}COMPRA DE REVERSIÓN`;
+            rationale = `Cambio de tendencia detectado (${confidence}%). Entrada anticipada con stop de protección ajustado.`;
+            break;
+            
+        case 'trend_change_down':
+        case 'reversal_from_high':
+        case 'double_top':
+            action = `${urgency}VENTA DE REVERSIÓN`;
+            rationale = `Cambio de tendencia detectado (${confidence}%). Salida o venta corta con stop de protección.`;
+            break;
+            
+        case 'rejection_down':
+        case 'distribution':
+        case 'distribution_extended':
+            action = `${urgency}REDUCIR POSICIONES LARGAS`;
+            rationale = `Señales de debilidad alcista (${confidence}%). Tomar ganancias parciales o ajustar stops.`;
+            break;
+            
+        case 'rejection_up':
+        case 'accumulation':
+            action = `${urgency}ACUMULAR POSICIONES`;
+            rationale = `Señales de fortaleza en zona de soporte (${confidence}%). Compras escalonadas recomendadas.`;
+            break;
+            
+        case 'range_neutral':
+        case 'perfect_range':
+        case 'market_confusion':
+            action = 'MANTENER / NO OPERAR';
+            rationale = `Mercado sin dirección clara (${confidence}%). Esperar ruptura del rango para nueva posición.`;
+            break;
+            
+        default:
+            action = `${urgency}${signal}`;
+            rationale = `Patrón técnico detectado con ${confidence}% de confianza. Evaluar en contexto general del mercado.`;
+    }
+    
+    return {
+        action: action,
+        rationale: rationale,
+        confidence: confidence,
+        nextMove: `Próxima vela esperada: ${pattern.next === 'G' ? 'VERDE' : 'ROJA'}`
+    };
+}
+
+// ============================================================
+// FUNCIONES DE CRUCE MA
 // ============================================================
 
 function calculateMA2MA10() {
-  if (history.length < 10) return { ma2: null, ma10: null, crossed: false };
-  
-  const last2 = history.slice(-2);
-  const ma2 = last2.reduce((sum, h) => sum + (h.color === 'G' ? 1 : 0), 0) / 2 * 100;
-  
-  const period = Math.min(10, history.length);
-  const lastN = history.slice(-period);
-  const ma10 = lastN.reduce((sum, h) => sum + (h.color === 'G' ? 1 : 0), 0) / period * 100;
-  
-  const prevMa2 = history.length > 2 ? 
-    (history[history.length-3].color === 'G' ? 100 : 0 + history[history.length-2].color === 'G' ? 100 : 0) / 2 : ma2;
-  const prevMa10 = history.length > 10 ?
-    history.slice(-11, -1).reduce((sum, h) => sum + (h.color === 'G' ? 1 : 0), 0) / 10 * 100 : ma10;
-  
-  const crossed = (prevMa2 <= prevMa10 && ma2 > ma10) || (prevMa2 >= prevMa10 && ma2 < ma10);
-  const crossType = ma2 > ma10 ? 'golden' : 'death';
-  const strength = Math.min(100, Math.abs(ma2 - ma10) * 2);
-  
-  return { 
-    ma2, 
-    ma10, 
-    crossed, 
-    crossType, 
-    strength,
-    diff: ma2 - ma10 
-  };
+    if (history.length < 10) return { ma2: null, ma10: null, crossed: false };
+    
+    const last2 = history.slice(-2);
+    const ma2 = last2.reduce((sum, h) => sum + (h.color === 'G' ? 1 : 0), 0) / 2 * 100;
+    
+    const period = Math.min(10, history.length);
+    const lastN = history.slice(-period);
+    const ma10 = lastN.reduce((sum, h) => sum + (h.color === 'G' ? 1 : 0), 0) / period * 100;
+    
+    const prevMa2 = history.length > 2 ? 
+        (history[history.length-3].color === 'G' ? 100 : 0 + history[history.length-2].color === 'G' ? 100 : 0) / 2 : ma2;
+    const prevMa10 = history.length > 10 ?
+        history.slice(-11, -1).reduce((sum, h) => sum + (h.color === 'G' ? 1 : 0), 0) / 10 * 100 : ma10;
+    
+    const crossed = (prevMa2 <= prevMa10 && ma2 > ma10) || (prevMa2 >= prevMa10 && ma2 < ma10);
+    const crossType = ma2 > ma10 ? 'golden' : 'death';
+    const strength = Math.min(100, Math.abs(ma2 - ma10) * 2);
+    
+    return { 
+        ma2, 
+        ma10, 
+        crossed, 
+        crossType, 
+        strength,
+        diff: ma2 - ma10 
+    };
 }
 
 function autoDetectCross() {
-  const ma = calculateMA2MA10();
-  
-  if (!ma.ma2 || !ma.ma10) {
-    showNotification("Se necesitan al menos 10 velas para detectar cruce MA2/MA10", "warning");
-    return;
-  }
-  
-  if (ma.crossed) {
-    registerCross(ma.crossType, ma.strength, 'auto');
-    updateMAVisuals(ma.crossType, ma.strength, true);
-    showNotification(`🚨 CRUCE ${ma.crossType === 'golden' ? 'GOLDEN' : 'DEATH'} DETECTADO (${Math.round(ma.strength)}% fuerza)`, "success");
+    const ma = calculateMA2MA10();
     
-    // NUEVO: Verificar condición de 8 velas después de registrar cruce
-    setTimeout(() => {
-        const eightCandleResult = analyzeEightCandlesOnCross();
-        if (eightCandleResult) {
-            showNotification('📊 Análisis de 8 velas activado: Cruce + Ruptura detectados', 'success');
-        }
-    }, 500);
+    if (!ma.ma2 || !ma.ma10) {
+        showNotification("Se necesitan al menos 10 velas para detectar cruce MA2/MA10", "warning");
+        return;
+    }
     
-  } else {
-    const currentType = ma.ma2 > ma.ma10 ? 'golden' : 'death';
-    updateMAVisuals(currentType, ma.strength, false);
-    showNotification(`Sin cruce detectado. MA2 ${ma.ma2 > ma.ma10 ? '>' : '<'} MA10 (${Math.round(ma.strength)}% diferencia)`, "info");
-  }
-  
-  updateMAStatus(ma);
+    if (ma.crossed) {
+        registerCross(ma.crossType, ma.strength, 'auto');
+        updateMAVisuals(ma.crossType, ma.strength, true);
+        showNotification(`🚨 CRUCE ${ma.crossType === 'golden' ? 'GOLDEN' : 'DEATH'} DETECTADO (${Math.round(ma.strength)}% fuerza)`, "success");
+        
+        setTimeout(() => {
+            const eightCandleResult = analyzeEightCandlesOnCross();
+            if (eightCandleResult) {
+                showNotification('📊 Análisis de 8 velas activado: Cruce + Ruptura detectados', 'success');
+            }
+        }, 500);
+        
+    } else {
+        const currentType = ma.ma2 > ma.ma10 ? 'golden' : 'death';
+        updateMAVisuals(currentType, ma.strength, false);
+        showNotification(`Sin cruce detectado. MA2 ${ma.ma2 > ma.ma10 ? '>' : '<'} MA10 (${Math.round(ma.strength)}% diferencia)`, "info");
+    }
+    
+    updateMAStatus(ma);
 }
 
 function manualCross(type) {
-  let strength = 50;
-  
-  if (history.length >= 2) {
-    const recentG = history.slice(-5).filter(h => h.color === 'G').length;
-    const recentR = history.slice(-5).filter(h => h.color === 'R').length;
+    let strength = 50;
     
-    if (type === 'golden' && recentG >= 3) strength = 70 + (recentG * 5);
-    else if (type === 'death' && recentR >= 3) strength = 70 + (recentR * 5);
-    else strength = 60;
-  }
-  
-  strength = Math.min(95, strength);
-  
-  registerCross(type, strength, 'manual');
-  updateMAVisuals(type, strength, true);
-  
-  const btn = document.getElementById(type === 'golden' ? 'btn-golden' : 'btn-death');
-  btn.classList.add('active');
-  setTimeout(() => btn.classList.remove('active'), 2000);
-  
-  showNotification(`✋ CRUCE ${type === 'golden' ? 'GOLDEN' : 'DEATH'} MARCADO MANUALMENTE (${Math.round(strength)}% fuerza)`, "success");
-  
-  updateMAStatus({
-    ma2: type === 'golden' ? 70 : 30,
-    ma10: 50,
-    crossType: type,
-    strength: strength,
-    diff: type === 'golden' ? 20 : -20
-  });
-  
-  // NUEVO: Verificar condición de 8 velas después de cruce manual
-  setTimeout(() => {
-      const eightCandleResult = analyzeEightCandlesOnCross();
-      if (eightCandleResult) {
-          showNotification('📊 Análisis de 8 velas activado por cruce manual + ruptura', 'success');
-      }
-  }, 500);
+    if (history.length >= 2) {
+        const recentG = history.slice(-5).filter(h => h.color === 'G').length;
+        const recentR = history.slice(-5).filter(h => h.color === 'R').length;
+        
+        if (type === 'golden' && recentG >= 3) strength = 70 + (recentG * 5);
+        else if (type === 'death' && recentR >= 3) strength = 70 + (recentR * 5);
+        else strength = 60;
+    }
+    
+    strength = Math.min(95, strength);
+    
+    registerCross(type, strength, 'manual');
+    updateMAVisuals(type, strength, true);
+    
+    const btn = document.getElementById(type === 'golden' ? 'btn-golden' : 'btn-death');
+    btn.classList.add('active');
+    setTimeout(() => btn.classList.remove('active'), 2000);
+    
+    showNotification(`✋ CRUCE ${type === 'golden' ? 'GOLDEN' : 'DEATH'} MARCADO MANUALMENTE (${Math.round(strength)}% fuerza)`, "success");
+    
+    updateMAStatus({
+        ma2: type === 'golden' ? 70 : 30,
+        ma10: 50,
+        crossType: type,
+        strength: strength,
+        diff: type === 'golden' ? 20 : -20
+    });
+    
+    setTimeout(() => {
+        const eightCandleResult = analyzeEightCandlesOnCross();
+        if (eightCandleResult) {
+            showNotification('📊 Análisis de 8 velas activado por cruce manual + ruptura', 'success');
+        }
+    }, 500);
 }
 
 function registerCross(type, strength, source) {
-  const cross = {
-    type: type,
-    strength: strength,
-    source: source,
-    timestamp: Date.now(),
-    pattern: lastPattern || 'N/A',
-    historyLength: history.length
-  };
-  
-  maCrossHistory.push(cross);
-  lastCrossType = type;
-  isCrossing = true;
-  crossStrength = strength;
-  
-  updateMAHistory();
-  enhanceProjectionWithMA(type, strength);
-  
-  setTimeout(() => {
-    isCrossing = false;
-  }, 3000);
+    const cross = {
+        type: type,
+        strength: strength,
+        source: source,
+        timestamp: Date.now(),
+        pattern: lastPattern || 'N/A',
+        historyLength: history.length
+    };
+    
+    maCrossHistory.push(cross);
+    lastCrossType = type;
+    isCrossing = true;
+    crossStrength = strength;
+    
+    updateMAHistory();
+    enhanceProjectionWithMA(type, strength);
+    
+    setTimeout(() => {
+        isCrossing = false;
+    }, 3000);
 }
 
 function updateMAVisuals(type, strength, isCrossingNow) {
-  const fastLine = document.getElementById('ma-line-fast');
-  const slowLine = document.getElementById('ma-line-slow');
-  const crossIcon = document.getElementById('ma-cross-icon');
-  const alert = document.getElementById('ma-cross-alert');
-  const title = document.getElementById('ma-cross-title');
-  const subtitle = document.getElementById('ma-cross-subtitle');
-  
-  if (type === 'golden') {
-    fastLine.style.transform = 'translateY(-10px)';
-    slowLine.style.transform = 'translateY(10px)';
-    fastLine.style.opacity = '1';
-    slowLine.style.opacity = '0.6';
-  } else {
-    fastLine.style.transform = 'translateY(10px)';
-    slowLine.style.transform = 'translateY(-10px)';
-    fastLine.style.opacity = '0.6';
-    slowLine.style.opacity = '1';
-  }
-  
-  if (isCrossingNow) {
-    fastLine.classList.add('crossing');
-    slowLine.classList.add('crossing');
-    crossIcon.textContent = type === 'golden' ? '🚀' : '💀';
-    crossIcon.style.color = type === 'golden' ? 'var(--cross-bullish)' : 'var(--cross-bearish)';
+    const fastLine = document.getElementById('ma-line-fast');
+    const slowLine = document.getElementById('ma-line-slow');
+    const crossIcon = document.getElementById('ma-cross-icon');
+    const alert = document.getElementById('ma-cross-alert');
+    const title = document.getElementById('ma-cross-title');
+    const subtitle = document.getElementById('ma-cross-subtitle');
     
-    alert.classList.add('active');
-    title.textContent = type === 'golden' ? '🚀 GOLDEN CROSS DETECTADO' : '💀 DEATH CROSS DETECTADO';
-    title.style.color = type === 'golden' ? 'var(--cross-bullish)' : 'var(--cross-bearish)';
-    subtitle.textContent = type === 'golden' ? 
-      `MA2 cruza sobre MA10 con ${Math.round(strength)}% fuerza alcista` : 
-      `MA2 cruza bajo MA10 con ${Math.round(strength)}% fuerza bajista`;
+    if (type === 'golden') {
+        fastLine.style.transform = 'translateY(-10px)';
+        slowLine.style.transform = 'translateY(10px)';
+        fastLine.style.opacity = '1';
+        slowLine.style.opacity = '0.6';
+    } else {
+        fastLine.style.transform = 'translateY(10px)';
+        slowLine.style.transform = 'translateY(-10px)';
+        fastLine.style.opacity = '0.6';
+        slowLine.style.opacity = '1';
+    }
     
-    document.getElementById('strength-meter').style.display = 'block';
-    updateStrengthMeter(strength, type);
-  } else {
-    fastLine.classList.remove('crossing');
-    slowLine.classList.remove('crossing');
-    crossIcon.textContent = '⚔️';
-    crossIcon.style.color = 'var(--gold)';
-    alert.classList.remove('active');
-  }
+    if (isCrossingNow) {
+        fastLine.classList.add('crossing');
+        slowLine.classList.add('crossing');
+        crossIcon.textContent = type === 'golden' ? '🚀' : '💀';
+        crossIcon.style.color = type === 'golden' ? 'var(--cross-bullish)' : 'var(--cross-bearish)';
+        
+        alert.classList.add('active');
+        title.textContent = type === 'golden' ? '🚀 GOLDEN CROSS DETECTADO' : '💀 DEATH CROSS DETECTADO';
+        title.style.color = type === 'golden' ? 'var(--cross-bullish)' : 'var(--cross-bearish)';
+        subtitle.textContent = type === 'golden' ? 
+            `MA2 cruza sobre MA10 con ${Math.round(strength)}% fuerza alcista` : 
+            `MA2 cruza bajo MA10 con ${Math.round(strength)}% fuerza bajista`;
+        
+        document.getElementById('strength-meter').style.display = 'block';
+        updateStrengthMeter(strength, type);
+    } else {
+        fastLine.classList.remove('crossing');
+        slowLine.classList.remove('crossing');
+        crossIcon.textContent = '⚔️';
+        crossIcon.style.color = 'var(--gold)';
+        alert.classList.remove('active');
+    }
 }
 
 function updateStrengthMeter(strength, type) {
-  const fill = document.getElementById('strength-fill');
-  const marker = document.getElementById('strength-marker');
-  const value = document.getElementById('strength-value');
-  const text = document.getElementById('strength-text');
-  
-  fill.style.width = strength + '%';
-  marker.style.left = strength + '%';
-  value.textContent = Math.round(strength) + '%';
-  
-  if (strength >= 80) {
-    text.textContent = 'Muy Fuerte';
-    text.style.color = type === 'golden' ? 'var(--green)' : 'var(--red)';
-  } else if (strength >= 60) {
-    text.textContent = 'Fuerte';
-    text.style.color = 'var(--gold)';
-  } else if (strength >= 40) {
-    text.textContent = 'Moderada';
-    text.style.color = 'var(--orange)';
-  } else {
-    text.textContent = 'Débil';
-    text.style.color = 'var(--text-dim)';
-  }
+    const fill = document.getElementById('strength-fill');
+    const marker = document.getElementById('strength-marker');
+    const value = document.getElementById('strength-value');
+    const text = document.getElementById('strength-text');
+    
+    fill.style.width = strength + '%';
+    marker.style.left = strength + '%';
+    value.textContent = Math.round(strength) + '%';
+    
+    if (strength >= 80) {
+        text.textContent = 'Muy Fuerte';
+        text.style.color = type === 'golden' ? 'var(--green)' : 'var(--red)';
+    } else if (strength >= 60) {
+        text.textContent = 'Fuerte';
+        text.style.color = 'var(--gold)';
+    } else if (strength >= 40) {
+        text.textContent = 'Moderada';
+        text.style.color = 'var(--orange)';
+    } else {
+        text.textContent = 'Débil';
+        text.style.color = 'var(--text-dim)';
+    }
 }
 
 function updateMAHistory() {
-  const container = document.getElementById('ma-history-list');
-  
-  if (maCrossHistory.length === 0) {
-    container.innerHTML = '<div style="text-align: center; color: var(--text-dim); font-size: 10px; padding: 10px;">Sin cruces registrados</div>';
-    return;
-  }
-  
-  container.innerHTML = maCrossHistory.slice(-5).reverse().map(cross => {
-    const time = new Date(cross.timestamp).toLocaleTimeString();
-    const isGolden = cross.type === 'golden';
-    return `
-      <div class="ma-cross-item ${isGolden ? 'golden' : 'death'}">
-        <div>
-          <span class="cross-type ${isGolden ? 'golden' : 'death'}">
-            ${isGolden ? '🚀 GOLDEN' : '💀 DEATH'}
-          </span>
-          <span style="color: var(--text-dim); margin-left: 5px;">
-            ${Math.round(cross.strength)}%
-          </span>
-          ${cross.source === 'manual' ? '<span style="color: var(--gold); font-size: 8px;">[MANUAL]</span>' : ''}
-        </div>
-        <div class="cross-time">${time}</div>
-      </div>
-    `;
-  }).join('');
+    const container = document.getElementById('ma-history-list');
+    
+    if (maCrossHistory.length === 0) {
+        container.innerHTML = '<div style="text-align: center; color: var(--text-dim); font-size: 10px; padding: 10px;">Sin cruces registrados</div>';
+        return;
+    }
+    
+    container.innerHTML = maCrossHistory.slice(-5).reverse().map(cross => {
+        const time = new Date(cross.timestamp).toLocaleTimeString();
+        const isGolden = cross.type === 'golden';
+        return `
+            <div class="ma-cross-item ${isGolden ? 'golden' : 'death'}">
+                <div>
+                    <span class="cross-type ${isGolden ? 'golden' : 'death'}">
+                        ${isGolden ? '🚀 GOLDEN' : '💀 DEATH'}
+                    </span>
+                    <span style="color: var(--text-dim); margin-left: 5px;">
+                        ${Math.round(cross.strength)}%
+                    </span>
+                    ${cross.source === 'manual' ? '<span style="color: var(--gold); font-size: 8px;">[MANUAL]</span>' : ''}
+                </div>
+                <div class="cross-time">${time}</div>
+            </div>
+        `;
+    }).join('');
 }
 
 function updateMAStatus(ma) {
-  const indicator = document.getElementById('ma-status-indicator');
-  const text = document.getElementById('ma-status-text');
-  
-  if (!ma || !ma.ma2) {
-    indicator.className = 'ma-status-indicator ma-status-waiting';
-    text.textContent = 'ESPERANDO CRUCE MA2/MA10';
-    return;
-  }
-  
-  if (isCrossing) {
-    indicator.className = `ma-status-indicator ${ma.crossType === 'golden' ? 'ma-status-bullish' : 'ma-status-bearish'}`;
-    text.textContent = `CRUCE ${ma.crossType === 'golden' ? 'GOLDEN' : 'DEATH'} ACTIVO`;
-  } else if (ma.ma2 > ma.ma10) {
-    indicator.className = 'ma-status-indicator ma-status-bullish';
-    text.textContent = `MA2 > MA10 (${Math.round(ma.diff)}%)`;
-  } else {
-    indicator.className = 'ma-status-indicator ma-status-bearish';
-    text.textContent = `MA2 < MA10 (${Math.round(Math.abs(ma.diff))}%)`;
-  }
+    const indicator = document.getElementById('ma-status-indicator');
+    const text = document.getElementById('ma-status-text');
+    
+    if (!ma || !ma.ma2) {
+        indicator.className = 'ma-status-indicator ma-status-waiting';
+        text.textContent = 'ESPERANDO CRUCE MA2/MA10';
+        return;
+    }
+    
+    if (isCrossing) {
+        indicator.className = `ma-status-indicator ${ma.crossType === 'golden' ? 'ma-status-bullish' : 'ma-status-bearish'}`;
+        text.textContent = `CRUCE ${ma.crossType === 'golden' ? 'GOLDEN' : 'DEATH'} ACTIVO`;
+    } else if (ma.ma2 > ma.ma10) {
+        indicator.className = 'ma-status-indicator ma-status-bullish';
+        text.textContent = `MA2 > MA10 (${Math.round(ma.diff)}%)`;
+    } else {
+        indicator.className = 'ma-status-indicator ma-status-bearish';
+        text.textContent = `MA2 < MA10 (${Math.round(Math.abs(ma.diff))}%)`;
+    }
 }
 
 function enhanceProjectionWithMA(type, strength) {
-  if (!activeProjection) return;
-  
-  const multiplier = strength / 100;
-  
-  if (type === 'golden') {
-    if (activeProjection.signalType === 'buy') {
-      activeProjection.probability = Math.min(0.95, activeProjection.probability + (0.15 * multiplier));
-      activeProjection.description += ` [+CRUCE GOLDEN ${Math.round(strength)}%]`;
-    } else if (activeProjection.signalType === 'sell') {
-      activeProjection.probability = Math.max(0.1, activeProjection.probability - (0.2 * multiplier));
-      activeProjection.description = `Conflicto: ${activeProjection.description} vs CRUCE GOLDEN`;
+    if (!activeProjection) return;
+    
+    const multiplier = strength / 100;
+    
+    if (type === 'golden') {
+        if (activeProjection.signalType === 'buy') {
+            activeProjection.probability = Math.min(0.95, activeProjection.probability + (0.15 * multiplier));
+            activeProjection.description += ` [+CRUCE GOLDEN ${Math.round(strength)}%]`;
+        } else if (activeProjection.signalType === 'sell') {
+            activeProjection.probability = Math.max(0.1, activeProjection.probability - (0.2 * multiplier));
+            activeProjection.description = `Conflicto: ${activeProjection.description} vs CRUCE GOLDEN`;
+        }
+    } else {
+        if (activeProjection.signalType === 'sell') {
+            activeProjection.probability = Math.min(0.95, activeProjection.probability + (0.15 * multiplier));
+            activeProjection.description += ` [+CRUCE DEATH ${Math.round(strength)}%]`;
+        } else if (activeProjection.signalType === 'buy') {
+            activeProjection.probability = Math.max(0.1, activeProjection.probability - (0.2 * multiplier));
+            activeProjection.description = `Conflicto: ${activeProjection.description} vs CRUCE DEATH`;
+        }
     }
-  } else {
-    if (activeProjection.signalType === 'sell') {
-      activeProjection.probability = Math.min(0.95, activeProjection.probability + (0.15 * multiplier));
-      activeProjection.description += ` [+CRUCE DEATH ${Math.round(strength)}%]`;
-    } else if (activeProjection.signalType === 'buy') {
-      activeProjection.probability = Math.max(0.1, activeProjection.probability - (0.2 * multiplier));
-      activeProjection.description = `Conflicto: ${activeProjection.description} vs CRUCE DEATH`;
-    }
-  }
-  
-  updateProjectionUI();
-  updateMainPrediction();
+    
+    updateProjectionUI();
+    updateMainPrediction();
 }
 
 function showNotification(message, type) {
-  const notif = document.createElement('div');
-  notif.style.cssText = `
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 15px 20px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: bold;
-    z-index: 10000;
-    animation: slideIn 0.3s ease;
-    max-width: 300px;
-    word-wrap: break-word;
-  `;
-  
-  if (type === 'success') {
-    notif.style.background = 'rgba(0,255,136,0.9)';
-    notif.style.color = '#000';
-    notif.style.boxShadow = '0 0 20px rgba(0,255,136,0.5)';
-  } else if (type === 'warning') {
-    notif.style.background = 'rgba(255,102,0,0.9)';
-    notif.style.color = '#fff';
-  } else {
-    notif.style.background = 'rgba(0,212,255,0.9)';
-    notif.style.color = '#000';
-  }
-  
-  notif.textContent = message;
-  document.body.appendChild(notif);
-  
-  setTimeout(() => {
-    notif.style.animation = 'slideOut 0.3s ease';
-    setTimeout(() => notif.remove(), 300);
-  }, 3000);
+    const notif = document.createElement('div');
+    notif.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: bold;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        max-width: 300px;
+        word-wrap: break-word;
+    `;
+    
+    if (type === 'success') {
+        notif.style.background = 'rgba(0,255,136,0.9)';
+        notif.style.color = '#000';
+        notif.style.boxShadow = '0 0 20px rgba(0,255,136,0.5)';
+    } else if (type === 'warning') {
+        notif.style.background = 'rgba(255,102,0,0.9)';
+        notif.style.color = '#fff';
+    } else {
+        notif.style.background = 'rgba(0,212,255,0.9)';
+        notif.style.color = '#000';
+    }
+    
+    notif.textContent = message;
+    document.body.appendChild(notif);
+    
+    setTimeout(() => {
+        notif.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notif.remove(), 300);
+    }, 3000);
 }
 
 // ============================================================
-// FUNCIONES ORIGINALES DEL SISTEMA ADN
+// FUNCIONES DE ANÁLISIS TÉCNICO
 // ============================================================
 
 function patternToValue(pattern) {
-  if (!pattern) return 50;
-  const map = {
-    'GG': 80, 'GR': 60, 'RG': 40, 'RR': 20,
-    'GGG': 90, 'RRR': 10, 'GGR': 70, 'GRR': 30,
-    'RGG': 70, 'RRG': 30
-  };
-  return map[pattern] || 50;
+    if (!pattern) return 50;
+    const map = {
+        'GG': 80, 'GR': 60, 'RG': 40, 'RR': 20,
+        'GGG': 90, 'RRR': 10, 'GGR': 70, 'GRR': 30,
+        'RGG': 70, 'RRG': 30
+    };
+    return map[pattern] || 50;
 }
 
 function calculatePatternRSI(periods = 6) {
-  if (patternHistory.length < 2) return { value: 50, signal: 'neutral' };
-  
-  const values = patternHistory.map(p => patternToValue(p.pattern));
-  if (values.length < periods) return { value: 50, signal: 'neutral' };
-  
-  const recent = values.slice(-periods);
-  let gains = 0, losses = 0;
-  
-  for (let i = 1; i < recent.length; i++) {
-    const change = recent[i] - recent[i-1];
-    if (change > 0) gains += change;
-    else losses += Math.abs(change);
-  }
-  
-  const avgGain = gains / (periods - 1);
-  const avgLoss = losses / (periods - 1);
-  
-  if (avgLoss === 0) return { value: 100, signal: 'overbought' };
-  
-  const rs = avgGain / avgLoss;
-  const rsi = 100 - (100 / (1 + rs));
-  
-  let signal = 'neutral';
-  if (rsi > 70) signal = 'overbought';
-  else if (rsi < 30) signal = 'oversold';
-  
-  return { value: Math.round(rsi), signal };
+    if (patternHistory.length < 2) return { value: 50, signal: 'neutral' };
+    
+    const values = patternHistory.map(p => patternToValue(p.pattern));
+    if (values.length < periods) return { value: 50, signal: 'neutral' };
+    
+    const recent = values.slice(-periods);
+    let gains = 0, losses = 0;
+    
+    for (let i = 1; i < recent.length; i++) {
+        const change = recent[i] - recent[i-1];
+        if (change > 0) gains += change;
+        else losses += Math.abs(change);
+    }
+    
+    const avgGain = gains / (periods - 1);
+    const avgLoss = losses / (periods - 1);
+    
+    if (avgLoss === 0) return { value: 100, signal: 'overbought' };
+    
+    const rs = avgGain / avgLoss;
+    const rsi = 100 - (100 / (1 + rs));
+    
+    let signal = 'neutral';
+    if (rsi > 70) signal = 'overbought';
+    else if (rsi < 30) signal = 'oversold';
+    
+    return { value: Math.round(rsi), signal };
 }
 
 function calculatePatternMA() {
-  if (patternHistory.length < 2) return { ma3: null, ma5: null, ma8: null, trend: 'neutral' };
-  
-  const values = patternHistory.map(p => patternToValue(p.pattern));
-  
-  const ma = (arr, period) => {
-    if (arr.length < period) return null;
-    const slice = arr.slice(-period);
-    return slice.reduce((a, b) => a + b, 0) / period;
-  };
-  
-  const ma3 = ma(values, Math.min(3, values.length));
-  const ma5 = ma(values, Math.min(5, values.length));
-  const ma8 = ma(values, Math.min(8, values.length));
-  
-  let trend = 'neutral';
-  if (ma3 && ma5 && ma8) {
-    if (ma3 > ma5 && ma5 > ma8) trend = 'strong_up';
-    else if (ma3 > ma5) trend = 'up';
-    else if (ma3 < ma5 && ma5 < ma8) trend = 'strong_down';
-    else if (ma3 < ma5) trend = 'down';
-  }
-  
-  return { ma3, ma5, ma8, trend };
+    if (patternHistory.length < 2) return { ma3: null, ma5: null, ma8: null, trend: 'neutral' };
+    
+    const values = patternHistory.map(p => patternToValue(p.pattern));
+    
+    const ma = (arr, period) => {
+        if (arr.length < period) return null;
+        const slice = arr.slice(-period);
+        return slice.reduce((a, b) => a + b, 0) / period;
+    };
+    
+    const ma3 = ma(values, Math.min(3, values.length));
+    const ma5 = ma(values, Math.min(5, values.length));
+    const ma8 = ma(values, Math.min(8, values.length));
+    
+    let trend = 'neutral';
+    if (ma3 && ma5 && ma8) {
+        if (ma3 > ma5 && ma5 > ma8) trend = 'strong_up';
+        else if (ma3 > ma5) trend = 'up';
+        else if (ma3 < ma5 && ma5 < ma8) trend = 'strong_down';
+        else if (ma3 < ma5) trend = 'down';
+    }
+    
+    return { ma3, ma5, ma8, trend };
 }
 
 function calculatePatternBollinger(period = 5) {
-  if (patternHistory.length < period) {
-    return { upper: 80, middle: 50, lower: 20, position: 50, width: 'normal' };
-  }
-  
-  const values = patternHistory.map(p => patternToValue(p.pattern)).slice(-period);
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
-  const stdDev = Math.sqrt(variance);
-  
-  const upper = mean + (2 * stdDev);
-  const lower = mean - (2 * stdDev);
-  const current = values[values.length - 1];
-  
-  const position = ((current - lower) / (upper - lower)) * 100;
-  
-  let width = 'normal';
-  if (stdDev > 25) width = 'high';
-  else if (stdDev < 10) width = 'low';
-  
-  return { 
-    upper: Math.round(upper), 
-    middle: Math.round(mean), 
-    lower: Math.round(lower), 
-    position: Math.max(0, Math.min(100, position)),
-    width
-  };
+    if (patternHistory.length < period) {
+        return { upper: 80, middle: 50, lower: 20, position: 50, width: 'normal' };
+    }
+    
+    const values = patternHistory.map(p => patternToValue(p.pattern)).slice(-period);
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+    const stdDev = Math.sqrt(variance);
+    
+    const upper = mean + (2 * stdDev);
+    const lower = mean - (2 * stdDev);
+    const current = values[values.length - 1];
+    
+    const position = ((current - lower) / (upper - lower)) * 100;
+    
+    let width = 'normal';
+    if (stdDev > 25) width = 'high';
+    else if (stdDev < 10) width = 'low';
+    
+    return { 
+        upper: Math.round(upper), 
+        middle: Math.round(mean), 
+        lower: Math.round(lower), 
+        position: Math.max(0, Math.min(100, position)),
+        width
+    };
 }
 
 function detectTechnicalRupture() {
-  if (patternHistory.length < 4) return false;
-  
-  const recent = patternHistory.slice(-4);
-  const values = recent.map(p => patternToValue(p.pattern));
-  
-  const maxChange = Math.max(...values) - Math.min(...values);
-  const lastPattern = recent[recent.length - 1].pattern;
-  const prevPattern = recent[recent.length - 2].pattern;
-  
-  const drasticChange = patternToValue(lastPattern) - patternToValue(prevPattern);
-  
-  return Math.abs(drasticChange) > 35 || maxChange > 50;
+    if (patternHistory.length < 4) return false;
+    
+    const recent = patternHistory.slice(-4);
+    const values = recent.map(p => patternToValue(p.pattern));
+    
+    const maxChange = Math.max(...values) - Math.min(...values);
+    const lastPattern = recent[recent.length - 1].pattern;
+    const prevPattern = recent[recent.length - 2].pattern;
+    
+    const drasticChange = patternToValue(lastPattern) - patternToValue(prevPattern);
+    
+    return Math.abs(drasticChange) > 35 || maxChange > 50;
 }
 
 function generatePostRuptureScenarios() {
-  if (patternHistory.length < 2) return [];
-  
-  const lastPattern = patternHistory[patternHistory.length - 1].pattern;
-  const lastValue = patternToValue(lastPattern);
-  
-  const scenarios = [];
-  
-  const momentumDir = lastValue > 50 ? 'ALCISTA' : 'BAJISTA';
-  scenarios.push({
-    probability: '40%',
-    direction: momentumDir,
-    type: 'probable',
-    desc: `Continuación ${momentumDir.toLowerCase()}`
-  });
-  
-  scenarios.push({
-    probability: '35%',
-    direction: lastValue > 50 ? 'BAJISTA' : 'ALCISTA',
-    type: 'possible',
-    desc: 'Reversión técnica'
-  });
-  
-  scenarios.push({
-    probability: '25%',
-    direction: 'LATERAL',
-    type: 'weak',
-    desc: 'Rango de consolidación'
-  });
-  
-  return scenarios;
+    if (patternHistory.length < 2) return [];
+    
+    const lastPattern = patternHistory[patternHistory.length - 1].pattern;
+    const lastValue = patternToValue(lastPattern);
+    
+    const scenarios = [];
+    
+    const momentumDir = lastValue > 50 ? 'ALCISTA' : 'BAJISTA';
+    scenarios.push({
+        probability: '40%',
+        direction: momentumDir,
+        type: 'probable',
+        desc: `Continuación ${momentumDir.toLowerCase()}`
+    });
+    
+    scenarios.push({
+        probability: '35%',
+        direction: lastValue > 50 ? 'BAJISTA' : 'ALCISTA',
+        type: 'possible',
+        desc: 'Reversión técnica'
+    });
+    
+    scenarios.push({
+        probability: '25%',
+        direction: 'LATERAL',
+        type: 'weak',
+        desc: 'Rango de consolidación'
+    });
+    
+    return scenarios;
 }
 
 function updateTechnicalPanel() {
-  updatePatternHistory();
-  
-  const rsi = calculatePatternRSI();
-  const rsiEl = document.getElementById('rsi-value');
-  const rsiBar = document.getElementById('rsi-bar');
-  const rsiSignal = document.getElementById('rsi-signal');
-  
-  rsiEl.textContent = rsi.value;
-  rsiEl.className = `indicator-value ${rsi.value > 60 ? 'bullish' : rsi.value < 40 ? 'bearish' : 'neutral'}`;
-  rsiBar.style.width = rsi.value + '%';
-  rsiBar.style.background = rsi.value > 70 ? 'var(--red)' : rsi.value < 30 ? 'var(--green)' : 'var(--gold)';
-  rsiSignal.textContent = rsi.signal === 'overbought' ? '⚠️ Sobrecompra - Posible reversión' : 
-                          rsi.signal === 'oversold' ? '⚠️ Sobreventa - Posible rebote' : 
-                          '✓ Zona neutral';
-  rsiSignal.className = `indicator-signal ${rsi.signal === 'overbought' ? 'sell' : rsi.signal === 'oversold' ? 'buy' : 'hold'}`;
-  
-  const ma = calculatePatternMA();
-  document.getElementById('ma3-value').textContent = ma.ma3 ? ma.ma3.toFixed(1) : '--';
-  document.getElementById('ma5-value').textContent = ma.ma5 ? ma.ma5.toFixed(1) : '--';
-  document.getElementById('ma8-value').textContent = ma.ma8 ? ma.ma8.toFixed(1) : '--';
-  
-  const maSignalEl = document.getElementById('ma-signal');
-  const maSignalText = document.getElementById('ma-signal-text');
-  
-  const maTrendMap = {
-    'strong_up': { text: 'FUERTE ALCISTA', class: 'bullish', signal: 'buy' },
-    'up': { text: 'ALCISTA', class: 'bullish', signal: 'buy' },
-    'strong_down': { text: 'FUERTE BAJISTA', class: 'bearish', signal: 'sell' },
-    'down': { text: 'BAJISTA', class: 'bearish', signal: 'sell' },
-    'neutral': { text: 'NEUTRAL', class: 'neutral', signal: 'hold' }
-  };
-  
-  const maTrend = maTrendMap[ma.trend];
-  maSignalEl.textContent = maTrend.text;
-  maSignalEl.className = `indicator-value ${maTrend.class}`;
-  maSignalText.textContent = ma.trend.includes('up') ? 'Tendencia alcista confirmada' : 
-                             ma.trend.includes('down') ? 'Tendencia bajista confirmada' : 
-                             'Sin tendencia definida';
-  maSignalText.className = `indicator-signal ${maTrend.signal}`;
-  
-  const bb = calculatePatternBollinger();
-  document.getElementById('bb-upper-val').textContent = bb.upper;
-  document.getElementById('bb-middle-val').textContent = bb.middle;
-  document.getElementById('bb-lower-val').textContent = bb.lower;
-  
-  const bbPrice = document.getElementById('bb-price');
-  bbPrice.style.top = (100 - bb.position) + '%';
-  
-  const bbPosEl = document.getElementById('bb-position');
-  const bbSignal = document.getElementById('bb-signal');
-  
-  let bbPosText = 'Media';
-  let bbPosClass = 'neutral';
-  let bbSignalClass = 'hold';
-  let bbSignalText = 'Precio en zona media';
-  
-  if (bb.position > 90) {
-    bbPosText = 'Superior';
-    bbPosClass = 'bullish';
-    bbSignalClass = 'sell';
-    bbSignalText = '⚠️ Cerca banda superior - Posible caída';
-  } else if (bb.position < 10) {
-    bbPosText = 'Inferior';
-    bbPosClass = 'bearish';
-    bbSignalClass = 'buy';
-    bbSignalText = '⚠️ Cerca banda inferior - Posible rebote';
-  } else if (bb.position > 60) {
-    bbPosText = 'Alta';
-    bbPosClass = 'bullish';
-  } else if (bb.position < 40) {
-    bbPosText = 'Baja';
-    bbPosClass = 'bearish';
-  }
-  
-  bbPosEl.textContent = bbPosText;
-  bbPosEl.className = `indicator-value ${bbPosClass}`;
-  bbSignal.textContent = bbSignalText;
-  bbSignal.className = `indicator-signal ${bbSignalClass}`;
-  
-  const trendValue = ma.ma3 || 50;
-  const trendBar = document.getElementById('trend-bar');
-  const trendVal = document.getElementById('trend-value');
-  const trendSig = document.getElementById('trend-signal');
-  
-  trendBar.style.width = trendValue + '%';
-  trendBar.style.background = trendValue > 60 ? 'var(--green)' : trendValue < 40 ? 'var(--red)' : 'var(--gold)';
-  trendVal.textContent = trendValue > 60 ? 'ALCISTA' : trendValue < 40 ? 'BAJISTA' : 'NEUTRAL';
-  trendVal.className = `indicator-value ${trendValue > 60 ? 'bullish' : trendValue < 40 ? 'bearish' : 'neutral'}`;
-  trendSig.textContent = trendValue > 60 ? 'Momentum positivo detectado' : trendValue < 40 ? 'Momentum negativo detectado' : 'Sin momentum claro';
-  trendSig.className = `indicator-signal ${trendValue > 60 ? 'buy' : trendValue < 40 ? 'sell' : 'hold'}`;
-  
-  updateConfluence(rsi, ma, bb);
-  
-  const techRupture = detectTechnicalRupture();
-  const ruptureAlert = document.getElementById('rupture-tech-alert');
-  const techStatus = document.getElementById('tech-status');
-  
-  if (techRupture || ruptureDetected) {
-    ruptureAlert.classList.add('active');
-    techStatus.textContent = 'RUPTURA';
-    techStatus.className = 'tech-status conflict';
+    updatePatternHistory();
     
-    const scenarios = generatePostRuptureScenarios();
-    const container = document.getElementById('trend-scenarios');
-    container.innerHTML = scenarios.map(s => `
-      <div class="trend-scenario ${s.type}">
-        <span class="scenario-prob">${s.probability}</span>
-        <span class="scenario-dir ${s.direction === 'ALCISTA' ? 'up' : s.direction === 'BAJISTA' ? 'down' : 'side'}">
-          ${s.direction}
-        </span>
-        <span style="color: var(--text-dim);">${s.desc}</span>
-      </div>
-    `).join('');
-  } else {
-    ruptureAlert.classList.remove('active');
-    techStatus.textContent = 'VALIDANDO';
-    techStatus.className = 'tech-status validating';
-  }
-  
-  updatePatternDisplay();
+    const rsi = calculatePatternRSI();
+    const rsiEl = document.getElementById('rsi-value');
+    const rsiBar = document.getElementById('rsi-bar');
+    const rsiSignal = document.getElementById('rsi-signal');
+    
+    rsiEl.textContent = rsi.value;
+    rsiEl.className = `indicator-value ${rsi.value > 60 ? 'bullish' : rsi.value < 40 ? 'bearish' : 'neutral'}`;
+    rsiBar.style.width = rsi.value + '%';
+    rsiBar.style.background = rsi.value > 70 ? 'var(--red)' : rsi.value < 30 ? 'var(--green)' : 'var(--gold)';
+    rsiSignal.textContent = rsi.signal === 'overbought' ? '⚠️ Sobrecompra - Posible reversión' : 
+                            rsi.signal === 'oversold' ? '⚠️ Sobreventa - Posible rebote' : 
+                            '✓ Zona neutral';
+    rsiSignal.className = `indicator-signal ${rsi.signal === 'overbought' ? 'sell' : rsi.signal === 'oversold' ? 'buy' : 'hold'}`;
+    
+    const ma = calculatePatternMA();
+    document.getElementById('ma3-value').textContent = ma.ma3 ? ma.ma3.toFixed(1) : '--';
+    document.getElementById('ma5-value').textContent = ma.ma5 ? ma.ma5.toFixed(1) : '--';
+    document.getElementById('ma8-value').textContent = ma.ma8 ? ma.ma8.toFixed(1) : '--';
+    
+    const maSignalEl = document.getElementById('ma-signal');
+    const maSignalText = document.getElementById('ma-signal-text');
+    
+    const maTrendMap = {
+        'strong_up': { text: 'FUERTE ALCISTA', class: 'bullish', signal: 'buy' },
+        'up': { text: 'ALCISTA', class: 'bullish', signal: 'buy' },
+        'strong_down': { text: 'FUERTE BAJISTA', class: 'bearish', signal: 'sell' },
+        'down': { text: 'BAJISTA', class: 'bearish', signal: 'sell' },
+        'neutral': { text: 'NEUTRAL', class: 'neutral', signal: 'hold' }
+    };
+    
+    const maTrend = maTrendMap[ma.trend];
+    maSignalEl.textContent = maTrend.text;
+    maSignalEl.className = `indicator-value ${maTrend.class}`;
+    maSignalText.textContent = ma.trend.includes('up') ? 'Tendencia alcista confirmada' : 
+                               ma.trend.includes('down') ? 'Tendencia bajista confirmada' : 
+                               'Sin tendencia definida';
+    maSignalText.className = `indicator-signal ${maTrend.signal}`;
+    
+    const bb = calculatePatternBollinger();
+    document.getElementById('bb-upper-val').textContent = bb.upper;
+    document.getElementById('bb-middle-val').textContent = bb.middle;
+    document.getElementById('bb-lower-val').textContent = bb.lower;
+    
+    const bbPrice = document.getElementById('bb-price');
+    bbPrice.style.top = (100 - bb.position) + '%';
+    
+    const bbPosEl = document.getElementById('bb-position');
+    const bbSignal = document.getElementById('bb-signal');
+    
+    let bbPosText = 'Media';
+    let bbPosClass = 'neutral';
+    let bbSignalClass = 'hold';
+    let bbSignalText = 'Precio en zona media';
+    
+    if (bb.position > 90) {
+        bbPosText = 'Superior';
+        bbPosClass = 'bullish';
+        bbSignalClass = 'sell';
+        bbSignalText = '⚠️ Cerca banda superior - Posible caída';
+    } else if (bb.position < 10) {
+        bbPosText = 'Inferior';
+        bbPosClass = 'bearish';
+        bbSignalClass = 'buy';
+        bbSignalText = '⚠️ Cerca banda inferior - Posible rebote';
+    } else if (bb.position > 60) {
+        bbPosText = 'Alta';
+        bbPosClass = 'bullish';
+    } else if (bb.position < 40) {
+        bbPosText = 'Baja';
+        bbPosClass = 'bearish';
+    }
+    
+    bbPosEl.textContent = bbPosText;
+    bbPosEl.className = `indicator-value ${bbPosClass}`;
+    bbSignal.textContent = bbSignalText;
+    bbSignal.className = `indicator-signal ${bbSignalClass}`;
+    
+    const trendValue = ma.ma3 || 50;
+    const trendBar = document.getElementById('trend-bar');
+    const trendVal = document.getElementById('trend-value');
+    const trendSig = document.getElementById('trend-signal');
+    
+    trendBar.style.width = trendValue + '%';
+    trendBar.style.background = trendValue > 60 ? 'var(--green)' : trendValue < 40 ? 'var(--red)' : 'var(--gold)';
+    trendVal.textContent = trendValue > 60 ? 'ALCISTA' : trendValue < 40 ? 'BAJISTA' : 'NEUTRAL';
+    trendVal.className = `indicator-value ${trendValue > 60 ? 'bullish' : trendValue < 40 ? 'bearish' : 'neutral'}`;
+    trendSig.textContent = trendValue > 60 ? 'Momentum positivo detectado' : trendValue < 40 ? 'Momentum negativo detectado' : 'Sin momentum claro';
+    trendSig.className = `indicator-signal ${trendValue > 60 ? 'buy' : trendValue < 40 ? 'sell' : 'hold'}`;
+    
+    updateConfluence(rsi, ma, bb);
+    
+    const techRupture = detectTechnicalRupture();
+    const ruptureAlert = document.getElementById('rupture-tech-alert');
+    const techStatus = document.getElementById('tech-status');
+    
+    if (techRupture || ruptureDetected) {
+        ruptureAlert.classList.add('active');
+        techStatus.textContent = 'RUPTURA';
+        techStatus.className = 'tech-status conflict';
+        
+        const scenarios = generatePostRuptureScenarios();
+        const container = document.getElementById('trend-scenarios');
+        container.innerHTML = scenarios.map(s => `
+            <div class="trend-scenario ${s.type}">
+                <span class="scenario-prob">${s.probability}</span>
+                <span class="scenario-dir ${s.direction === 'ALCISTA' ? 'up' : s.direction === 'BAJISTA' ? 'down' : 'side'}">
+                    ${s.direction}
+                </span>
+                <span style="color: var(--text-dim);">${s.desc}</span>
+            </div>
+        `).join('');
+    } else {
+        ruptureAlert.classList.remove('active');
+        techStatus.textContent = 'VALIDANDO';
+        techStatus.className = 'tech-status validating';
+    }
+    
+    updatePatternDisplay();
 }
 
 function updatePatternHistory() {
-  if (history.length < 2) return;
-  
-  const newPatterns = [];
-  for (let i = 1; i < history.length; i++) {
-    const pattern = history[i-1].color + history[i].color;
-    const exists = patternHistory.some(p => p.index === i);
-    if (!exists) {
-      newPatterns.push({
-        pattern: pattern,
-        index: i,
-        timestamp: Date.now(),
-        value: patternToValue(pattern)
-      });
+    if (history.length < 2) return;
+    
+    const newPatterns = [];
+    for (let i = 1; i < history.length; i++) {
+        const pattern = history[i-1].color + history[i].color;
+        const exists = patternHistory.some(p => p.index === i);
+        if (!exists) {
+            newPatterns.push({
+                pattern: pattern,
+                index: i,
+                timestamp: Date.now(),
+                value: patternToValue(pattern)
+            });
+        }
     }
-  }
-  
-  patternHistory.push(...newPatterns);
-  
-  if (patternHistory.length > 50) {
-    patternHistory = patternHistory.slice(-50);
-  }
+    
+    patternHistory.push(...newPatterns);
+    
+    if (patternHistory.length > 50) {
+        patternHistory = patternHistory.slice(-50);
+    }
 }
 
 function updatePatternDisplay() {
-  const container = document.getElementById('pattern-sequence-display');
-  if (!container) return;
-  
-  const recentPatterns = patternHistory.slice(-20);
-  container.innerHTML = recentPatterns.map((p, idx) => {
-    const isLast = idx === recentPatterns.length - 1;
-    const className = p.pattern.toLowerCase();
-    return `<div class="pattern-chip ${className} ${isLast ? 'current' : ''}">${p.pattern}</div>`;
-  }).join('');
+    const container = document.getElementById('pattern-sequence-display');
+    if (!container) return;
+    
+    const recentPatterns = patternHistory.slice(-20);
+    container.innerHTML = recentPatterns.map((p, idx) => {
+        const isLast = idx === recentPatterns.length - 1;
+        const className = p.pattern.toLowerCase();
+        return `<div class="pattern-chip ${className} ${isLast ? 'current' : ''}">${p.pattern}</div>`;
+    }).join('');
 }
 
 function updateConfluence(rsi, ma, bb) {
-  let buyScore = 0;
-  let sellScore = 0;
-  let totalWeight = 0;
-  
-  if (rsi.value < 30) buyScore += 30;
-  else if (rsi.value > 70) sellScore += 30;
-  else if (rsi.value < 45) buyScore += 15;
-  else if (rsi.value > 55) sellScore += 15;
-  totalWeight += 30;
-  
-  if (ma.trend === 'strong_up') buyScore += 40;
-  else if (ma.trend === 'up') buyScore += 25;
-  else if (ma.trend === 'strong_down') sellScore += 40;
-  else if (ma.trend === 'down') sellScore += 25;
-  totalWeight += 40;
-  
-  if (bb.position < 20) buyScore += 30;
-  else if (bb.position > 80) sellScore += 30;
-  else if (bb.position < 40) buyScore += 15;
-  else if (bb.position > 60) sellScore += 15;
-  totalWeight += 30;
-  
-  // NUEVO: Factor de cruce MA2/MA10
-  if (lastCrossType === 'golden') buyScore += 20;
-  else if (lastCrossType === 'death') sellScore += 20;
-  
-  const netScore = buyScore - sellScore;
-  const confluenceValue = 50 + (netScore / totalWeight) * 50;
-  const clampedValue = Math.max(0, Math.min(100, confluenceValue));
-  
-  const fill = document.getElementById('confluence-fill');
-  const value = document.getElementById('confluence-value');
-  
-  fill.style.width = clampedValue + '%';
-  value.textContent = Math.round(clampedValue) + '%';
-  
-  fill.className = 'confluence-fill';
-  if (clampedValue >= 75) {
-    fill.classList.add('strong-buy');
-    value.style.color = 'var(--green)';
-  } else if (clampedValue >= 60) {
-    fill.classList.add('buy');
-    value.style.color = 'var(--green)';
-  } else if (clampedValue <= 25) {
-    fill.classList.add('strong-sell');
-    value.style.color = 'var(--red)';
-  } else if (clampedValue <= 40) {
-    fill.classList.add('sell');
-    value.style.color = 'var(--red)';
-  } else {
-    fill.classList.add('neutral');
-    value.style.color = 'var(--gold)';
-  }
-  
-  updateConfluenceItem('conf-rsi', rsi.value < 30 ? 'active' : rsi.value > 70 ? 'danger' : rsi.value < 45 ? 'warning' : rsi.value > 55 ? 'warning' : '');
-  updateConfluenceItem('conf-ma', ma.trend.includes('up') ? 'active' : ma.trend.includes('down') ? 'danger' : '');
-  updateConfluenceItem('conf-bb', bb.position < 20 ? 'active' : bb.position > 80 ? 'danger' : bb.position < 40 ? 'warning' : bb.position > 60 ? 'warning' : '');
+    let buyScore = 0;
+    let sellScore = 0;
+    let totalWeight = 0;
+    
+    if (rsi.value < 30) buyScore += 30;
+    else if (rsi.value > 70) sellScore += 30;
+    else if (rsi.value < 45) buyScore += 15;
+    else if (rsi.value > 55) sellScore += 15;
+    totalWeight += 30;
+    
+    if (ma.trend === 'strong_up') buyScore += 40;
+    else if (ma.trend === 'up') buyScore += 25;
+    else if (ma.trend === 'strong_down') sellScore += 40;
+    else if (ma.trend === 'down') sellScore += 25;
+    totalWeight += 40;
+    
+    if (bb.position < 20) buyScore += 30;
+    else if (bb.position > 80) sellScore += 30;
+    else if (bb.position < 40) buyScore += 15;
+    else if (bb.position > 60) sellScore += 15;
+    totalWeight += 30;
+    
+    if (lastCrossType === 'golden') buyScore += 20;
+    else if (lastCrossType === 'death') sellScore += 20;
+    
+    const netScore = buyScore - sellScore;
+    const confluenceValue = 50 + (netScore / totalWeight) * 50;
+    const clampedValue = Math.max(0, Math.min(100, confluenceValue));
+    
+    const fill = document.getElementById('confluence-fill');
+    const value = document.getElementById('confluence-value');
+    
+    fill.style.width = clampedValue + '%';
+    value.textContent = Math.round(clampedValue) + '%';
+    
+    fill.className = 'confluence-fill';
+    if (clampedValue >= 75) {
+        fill.classList.add('strong-buy');
+        value.style.color = 'var(--green)';
+    } else if (clampedValue >= 60) {
+        fill.classList.add('buy');
+        value.style.color = 'var(--green)';
+    } else if (clampedValue <= 25) {
+        fill.classList.add('strong-sell');
+        value.style.color = 'var(--red)';
+    } else if (clampedValue <= 40) {
+        fill.classList.add('sell');
+        value.style.color = 'var(--red)';
+    } else {
+        fill.classList.add('neutral');
+        value.style.color = 'var(--gold)';
+    }
+    
+    updateConfluenceItem('conf-rsi', rsi.value < 30 ? 'active' : rsi.value > 70 ? 'danger' : rsi.value < 45 ? 'warning' : rsi.value > 55 ? 'warning' : '');
+    updateConfluenceItem('conf-ma', ma.trend.includes('up') ? 'active' : ma.trend.includes('down') ? 'danger' : '');
+    updateConfluenceItem('conf-bb', bb.position < 20 ? 'active' : bb.position > 80 ? 'danger' : bb.position < 40 ? 'warning' : bb.position > 60 ? 'warning' : '');
 }
 
 function updateConfluenceItem(id, status) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.className = 'confluence-item';
-  if (status === 'active') el.classList.add('active');
-  else if (status === 'warning') el.classList.add('warning');
-  else if (status === 'danger') el.classList.add('danger');
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'confluence-item';
+    if (status === 'active') el.classList.add('active');
+    else if (status === 'warning') el.classList.add('warning');
+    else if (status === 'danger') el.classList.add('danger');
 }
 
 function performTechnicalAnalysis() {
-  updateTechnicalPanel();
+    updateTechnicalPanel();
 }
 
+// ============================================================
+// FUNCIONES DE PREDICCIÓN Y ANÁLISIS
+// ============================================================
+
 function generateAnticipationScenarios() {
-  if (history.length < 2) return null;
-  
-  const lastCandle = history[history.length - 1].color;
-  const prevCandle = history[history.length - 2].color;
-  const currentPattern = prevCandle + lastCandle;
-  
-  const scenarios = {
-    green: analyzeScenario(currentPattern, 'G'),
-    red: analyzeScenario(currentPattern, 'R')
-  };
-  
-  return scenarios;
+    if (history.length < 2) return null;
+    
+    const lastCandle = history[history.length - 1].color;
+    const prevCandle = history[history.length - 2].color;
+    const currentPattern = prevCandle + lastCandle;
+    
+    const scenarios = {
+        green: analyzeScenario(currentPattern, 'G'),
+        red: analyzeScenario(currentPattern, 'R')
+    };
+    
+    return scenarios;
 }
 
 function analyzeScenario(currentPattern, nextCandle) {
-  const newPattern = currentPattern[1] + nextCandle;
-  
-  let signal = 'HOLD';
-  let signalType = 'hold';
-  let probability = 0.5;
-  let description = 'Neutral';
-  
-  if (currentPattern === 'GG') {
-    if (nextCandle === 'G') {
-      signal = 'COMPRA';
-      signalType = 'buy';
-      probability = 0.65;
-      description = 'Continuación alcista';
-    } else {
-      signal = 'VENTA';
-      signalType = 'sell';
-      probability = 0.55;
-      description = 'Posible reversión';
-    }
-  } else if (currentPattern === 'RR') {
-    if (nextCandle === 'R') {
-      signal = 'VENTA';
-      signalType = 'sell';
-      probability = 0.65;
-      description = 'Continuación bajista';
-    } else {
-      signal = 'COMPRA';
-      signalType = 'buy';
-      probability = 0.55;
-      description = 'Posible rebote';
-    }
-  } else if (currentPattern === 'GR') {
-    if (nextCandle === 'R') {
-      signal = 'VENTA';
-      signalType = 'sell';
-      probability = 0.60;
-      description = 'Confirmación bajista';
-    } else {
-      signal = 'COMPRA';
-      signalType = 'buy';
-      probability = 0.50;
-      description = 'Reversión alcista';
-    }
-  } else if (currentPattern === 'RG') {
-    if (nextCandle === 'G') {
-      signal = 'COMPRA';
-      signalType = 'buy';
-      probability = 0.60;
-      description = 'Confirmación alcista';
-    } else {
-      signal = 'VENTA';
-      signalType = 'sell';
-      probability = 0.50;
-      description = 'Reversión bajista';
-    }
-  }
-  
-  // Ajustar según indicadores técnicos
-  if (patternHistory.length >= 3) {
-    const rsi = calculatePatternRSI();
-    const ma = calculatePatternMA();
+    const newPattern = currentPattern[1] + nextCandle;
     
-    if (rsi.value > 70 && signalType === 'buy') {
-      probability -= 0.15;
-      description += ' (Sobrecompra)';
-    } else if (rsi.value < 30 && signalType === 'sell') {
-      probability -= 0.15;
-      description += ' (Sobreventa)';
+    let signal = 'HOLD';
+    let signalType = 'hold';
+    let probability = 0.5;
+    let description = 'Neutral';
+    
+    if (currentPattern === 'GG') {
+        if (nextCandle === 'G') {
+            signal = 'COMPRA';
+            signalType = 'buy';
+            probability = 0.65;
+            description = 'Continuación alcista';
+        } else {
+            signal = 'VENTA';
+            signalType = 'sell';
+            probability = 0.55;
+            description = 'Posible reversión';
+        }
+    } else if (currentPattern === 'RR') {
+        if (nextCandle === 'R') {
+            signal = 'VENTA';
+            signalType = 'sell';
+            probability = 0.65;
+            description = 'Continuación bajista';
+        } else {
+            signal = 'COMPRA';
+            signalType = 'buy';
+            probability = 0.55;
+            description = 'Posible rebote';
+        }
+    } else if (currentPattern === 'GR') {
+        if (nextCandle === 'R') {
+            signal = 'VENTA';
+            signalType = 'sell';
+            probability = 0.60;
+            description = 'Confirmación bajista';
+        } else {
+            signal = 'COMPRA';
+            signalType = 'buy';
+            probability = 0.50;
+            description = 'Reversión alcista';
+        }
+    } else if (currentPattern === 'RG') {
+        if (nextCandle === 'G') {
+            signal = 'COMPRA';
+            signalType = 'buy';
+            probability = 0.60;
+            description = 'Confirmación alcista';
+        } else {
+            signal = 'VENTA';
+            signalType = 'sell';
+            probability = 0.50;
+            description = 'Reversión bajista';
+        }
     }
     
-    if (ma.trend.includes('up') && signalType === 'buy') {
-      probability += 0.10;
-    } else if (ma.trend.includes('down') && signalType === 'sell') {
-      probability += 0.10;
+    // Ajustar según indicadores técnicos
+    if (patternHistory.length >= 3) {
+        const rsi = calculatePatternRSI();
+        const ma = calculatePatternMA();
+        
+        if (rsi.value > 70 && signalType === 'buy') {
+            probability -= 0.15;
+            description += ' (Sobrecompra)';
+        } else if (rsi.value < 30 && signalType === 'sell') {
+            probability -= 0.15;
+            description += ' (Sobreventa)';
+        }
+        
+        if (ma.trend.includes('up') && signalType === 'buy') {
+            probability += 0.10;
+        } else if (ma.trend.includes('down') && signalType === 'sell') {
+            probability += 0.10;
+        }
     }
-  }
-  
-  // NUEVO: Ajustar según último cruce MA
-  if (lastCrossType === 'golden' && signalType === 'buy') {
-    probability += 0.10;
-    description += ' [MA:Golden]';
-  } else if (lastCrossType === 'death' && signalType === 'sell') {
-    probability += 0.10;
-    description += ' [MA:Death]';
-  }
-  
-  return {
-    pattern: newPattern,
-    signal: signal,
-    signalType: signalType,
-    probability: Math.max(0.1, Math.min(0.9, probability)),
-    description: description,
-    fullSequence: currentPattern + nextCandle
-  };
+    
+    // Ajustar según último cruce MA
+    if (lastCrossType === 'golden' && signalType === 'buy') {
+        probability += 0.10;
+        description += ' [MA:Golden]';
+    } else if (lastCrossType === 'death' && signalType === 'sell') {
+        probability += 0.10;
+        description += ' [MA:Death]';
+    }
+    
+    return {
+        pattern: newPattern,
+        signal: signal,
+        signalType: signalType,
+        probability: Math.max(0.1, Math.min(0.9, probability)),
+        description: description,
+        fullSequence: currentPattern + nextCandle
+    };
 }
 
 function updateAnticipationPanel() {
-  const panel = document.getElementById('anticipation-panel');
-  const container = document.getElementById('scenario-container');
-  const recommendation = document.getElementById('recommendation-action');
-  const timestamp = document.getElementById('update-timestamp');
-  
-  if (history.length < 2) {
-    panel.style.display = 'none';
-    return;
-  }
-  
-  panel.style.display = 'block';
-  
-  const scenarios = generateAnticipationScenarios();
-  if (!scenarios) return;
-  
-  container.innerHTML = `
-    <div class="scenario-box green-scenario" onclick="addCandle('G')">
-      <div class="scenario-label">Si siguiente es VERDE</div>
-      <div class="scenario-sequence">${scenarios.green.fullSequence}</div>
-      <div class="scenario-signal">${scenarios.green.signal}</div>
-      <div class="scenario-probability">Prob: ${Math.round(scenarios.green.probability * 100)}%</div>
-    </div>
-    <div class="scenario-box red-scenario" onclick="addCandle('R')">
-      <div class="scenario-label">Si siguiente es ROJO</div>
-      <div class="scenario-sequence">${scenarios.red.fullSequence}</div>
-      <div class="scenario-signal">${scenarios.red.signal}</div>
-      <div class="scenario-probability">Prob: ${Math.round(scenarios.red.probability * 100)}%</div>
-    </div>
-  `;
-  
-  let bestScenario = null;
-  let preSignal = '';
-  
-  if (scenarios.green.probability > scenarios.red.probability) {
-    bestScenario = scenarios.green;
-    preSignal = 'PRE-COMPRA';
-  } else if (scenarios.red.probability > scenarios.green.probability) {
-    bestScenario = scenarios.red;
-    preSignal = 'PRE-VENTA';
-  } else {
-    preSignal = 'NEUTRAL';
-  }
-  
-  recommendation.textContent = preSignal;
-  recommendation.style.color = bestScenario ? 
-    (bestScenario.signalType === 'buy' ? 'var(--green)' : 'var(--red)') : 
-    'var(--gold)';
-  
-  lastUpdateTime = new Date();
-  timestamp.textContent = 'Actualizado: ' + lastUpdateTime.toLocaleTimeString();
-  
-  updateMainPredictionWithAnticipation(scenarios, preSignal);
+    const panel = document.getElementById('anticipation-panel');
+    const container = document.getElementById('scenario-container');
+    const recommendation = document.getElementById('recommendation-action');
+    const timestamp = document.getElementById('update-timestamp');
+    
+    if (history.length < 2) {
+        panel.style.display = 'none';
+        return;
+    }
+    
+    panel.style.display = 'block';
+    
+    const scenarios = generateAnticipationScenarios();
+    if (!scenarios) return;
+    
+    container.innerHTML = `
+        <div class="scenario-box green-scenario" onclick="addCandle('G')">
+            <div class="scenario-label">Si siguiente es VERDE</div>
+            <div class="scenario-sequence">${scenarios.green.fullSequence}</div>
+            <div class="scenario-signal">${scenarios.green.signal}</div>
+            <div class="scenario-probability">Prob: ${Math.round(scenarios.green.probability * 100)}%</div>
+        </div>
+        <div class="scenario-box red-scenario" onclick="addCandle('R')">
+            <div class="scenario-label">Si siguiente es ROJO</div>
+            <div class="scenario-sequence">${scenarios.red.fullSequence}</div>
+            <div class="scenario-signal">${scenarios.red.signal}</div>
+            <div class="scenario-probability">Prob: ${Math.round(scenarios.red.probability * 100)}%</div>
+        </div>
+    `;
+    
+    let bestScenario = null;
+    let preSignal = '';
+    
+    if (scenarios.green.probability > scenarios.red.probability) {
+        bestScenario = scenarios.green;
+        preSignal = 'PRE-COMPRA';
+    } else if (scenarios.red.probability > scenarios.green.probability) {
+        bestScenario = scenarios.red;
+        preSignal = 'PRE-VENTA';
+    } else {
+        preSignal = 'NEUTRAL';
+    }
+    
+    recommendation.textContent = preSignal;
+    recommendation.style.color = bestScenario ? 
+        (bestScenario.signalType === 'buy' ? 'var(--green)' : 'var(--red)') : 
+        'var(--gold)';
+    
+    lastUpdateTime = new Date();
+    timestamp.textContent = 'Actualizado: ' + lastUpdateTime.toLocaleTimeString();
+    
+    updateMainPredictionWithAnticipation(scenarios, preSignal);
 }
 
 function updateMainPredictionWithAnticipation(scenarios, preSignal) {
-  const predMain = document.getElementById('prediction-main');
-  const predSeq = document.getElementById('pred-sequence');
-  const seqNext = document.getElementById('sequence-next');
-  const confDisplay = document.getElementById('confidence-display');
-  const detail = document.getElementById('prediction-detail');
-  
-  const bestScenario = scenarios.green.probability > scenarios.red.probability ? 
-    scenarios.green : scenarios.red;
-  
-  predMain.className = 'pred-main pred-pre-' + bestScenario.signalType;
-  predMain.innerHTML = `<span style="font-size:0.6em;display:block;margin-bottom:5px;">${preSignal}</span>${bestScenario.signal}`;
-  
-  predSeq.style.display = 'block';
-  seqNext.innerHTML = `
-    <span style="color:var(--green)">${scenarios.green.fullSequence}</span> 
-    <span style="color:var(--text-dim)">|</span> 
-    <span style="color:var(--red)">${scenarios.red.fullSequence}</span>
-  `;
-  
-  const confidenceDiff = Math.abs(scenarios.green.probability - scenarios.red.probability);
-  const confidence = Math.round(confidenceDiff * 100);
-  confDisplay.textContent = confidence + '%';
-  confDisplay.style.color = confidence > 60 ? 'var(--green)' : 
-                            confidence > 40 ? 'var(--gold)' : 'var(--text-dim)';
-  
-  // Incluir info de cruce MA si existe
-  let maInfo = '';
-  if (lastCrossType) {
-    maInfo = `<br><strong>Último Cruce MA:</strong> <span style="color:${lastCrossType === 'golden' ? 'var(--green)' : 'var(--red)'}">${lastCrossType === 'golden' ? '🚀 GOLDEN' : '💀 DEATH'}</span>`;
-  }
-  
-  detail.innerHTML = `
-    <strong style="color:var(--gold)">🎯 ANÁLISIS PREDICTIVO:</strong><br>
-    <strong>Patrón Actual:</strong> ${history[history.length-2].color}${history[history.length-1].color}<br>
-    <strong>Escenario Verde:</strong> ${scenarios.green.description} (${Math.round(scenarios.green.probability*100)}%)<br>
-    <strong>Escenario Rojo:</strong> ${scenarios.red.description} (${Math.round(scenarios.red.probability*100)}%)<br>
-    <strong>Recomendación:</strong> <span style="color:${bestScenario.signalType === 'buy' ? 'var(--green)' : 'var(--red)'}">${preSignal}</span>${maInfo}
-  `;
+    const predMain = document.getElementById('prediction-main');
+    const predSeq = document.getElementById('pred-sequence');
+    const seqNext = document.getElementById('sequence-next');
+    const confDisplay = document.getElementById('confidence-display');
+    const detail = document.getElementById('prediction-detail');
+    
+    const bestScenario = scenarios.green.probability > scenarios.red.probability ? 
+        scenarios.green : scenarios.red;
+    
+    predMain.className = 'pred-main pred-pre-' + bestScenario.signalType;
+    predMain.innerHTML = `<span style="font-size:0.6em;display:block;margin-bottom:5px;">${preSignal}</span>${bestScenario.signal}`;
+    
+    predSeq.style.display = 'block';
+    seqNext.innerHTML = `
+        <span style="color:var(--green)">${scenarios.green.fullSequence}</span> 
+        <span style="color:var(--text-dim)">|</span> 
+        <span style="color:var(--red)">${scenarios.red.fullSequence}</span>
+    `;
+    
+    const confidenceDiff = Math.abs(scenarios.green.probability - scenarios.red.probability);
+    const confidence = Math.round(confidenceDiff * 100);
+    confDisplay.textContent = confidence + '%';
+    confDisplay.style.color = confidence > 60 ? 'var(--green)' : 
+                              confidence > 40 ? 'var(--gold)' : 'var(--text-dim)';
+    
+    let maInfo = '';
+    if (lastCrossType) {
+        maInfo = `<br><strong>Último Cruce MA:</strong> <span style="color:${lastCrossType === 'golden' ? 'var(--green)' : 'var(--red)'}">${lastCrossType === 'golden' ? '🚀 GOLDEN' : '💀 DEATH'}</span>`;
+    }
+    
+    detail.innerHTML = `
+        <strong style="color:var(--gold)">🎯 ANÁLISIS PREDICTIVO:</strong><br>
+        <strong>Patrón Actual:</strong> ${history[history.length-2].color}${history[history.length-1].color}<br>
+        <strong>Escenario Verde:</strong> ${scenarios.green.description} (${Math.round(scenarios.green.probability*100)}%)<br>
+        <strong>Escenario Rojo:</strong> ${scenarios.red.description} (${Math.round(scenarios.red.probability*100)}%)<br>
+        <strong>Recomendación:</strong> <span style="color:${bestScenario.signalType === 'buy' ? 'var(--green)' : 'var(--red)'}">${preSignal}</span>${maInfo}
+    `;
 }
+
+// ============================================================
+// FUNCIONES PRINCIPALES DE DETECCIÓN Y ACTUALIZACIÓN
+// ============================================================
 
 function addCandle(color) {
-  if (crashDetected) return;
-  
-  const node = {
-    color: color,
-    x: history.length * 60 + 50,
-    y: CENTER_Y + (Math.random() - 0.5) * 100,
-    radius: NODE_RADIUS,
-    id: Date.now()
-  };
-  
-  history.push(node);
-  
-  if (history.length > 15) {
-    history.shift();
-    history.forEach((h, i) => h.x = i * 60 + 50);
-  }
-  
-  detectPattern();
-  updateVisualization();
-  performTechnicalAnalysis();
-  updateAnticipationPanel();
-  
-  // NUEVO: Verificar cruce automático después de añadir vela
-  if (history.length >= 10) {
-    const ma = calculateMA2MA10();
-    if (ma.crossed) {
-      registerCross(ma.crossType, ma.strength, 'auto');
-      updateMAVisuals(ma.crossType, ma.strength, true);
-      showNotification(`🚨 CRUCE ${ma.crossType === 'golden' ? 'GOLDEN' : 'DEATH'} AUTO-DETECTADO`, "success");
-      
-      // NUEVO: Verificar si activa análisis de 8 velas
-      setTimeout(() => {
-          const eightCandleResult = analyzeEightCandlesOnCross();
-          if (eightCandleResult) {
-              showNotification('📊 Análisis de 8 velas activado: Cruce + Ruptura detectados', 'success');
-          }
-      }, 500);
-    }
-    updateMAStatus(ma);
-  }
-  
-  if (detectTechnicalRupture()) {
-    handleTechnicalRupture();
-  }
-}
-
-function detectPattern() {
-  if (history.length < 2) return;
-  
-  const lastTwo = history.slice(-2);
-  const pattern = lastTwo[0].color + lastTwo[1].color;
-  
-  if (pattern === 'GG' || pattern === 'RR') {
-    const isPhase3 = currentPhase === '3';
-    const cycleType = isPhase3 ? '3' : '2';
+    if (crashDetected) return;
     
-    cycles.push({
-      pattern: pattern,
-      type: cycleType,
-      index: history.length - 2,
-      timestamp: Date.now()
-    });
-    
-    lastPattern = pattern;
-    
-    generateProjections(pattern);
-    
-    updateStats();
-    updateBlocks();
-    updateEnergy();
-  }
-}
-
-function generateProjections(basePattern) {
-  projectedPaths = [];
-  
-  const projections = [
-    new PatternProjection('Continuación', basePattern + basePattern[0], 0.4, 
-      basePattern === 'GG' ? 'COMPRA' : 'VENTA', 
-      basePattern === 'GG' ? 'buy' : 'sell',
-      'Continuación de tendencia actual'),
-    new PatternProjection('Reversión', basePattern === 'GG' ? 'GR' : 'RG', 0.3,
-      basePattern === 'GG' ? 'VENTA' : 'COMPRA',
-      basePattern === 'GG' ? 'sell' : 'buy',
-      'Reversión de tendencia'),
-    new PatternProjection('Consolidación', 'GR', 0.2, 'MANTENER', 'hold',
-      'Rango de consolidación'),
-    new PatternProjection('Ruptura', basePattern === 'GG' ? 'RR' : 'GG', 0.1,
-      basePattern === 'GG' ? 'VENTA FUERTE' : 'COMPRA FUERTE',
-      basePattern === 'GG' ? 'sell' : 'buy',
-      'Ruptura de estructura')
-  ];
-  
-  projectedPaths = projections;
-  activeProjection = projections[0];
-  
-  updateProjectionUI();
-}
-
-function updateProjectionUI() {
-  const container = document.getElementById('path-container');
-  const panel = document.getElementById('projection-panel');
-  const lastPatternEl = document.getElementById('last-pattern');
-  
-  if (!lastPattern || !panel) return;
-  
-  panel.style.display = 'block';
-  lastPatternEl.textContent = lastPattern;
-  
-  if (!container) return;
-  
-  container.innerHTML = projectedPaths.map((path, idx) => {
-    const isActive = idx === 0;
-    const isBroken = path.isBroken;
-    
-    return `
-      <div class="path-item ${isBroken ? 'broken' : isActive ? 'valid' : 'alternate'}">
-        <div class="path-signal ${path.signalType}">${path.signal}</div>
-        <div class="path-label">${path.name}</div>
-        <div class="path-sequence">
-          ${path.sequence.split('').map((c, i) => 
-            `<div class="path-dot ${c.toLowerCase()} ${i === path.sequence.length - 1 ? 'current' : ''}">${c}</div>`
-          ).join('')}
-        </div>
-        <div class="path-status ${isBroken ? 'broken' : isActive ? 'valid' : 'alternate'}">
-          ${isBroken ? 'ROTO' : isActive ? 'ACTIVO' : 'ALT'}
-        </div>
-      </div>
-    `;
-  }).join('');
-  
-  updateMainPrediction();
-}
-
-function updateMainPrediction() {
-  const predMain = document.getElementById('prediction-main');
-  const predSeq = document.getElementById('pred-sequence');
-  const seqNext = document.getElementById('sequence-next');
-  const confDisplay = document.getElementById('confidence-display');
-  const detail = document.getElementById('prediction-detail');
-  
-  if (!activeProjection) return;
-  
-  predMain.className = 'pred-main pred-' + activeProjection.signalType;
-  predMain.textContent = activeProjection.signal;
-  
-  predSeq.style.display = 'block';
-  seqNext.innerHTML = activeProjection.sequence.split('').map((c, i) => {
-    if (i < activeProjection.sequence.length - 1) {
-      return `<span style="color: var(--text-dim)">${c}</span>`;
-    }
-    return `<span class="exp-${c.toLowerCase()}">${c}</span>`;
-  }).join('');
-  
-  const confidence = Math.round(activeProjection.probability * 100);
-  confDisplay.textContent = confidence + '%';
-  
-  detail.innerHTML = `
-    <strong>Patrón Base:</strong> <span style="color: var(--gold)">${lastPattern || '--'}</span><br>
-    <strong>Proyección:</strong> ${activeProjection.name}<br>
-    <strong>Descripción:</strong> ${activeProjection.description}
-  `;
-}
-
-function updateVisualization() {
-  const svg = d3.select("#dna-svg");
-  
-  svg.selectAll("*").remove();
-  
-  for (let i = 0; i < history.length - 1; i++) {
-    const curr = history[i];
-    const next = history[i + 1];
-    
-    svg.append("line")
-      .attr("x1", curr.x)
-      .attr("y1", curr.y)
-      .attr("x2", next.x)
-      .attr("y2", next.y)
-      .attr("stroke", curr.color === 'G' ? 'var(--green)' : 'var(--red)')
-      .attr("stroke-width", 3)
-      .attr("opacity", 0.6);
-  }
-  
-  const nodes = svg.selectAll(".node")
-    .data(history)
-    .enter()
-    .append("g")
-    .attr("class", "dna-node")
-    .attr("transform", d => `translate(${d.x},${d.y})`);
-  
-  nodes.append("circle")
-    .attr("r", d => d.radius)
-    .attr("fill", d => d.color === 'G' ? 'var(--green)' : 'var(--red)')
-    .attr("stroke", "var(--gold)")
-    .attr("stroke-width", 2)
-    .attr("filter", d => d.color === 'G' ? 
-      "drop-shadow(0 0 10px var(--green))" : 
-      "drop-shadow(0 0 10px var(--red))");
-  
-  nodes.append("text")
-    .attr("text-anchor", "middle")
-    .attr("dy", "0.35em")
-    .attr("fill", d => d.color === 'G' ? '#000' : '#fff')
-    .attr("font-size", "14px")
-    .attr("font-weight", "bold")
-    .text(d => d.color);
-  
-  const cycleDisplay = document.getElementById('cycle-display');
-  const cycleMode = document.getElementById('cycle-mode');
-  
-  if (cycles.length > 0) {
-    const lastCycle = cycles[cycles.length - 1];
-    cycleDisplay.textContent = lastCycle.pattern;
-    cycleMode.textContent = `Fase ${lastCycle.type}+1`;
-    cycleMode.className = `cycle-mode phase-${lastCycle.type}`;
-  } else {
-    cycleDisplay.textContent = history.length > 0 ? 
-      history[history.length-1].color : '--';
-    cycleMode.textContent = 'Acumulando...';
-  }
-}
-
-function updateStats() {
-  const cycles3 = cycles.filter(c => c.type === '3').length;
-  const cycles2 = cycles.filter(c => c.type === '2').length;
-  
-  document.getElementById('stat-cycles-3').textContent = cycles3;
-  document.getElementById('stat-cycles-2').textContent = cycles2;
-  document.getElementById('stat-recalcs').textContent = recalcCount;
-  
-  const confidence = activeProjection ? 
-    Math.round(activeProjection.probability * 100) : 0;
-  document.getElementById('stat-confidence').textContent = confidence + '%';
-}
-
-function updateBlocks() {
-  const container = document.getElementById('blocks-display');
-  if (!container) return;
-  
-  container.innerHTML = cycles.slice(-10).reverse().map((cycle, idx) => {
-    const pattern = cycle.pattern;
-    const isPerfect3 = cycle.type === '3';
-    const isPhase2 = cycle.type === '2';
-    
-    return `
-      <div class="block-item ${isPerfect3 ? 'perfect-3' : isPhase2 ? 'phase-2' : ''}">
-        <div class="block-info">
-          <div class="block-number ${isPhase2 ? 'phase-2' : ''}">#${cycles.length - idx}</div>
-          <div class="block-type">Patrón ${cycle.type}+1</div>
-        </div>
-        <div class="block-visual">
-          ${pattern.split('').map(c => 
-            `<div class="v-dot ${c.toLowerCase()} main"></div>`
-          ).join('')}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function updateEnergy() {
-  const energyBar = document.getElementById('energy-bar');
-  const energyText = document.getElementById('energy-text');
-  
-  const recentPatterns = patternHistory.slice(-5);
-  let consistency = 0;
-  
-  if (recentPatterns.length >= 2) {
-    const values = recentPatterns.map(p => p.value);
-    const avg = values.reduce((a,b) => a+b, 0) / values.length;
-    const variance = values.reduce((a,b) => a + Math.pow(b - avg, 2), 0) / values.length;
-    consistency = Math.max(0, 100 - variance);
-  }
-  
-  energy = consistency;
-  
-  energyBar.style.width = energy + '%';
-  
-  if (energy > 70) {
-    energyBar.className = 'energy-bar-fill energy-phase3';
-    energyText.textContent = 'Energía Óptima - Patrón Estable';
-  } else if (energy > 40) {
-    energyBar.className = 'energy-bar-fill energy-phase2';
-    energyText.textContent = 'Energía Moderada - Fase 2+1';
-  } else {
-    energyBar.className = 'energy-bar-fill energy-broken';
-    energyText.textContent = 'Energía Baja - Inestabilidad Detectada';
-  }
-}
-
-function handleTechnicalRupture() {
-  ruptureDetected = true;
-  
-  const warning = document.getElementById('rupture-warning');
-  if (warning) warning.classList.add('active');
-  
-  const badge = document.getElementById('pattern-badge');
-  if (badge) {
-    badge.className = 'pattern-indicator pattern-broken';
-    badge.textContent = 'MODO: RUPTURA TÉCNICA';
-  }
-  
-  const status = document.getElementById('status-badge');
-  status.className = 'status-badge status-alert';
-  status.textContent = 'RUPTURA DETECTADA';
-  
-  const phaseAlert = document.getElementById('phase-alert');
-  phaseAlert.classList.add('active', 'broken');
-  document.getElementById('phase-title').textContent = '⚠ RUPTURA TÉCNICA CRÍTICA';
-  document.getElementById('phase-title').classList.add('broken');
-  document.getElementById('phase-desc').innerHTML = `
-    Los indicadores técnicos detectan desviación severa en la secuencia.<br>
-    <strong>Se requiere recalibración del sistema.</strong>
-  `;
-}
-
-function clearAll() {
-  history = [];
-  cycles = [];
-  patternHistory = [];
-  currentPhase = '3';
-  transitionCount = 0;
-  recalcCount = 0;
-  energy = 0;
-  crashDetected = false;
-  ruptureDetected = false;
-  lastPattern = null;
-  projectedPaths = [];
-  activeProjection = null;
-  lastUpdateTime = null;
-  
-  // NUEVO: Limpiar estado de cruces MA
-  maCrossHistory = [];
-  lastCrossType = null;
-  isCrossing = false;
-  crossStrength = 0;
-  
-  // NUEVO: Limpiar estado de 8 velas
-  eightCandleAnalysis = {
-      window: [],
-      ma2: null,
-      ma8: null,
-      crossDetected: false,
-      ruptureDetected: false,
-      trendProjection: null,
-      lastAnalysis: null,
-      active: false
-  };
-  
-  document.getElementById('sequenceInput').value = '';
-  document.getElementById('prediction-main').textContent = '---';
-  document.getElementById('prediction-main').className = 'pred-main pred-hold';
-  document.getElementById('pred-sequence').style.display = 'none';
-  document.getElementById('confidence-display').textContent = '0%';
-  document.getElementById('prediction-detail').textContent = 'Ingresa una secuencia para detectar el patrón base y generar proyecciones dinámicas.';
-  document.getElementById('projection-panel').style.display = 'none';
-  document.getElementById('anticipation-panel').style.display = 'none';
-  document.getElementById('rupture-warning').classList.remove('active');
-  document.getElementById('phase-alert').classList.remove('active', 'broken');
-  document.getElementById('phase-title').classList.remove('broken');
-  
-  const badge = document.getElementById('pattern-badge');
-  if (badge) {
-    badge.className = 'pattern-indicator pattern-3';
-    badge.textContent = 'MODO: ANÁLISIS DE PATRÓN';
-  }
-  
-  document.getElementById('status-badge').className = 'status-badge status-fractal';
-  document.getElementById('status-badge').textContent = 'ANALIZANDO';
-  document.getElementById('cycle-display').textContent = '--';
-  document.getElementById('cycle-mode').textContent = 'Esperando datos...';
-  document.getElementById('cycle-mode').className = 'cycle-mode';
-  
-  // NUEVO: Resetear UI de MA
-  document.getElementById('ma-status-indicator').className = 'ma-status-indicator ma-status-waiting';
-  document.getElementById('ma-status-text').textContent = 'ESPERANDO CRUCE MA2/MA10';
-  document.getElementById('ma-line-fast').style.transform = 'translateY(0)';
-  document.getElementById('ma-line-slow').style.transform = 'translateY(0)';
-  document.getElementById('ma-line-fast').classList.remove('crossing');
-  document.getElementById('ma-line-slow').classList.remove('crossing');
-  document.getElementById('ma-cross-alert').classList.remove('active');
-  document.getElementById('strength-meter').style.display = 'none';
-  document.getElementById('ma-history-list').innerHTML = '<div style="text-align: center; color: var(--text-dim); font-size: 10px; padding: 10px;">Sin cruces registrados</div>';
-  
-  document.getElementById('tech-status').textContent = 'ANALIZANDO';
-  document.getElementById('tech-status').className = 'tech-status validating';
-  document.getElementById('rupture-tech-alert').classList.remove('active');
-  
-  // Remover alerta de 8 velas si existe
-  const eightAlert = document.getElementById('eight-candle-alert');
-  if (eightAlert) eightAlert.remove();
-  
-  d3.select("#dna-svg").selectAll("*").remove();
-  
-  updateStats();
-  updateBlocks();
-  performTechnicalAnalysis();
-}
-
-function dismissCrash() {
-  document.getElementById('crash-alert').classList.remove('active');
-  clearAll();
-}
-
-document.getElementById('sequenceInput')?.addEventListener('input', function(e) {
-  const val = e.target.value.toUpperCase().replace(/[^GR]/g, '');
-  
-  if (val.length >= 2) {
-    history = [];
-    for (let char of val) {
-      history.push({
-        color: char,
+    const node = {
+        color: color,
         x: history.length * 60 + 50,
-        y: CENTER_Y + (Math.random() - 0.5) * 50,
+        y: CENTER_Y + (Math.random() - 0.5) * 100,
         radius: NODE_RADIUS,
-        id: Date.now() + Math.random()
-      });
+        id: Date.now()
+    };
+    
+    history.push(node);
+    
+    if (history.length > 15) {
+        history.shift();
+        history.forEach((h, i) => h.x = i * 60 + 50);
     }
     
     detectPattern();
     updateVisualization();
     performTechnicalAnalysis();
     updateAnticipationPanel();
-  }
+    
+    // Verificar cruce automático después de añadir vela
+    if (history.length >= 10) {
+        const ma = calculateMA2MA10();
+        if (ma.crossed) {
+            registerCross(ma.crossType, ma.strength, 'auto');
+            updateMAVisuals(ma.crossType, ma.strength, true);
+            showNotification(`🚨 CRUCE ${ma.crossType === 'golden' ? 'GOLDEN' : 'DEATH'} AUTO-DETECTADO`, "success");
+            
+            setTimeout(() => {
+                const eightCandleResult = analyzeEightCandlesOnCross();
+                if (eightCandleResult) {
+                    showNotification('📊 Análisis de 8 velas activado: Cruce + Ruptura detectados', 'success');
+                }
+            }, 500);
+        }
+        updateMAStatus(ma);
+    }
+    
+    if (detectTechnicalRupture()) {
+        handleTechnicalRupture();
+    }
+}
+
+function detectPattern() {
+    if (history.length < 2) return;
+    
+    // NUEVO: Detectar patrones complejos PRIMERO (prioridad alta)
+    const complexPattern = detectComplexPatterns();
+    
+    if (complexPattern) {
+        // Verificar si es una repetición del patrón anterior
+        const isRepetition = lastComplexPattern && 
+                             lastComplexPattern.detected === complexPattern.detected &&
+                             (Date.now() - lastComplexPattern.timestamp) < 10000;
+        
+        // Aumentar fuerza si es repetición
+        const adjustedStrength = isRepetition ? 
+            Math.min(0.98, complexPattern.strength + 0.08) : 
+            complexPattern.strength;
+        
+        const adjustedSignal = isRepetition ? 
+            (complexPattern.signal.includes('COMPRA') ? 'COMPRA_FUERTE' : 'VENTA_FUERTE') :
+            complexPattern.signal;
+        
+        // Registrar en historial de patrones complejos
+        complexPatternHistory.push({
+            ...complexPattern,
+            timestamp: Date.now(),
+            isRepetition: isRepetition,
+            adjustedStrength: adjustedStrength
+        });
+        
+        lastComplexPattern = {
+            ...complexPattern,
+            startIndex: history.length - complexPattern.length,
+            timestamp: Date.now()
+        };
+        
+        // Generar proyección especial para patrón complejo
+        generateComplexProjection(complexPattern);
+        
+        // También registrar como ciclo normal para mantener compatibilidad
+        cycles.push({
+            pattern: complexPattern.detected.substring(0, 2),
+            complexPattern: complexPattern.detected,
+            type: complexPattern.length >= 6 ? '6' : complexPattern.length >= 4 ? '4' : '2',
+            index: history.length - complexPattern.length,
+            timestamp: Date.now(),
+            isComplex: true,
+            strength: adjustedStrength
+        });
+        
+        updateStats();
+        updateBlocks();
+        updateEnergy();
+        
+        return; // Salir temprano, no procesar como patrón simple
+    }
+    
+    // Lógica original para patrones simples (2 velas)
+    const lastTwo = history.slice(-2);
+    const pattern = lastTwo[0].color + lastTwo[1].color;
+    
+    // Verificar si es patrón de continuación (GG o RR)
+    const isPhase3 = currentPhase === '3';
+    const cycleType = isPhase3 ? '3' : '2';
+    
+    // Detectar si es parte de una secuencia más larga del mismo color
+    let sequenceStrength = 1;
+    let isContinuation = false;
+    
+    if (history.length >= 3) {
+        const lastThree = history.slice(-3);
+        const allSameColor = lastThree.every(h => h.color === lastTwo[1].color);
+        if (allSameColor) {
+            sequenceStrength = 1.2;
+            isContinuation = true;
+        }
+    }
+    
+    if (pattern === 'GG' || pattern === 'RR') {
+        cycles.push({
+            pattern: pattern,
+            type: cycleType,
+            index: history.length - 2,
+            timestamp: Date.now(),
+            isContinuation: isContinuation,
+            strength: sequenceStrength
+        });
+        
+        lastPattern = pattern;
+        
+        generateProjections(pattern, isContinuation, sequenceStrength);
+        
+        updateStats();
+        updateBlocks();
+        updateEnergy();
+    }
+}
+
+function generateProjections(basePattern, isContinuation = false, sequenceStrength = 1) {
+    projectedPaths = [];
+    
+    const continuationBonus = isContinuation ? 0.15 : 0;
+    const baseProb = 0.4 * sequenceStrength;
+    
+    const projections = [
+        new PatternProjection(
+            'Continuación', 
+            basePattern + basePattern[0], 
+            Math.min(0.95, baseProb + continuationBonus), 
+            basePattern === 'GG' ? 'COMPRA' : 'VENTA', 
+            basePattern === 'GG' ? 'buy' : 'sell',
+            isContinuation ? 
+                `Continuación fuerte de tendencia ${basePattern === 'GG' ? 'alcista' : 'bajista'} (${Math.round(sequenceStrength * 100)}% fuerza)` :
+                'Continuación de tendencia actual'
+        ),
+        new PatternProjection(
+            'Reversión', 
+            basePattern === 'GG' ? 'GR' : 'RG', 
+            0.3 - (continuationBonus / 2), 
+            basePattern === 'GG' ? 'VENTA' : 'COMPRA',
+            basePattern === 'GG' ? 'sell' : 'buy',
+            'Reversión de tendencia'
+        ),
+        new PatternProjection(
+            'Consolidación', 
+            'GR', 
+            0.2, 
+            'MANTENER', 
+            'hold',
+            'Rango de consolidación'
+        ),
+        new PatternProjection(
+            'Ruptura', 
+            basePattern === 'GG' ? 'RR' : 'GG', 
+            0.1, 
+            basePattern === 'GG' ? 'VENTA_FUERTE' : 'COMPRA_FUERTE',
+            basePattern === 'GG' ? 'sell' : 'buy',
+            'Ruptura de estructura'
+        )
+    ];
+    
+    projectedPaths = projections;
+    activeProjection = projections[0];
+    
+    updateProjectionUI();
+}
+
+function updateProjectionUI() {
+    const container = document.getElementById('path-container');
+    const panel = document.getElementById('projection-panel');
+    const lastPatternEl = document.getElementById('last-pattern');
+    
+    if (!lastPattern || !panel) return;
+    
+    panel.style.display = 'block';
+    lastPatternEl.textContent = lastPattern;
+    
+    if (!container) return;
+    
+    container.innerHTML = projectedPaths.map((path, idx) => {
+        const isActive = idx === 0;
+        const isBroken = path.isBroken;
+        const isComplex = path.isComplex;
+        
+        return `
+            <div class="path-item ${isBroken ? 'broken' : isActive ? 'valid' : 'alternate'} ${isComplex ? 'complex' : ''}">
+                <div class="path-signal ${path.signalType}">${path.signal}</div>
+                <div class="path-label">${path.name}</div>
+                <div class="path-sequence">
+                    ${path.sequence.split('').map((c, i) => 
+                        `<div class="path-dot ${c.toLowerCase()} ${i === path.sequence.length - 1 ? 'current' : ''}">${c}</div>`
+                    ).join('')}
+                </div>
+                <div class="path-status ${isBroken ? 'broken' : isActive ? 'valid' : 'alternate'}">
+                    ${isBroken ? 'ROTO' : isActive ? 'ACTIVO' : 'ALT'}
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    updateMainPrediction();
+}
+
+function updateMainPrediction() {
+    const predMain = document.getElementById('prediction-main');
+    const predSeq = document.getElementById('pred-sequence');
+    const seqNext = document.getElementById('sequence-next');
+    const confDisplay = document.getElementById('confidence-display');
+    const detail = document.getElementById('prediction-detail');
+    
+    if (!activeProjection) return;
+    
+    // Si es un patrón complejo, mostrar mensaje de trading específico
+    if (activeProjection.isComplex && activeProjection.tradingMessage) {
+        const tm = activeProjection.tradingMessage;
+        
+        predMain.className = 'pred-main pred-' + activeProjection.signalType;
+        predMain.innerHTML = `
+            <div style="font-size: 0.5em; margin-bottom: 5px; color: var(--gold);">
+                ${activeProjection.name}
+            </div>
+            <div style="font-size: 0.9em;">${tm.action}</div>
+        `;
+        
+        predSeq.style.display = 'block';
+        seqNext.innerHTML = `
+            <span style="color: ${activeProjection.continuation === 'G' ? 'var(--green)' : 'var(--red)'}; font-size: 1.2em;">
+                ${activeProjection.continuation === 'G' ? '↑ VERDE' : '↓ ROJO'} ESPERADO
+            </span>
+        `;
+        
+        const confidence = Math.round(activeProjection.probability * 100);
+        confDisplay.textContent = confidence + '%';
+        confDisplay.style.color = confidence > 80 ? 'var(--green)' : 
+                                  confidence > 60 ? 'var(--gold)' : 'var(--orange)';
+        
+        detail.innerHTML = `
+            <div style="background: rgba(0,0,0,0.4); padding: 12px; border-radius: 8px; border-left: 3px solid ${activeProjection.signalType === 'buy' ? 'var(--green)' : activeProjection.signalType === 'sell' ? 'var(--red)' : 'var(--gold)'};">
+                <strong style="color: var(--gold); font-size: 1.1em;">📊 RECOMENDACIÓN DE TRADING:</strong><br><br>
+                <div style="font-size: 1.1em; margin-bottom: 8px; color: ${activeProjection.signalType === 'buy' ? 'var(--green)' : activeProjection.signalType === 'sell' ? 'var(--red)' : 'var(--text)'};">
+                    ${tm.action}
+                </div>
+                <div style="line-height: 1.5; margin-bottom: 10px;">
+                    ${tm.rationale}
+                </div>
+                <div style="background: rgba(255,215,0,0.1); padding: 8px; border-radius: 4px; font-size: 0.95em;">
+                    <strong>${tm.nextMove}</strong> | Confianza: ${tm.confidence}%
+                </div>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.9em; color: var(--text-dim);">
+                <strong>Patrón Detectado:</strong> ${activeProjection.originalPattern ? activeProjection.originalPattern.name : activeProjection.name}<br>
+                <strong>Descripción:</strong> ${activeProjection.originalPattern ? activeProjection.originalPattern.description : activeProjection.description}
+            </div>
+        `;
+        
+        return;
+    }
+    
+    // Vista normal para patrones simples
+    predMain.className = 'pred-main pred-' + activeProjection.signalType;
+    predMain.textContent = activeProjection.signal;
+    
+    predSeq.style.display = 'block';
+    seqNext.innerHTML = activeProjection.sequence.split('').map((c, i) => {
+        if (i < activeProjection.sequence.length - 1) {
+            return `<span style="color: var(--text-dim)">${c}</span>`;
+        }
+        return `<span class="exp-${c.toLowerCase()}">${c}</span>`;
+    }).join('');
+    
+    const confidence = Math.round(activeProjection.probability * 100);
+    confDisplay.textContent = confidence + '%';
+    
+    detail.innerHTML = `
+        <strong>Patrón Base:</strong> <span style="color: var(--gold)">${lastPattern || '--'}</span><br>
+        <strong>Proyección:</strong> ${activeProjection.name}<br>
+        <strong>Descripción:</strong> ${activeProjection.description}
+    `;
+}
+
+function updateVisualization() {
+    const svg = d3.select("#dna-svg");
+    
+    svg.selectAll("*").remove();
+    
+    for (let i = 0; i < history.length - 1; i++) {
+        const curr = history[i];
+        const next = history[i + 1];
+        
+        svg.append("line")
+            .attr("x1", curr.x)
+            .attr("y1", curr.y)
+            .attr("x2", next.x)
+            .attr("y2", next.y)
+            .attr("stroke", curr.color === 'G' ? 'var(--green)' : 'var(--red)')
+            .attr("stroke-width", 3)
+            .attr("opacity", 0.6);
+    }
+    
+    const nodes = svg.selectAll(".node")
+        .data(history)
+        .enter()
+        .append("g")
+        .attr("class", "dna-node")
+        .attr("transform", d => `translate(${d.x},${d.y})`);
+    
+    nodes.append("circle")
+        .attr("r", d => d.radius)
+        .attr("fill", d => d.color === 'G' ? 'var(--green)' : 'var(--red)')
+        .attr("stroke", "var(--gold)")
+        .attr("stroke-width", 2)
+        .attr("filter", d => d.color === 'G' ? 
+            "drop-shadow(0 0 10px var(--green))" : 
+            "drop-shadow(0 0 10px var(--red))");
+    
+    nodes.append("text")
+        .attr("text-anchor", "middle")
+        .attr("dy", "0.35em")
+        .attr("fill", d => d.color === 'G' ? '#000' : '#fff')
+        .attr("font-size", "14px")
+        .attr("font-weight", "bold")
+        .text(d => d.color);
+    
+    const cycleDisplay = document.getElementById('cycle-display');
+    const cycleMode = document.getElementById('cycle-mode');
+    
+    if (cycles.length > 0) {
+        const lastCycle = cycles[cycles.length - 1];
+        cycleDisplay.textContent = lastCycle.pattern;
+        cycleMode.textContent = lastCycle.isComplex ? `Patrón ${lastCycle.type} (Complejo)` : `Fase ${lastCycle.type}+1`;
+        cycleMode.className = `cycle-mode ${lastCycle.isComplex ? 'phase-complex' : 'phase-' + lastCycle.type}`;
+    } else {
+        cycleDisplay.textContent = history.length > 0 ? 
+            history[history.length-1].color : '--';
+        cycleMode.textContent = 'Acumulando...';
+    }
+}
+
+function updateStats() {
+    const cycles3 = cycles.filter(c => c.type === '3').length;
+    const cycles4 = cycles.filter(c => c.type === '4').length;
+    const cycles6 = cycles.filter(c => c.type === '6').length;
+    const complexCycles = cycles.filter(c => c.isComplex).length;
+    
+    document.getElementById('stat-cycles-3').textContent = cycles3;
+    document.getElementById('stat-cycles-2').textContent = cycles4 + cycles6;
+    document.getElementById('stat-recalcs').textContent = recalcCount;
+    
+    const confidence = activeProjection ? 
+        Math.round(activeProjection.probability * 100) : 0;
+    document.getElementById('stat-confidence').textContent = confidence + '%';
+}
+
+function updateBlocks() {
+    const container = document.getElementById('blocks-display');
+    if (!container) return;
+    
+    container.innerHTML = cycles.slice(-10).reverse().map((cycle, idx) => {
+        const pattern = cycle.pattern;
+        const isComplex = cycle.isComplex;
+        const isPerfect3 = cycle.type === '3';
+        const isPhase4 = cycle.type === '4';
+        const isPhase6 = cycle.type === '6';
+        
+        let visualPattern = pattern;
+        if (isComplex && cycle.complexPattern) {
+            visualPattern = cycle.complexPattern;
+        }
+        
+        return `
+            <div class="block-item ${isPerfect3 ? 'perfect-3' : isPhase6 ? 'phase-6' : isPhase4 ? 'phase-4' : 'phase-2'}">
+                <div class="block-info">
+                    <div class="block-number ${isPhase6 ? 'phase-6' : isPhase4 ? 'phase-4' : ''}">
+                        #${cycles.length - idx}
+                        ${isComplex ? '<span style="color: var(--purple); font-size: 0.7em;">★</span>' : ''}
+                    </div>
+                    <div class="block-type">
+                        ${isComplex ? 'Patrón Complejo ' + cycle.type + 'v' : 'Patrón ' + cycle.type + '+1'}
+                    </div>
+                </div>
+                <div class="block-visual">
+                    ${visualPattern.split('').map((c, i) => 
+                        `<div class="v-dot ${c.toLowerCase()} ${i < 2 ? 'main' : 'rebound'}" 
+                              style="${i >= 2 ? 'opacity: ' + (0.5 + (i * 0.1)) + '; transform: scale(0.8);' : ''}"
+                              title="${isComplex ? 'Patrón complejo detectado' : ''}"></div>`
+                    ).join('')}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function updateEnergy() {
+    const energyBar = document.getElementById('energy-bar');
+    const energyText = document.getElementById('energy-text');
+    
+    const recentPatterns = patternHistory.slice(-5);
+    let consistency = 0;
+    
+    if (recentPatterns.length >= 2) {
+        const values = recentPatterns.map(p => p.value);
+        const avg = values.reduce((a,b) => a+b, 0) / values.length;
+        const variance = values.reduce((a,b) => a + Math.pow(b - avg, 2), 0) / values.length;
+        consistency = Math.max(0, 100 - variance);
+    }
+    
+    energy = consistency;
+    
+    energyBar.style.width = energy + '%';
+    
+    if (energy > 70) {
+        energyBar.className = 'energy-bar-fill energy-phase3';
+        energyText.textContent = 'Energía Óptima - Patrón Estable';
+    } else if (energy > 40) {
+        energyBar.className = 'energy-bar-fill energy-phase2';
+        energyText.textContent = 'Energía Moderada - Fase 2+1';
+    } else {
+        energyBar.className = 'energy-bar-fill energy-broken';
+        energyText.textContent = 'Energía Baja - Inestabilidad Detectada';
+    }
+}
+
+function handleTechnicalRupture() {
+    ruptureDetected = true;
+    
+    const warning = document.getElementById('rupture-warning');
+    if (warning) warning.classList.add('active');
+    
+    const badge = document.getElementById('pattern-badge');
+    if (badge) {
+        badge.className = 'pattern-indicator pattern-broken';
+        badge.textContent = 'MODO: RUPTURA TÉCNICA';
+    }
+    
+    const status = document.getElementById('status-badge');
+    status.className = 'status-badge status-alert';
+    status.textContent = 'RUPTURA DETECTADA';
+    
+    const phaseAlert = document.getElementById('phase-alert');
+    phaseAlert.classList.add('active', 'broken');
+    document.getElementById('phase-title').textContent = '⚠ RUPTURA TÉCNICA CRÍTICA';
+    document.getElementById('phase-title').classList.add('broken');
+    document.getElementById('phase-desc').innerHTML = `
+        Los indicadores técnicos detectan desviación severa en la secuencia.<br>
+        <strong>Se requiere recalibración del sistema.</strong>
+    `;
+}
+
+function clearAll() {
+    history = [];
+    cycles = [];
+    patternHistory = [];
+    currentPhase = '3';
+    transitionCount = 0;
+    recalcCount = 0;
+    energy = 0;
+    crashDetected = false;
+    ruptureDetected = false;
+    lastPattern = null;
+    projectedPaths = [];
+    activeProjection = null;
+    lastUpdateTime = null;
+    
+    // Limpiar estado de cruces MA
+    maCrossHistory = [];
+    lastCrossType = null;
+    isCrossing = false;
+    crossStrength = 0;
+    
+    // Limpiar estado de 8 velas
+    eightCandleAnalysis = {
+        window: [],
+        ma2: null,
+        ma8: null,
+        crossDetected: false,
+        ruptureDetected: false,
+        trendProjection: null,
+        lastAnalysis: null,
+        active: false
+    };
+    
+    // Limpiar patrones complejos
+    lastComplexPattern = null;
+    complexPatternHistory = [];
+    
+    document.getElementById('sequenceInput').value = '';
+    document.getElementById('prediction-main').textContent = '---';
+    document.getElementById('prediction-main').className = 'pred-main pred-hold';
+    document.getElementById('pred-sequence').style.display = 'none';
+    document.getElementById('confidence-display').textContent = '0%';
+    document.getElementById('prediction-detail').textContent = 'Ingresa una secuencia para detectar el patrón base y generar proyecciones dinámicas.';
+    document.getElementById('projection-panel').style.display = 'none';
+    document.getElementById('anticipation-panel').style.display = 'none';
+    document.getElementById('rupture-warning').classList.remove('active');
+    document.getElementById('phase-alert').classList.remove('active', 'broken');
+    document.getElementById('phase-title').classList.remove('broken');
+    
+    const badge = document.getElementById('pattern-badge');
+    if (badge) {
+        badge.className = 'pattern-indicator pattern-3';
+        badge.textContent = 'MODO: ANÁLISIS DE PATRÓN';
+    }
+    
+    document.getElementById('status-badge').className = 'status-badge status-fractal';
+    document.getElementById('status-badge').textContent = 'ANALIZANDO';
+    document.getElementById('cycle-display').textContent = '--';
+    document.getElementById('cycle-mode').textContent = 'Esperando datos...';
+    document.getElementById('cycle-mode').className = 'cycle-mode';
+    
+    // Resetear UI de MA
+    document.getElementById('ma-status-indicator').className = 'ma-status-indicator ma-status-waiting';
+    document.getElementById('ma-status-text').textContent = 'ESPERANDO CRUCE MA2/MA10';
+    document.getElementById('ma-line-fast').style.transform = 'translateY(0)';
+    document.getElementById('ma-line-slow').style.transform = 'translateY(0)';
+    document.getElementById('ma-line-fast').classList.remove('crossing');
+    document.getElementById('ma-line-slow').classList.remove('crossing');
+    document.getElementById('ma-cross-alert').classList.remove('active');
+    document.getElementById('strength-meter').style.display = 'none';
+    document.getElementById('ma-history-list').innerHTML = '<div style="text-align: center; color: var(--text-dim); font-size: 10px; padding: 10px;">Sin cruces registrados</div>';
+    
+    document.getElementById('tech-status').textContent = 'ANALIZANDO';
+    document.getElementById('tech-status').className = 'tech-status validating';
+    document.getElementById('rupture-tech-alert').classList.remove('active');
+    
+    // Remover alerta de 8 velas si existe
+    const eightAlert = document.getElementById('eight-candle-alert');
+    if (eightAlert) eightAlert.remove();
+    
+    d3.select("#dna-svg").selectAll("*").remove();
+    
+    updateStats();
+    updateBlocks();
+    performTechnicalAnalysis();
+}
+
+function dismissCrash() {
+    document.getElementById('crash-alert').classList.remove('active');
+    clearAll();
+}
+
+document.getElementById('sequenceInput')?.addEventListener('input', function(e) {
+    const val = e.target.value.toUpperCase().replace(/[^GR]/g, '');
+    
+    if (val.length >= 2) {
+        history = [];
+        for (let char of val) {
+            history.push({
+                color: char,
+                x: history.length * 60 + 50,
+                y: CENTER_Y + (Math.random() - 0.5) * 50,
+                radius: NODE_RADIUS,
+                id: Date.now() + Math.random()
+            });
+        }
+        
+        detectPattern();
+        updateVisualization();
+        performTechnicalAnalysis();
+        updateAnticipationPanel();
+    }
 });
 
-// NUEVO: CSS para notificaciones
+// CSS para notificaciones
 const style = document.createElement('style');
 style.textContent += `
-  @keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-  @keyframes slideOut {
-    from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(100%); opacity: 0; }
-  }
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+    @keyframes slideInRight {
+        from { transform: translateX(400px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOutRight {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(400px); opacity: 0; }
+    }
 `;
 document.head.appendChild(style);
 
 document.addEventListener('DOMContentLoaded', function() {
-  updateStats();
-  performTechnicalAnalysis();
+    updateStats();
+    performTechnicalAnalysis();
 });
 </script>
 
