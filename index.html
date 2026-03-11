@@ -22,62 +22,69 @@
       color: #fff;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 15px;
+      padding: 10px;
+      overflow: hidden;
     }
     
-    /* ===== PANEL HÍBRIDO DE CONFIRMACIÓN ===== */
+    /* ===== LAYOUT PRINCIPAL EN GRID ===== */
+    .main-container {
+      display: grid;
+      grid-template-columns: 320px 1fr 320px;
+      grid-template-rows: auto 1fr auto;
+      gap: 10px;
+      height: calc(100vh - 20px);
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+    
+    /* ===== COLUMNA IZQUIERDA: CONTROLES Y ENTRADA ===== */
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+    
     .confirm-panel {
-      width: 100%;
-      max-width: 500px;
       background: var(--panel);
-      border: 3px solid var(--cyan);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 15px;
+      border: 2px solid var(--cyan);
+      border-radius: 8px;
+      padding: 12px;
       text-align: center;
     }
     .confirm-title {
       color: var(--cyan);
-      font-size: 0.9em;
-      margin-bottom: 15px;
+      font-size: 0.8em;
+      margin-bottom: 8px;
       font-weight: bold;
     }
     .suggestion-box {
       background: rgba(0,0,0,0.4);
-      border-radius: 10px;
-      padding: 20px;
-      margin-bottom: 15px;
-      border: 2px solid #444;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 8px;
+      border: 1px solid #444;
       transition: all 0.3s;
     }
-    .suggestion-box.confirmed {
-      border-color: var(--green);
-      background: rgba(0,255,136,0.1);
-    }
-    .suggestion-box.corrected {
-      border-color: var(--orange);
-      background: rgba(255,136,0,0.1);
-    }
-    .suggestion-label { font-size: 0.8em; color: #888; margin-bottom: 8px; }
+    .suggestion-box.confirmed { border-color: var(--green); background: rgba(0,255,136,0.1); }
+    .suggestion-box.corrected { border-color: var(--orange); background: rgba(255,136,0,0.1); }
+    .suggestion-label { font-size: 0.7em; color: #888; margin-bottom: 4px; }
     .suggestion-strength {
-      font-size: 2.5em;
+      font-size: 1.8em;
       font-weight: bold;
-      margin-bottom: 5px;
-      letter-spacing: 5px;
+      margin-bottom: 3px;
+      letter-spacing: 3px;
     }
-    .strength-3 { color: var(--green); text-shadow: 0 0 20px var(--green); }
+    .strength-3 { color: var(--green); text-shadow: 0 0 10px var(--green); }
     .strength-2 { color: var(--gold); }
     .strength-1 { color: #888; }
-    .suggestion-text { font-size: 1.2em; font-weight: bold; margin-bottom: 8px; }
-    .suggestion-reason { font-size: 0.75em; color: #aaa; line-height: 1.4; }
+    .suggestion-text { font-size: 1em; font-weight: bold; margin-bottom: 4px; }
+    .suggestion-reason { font-size: 0.65em; color: #aaa; line-height: 1.3; }
     .correction-notice {
       display: none;
-      font-size: 0.8em;
+      font-size: 0.7em;
       color: var(--orange);
-      margin-top: 8px;
+      margin-top: 4px;
       font-weight: bold;
     }
     .correction-notice.active { display: block; }
@@ -85,70 +92,65 @@
     .action-buttons {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 10px;
+      gap: 6px;
+      margin-bottom: 6px;
     }
     .btn-confirm {
       background: linear-gradient(135deg, var(--green), #00aa55);
       color: #000;
       border: none;
-      border-radius: 8px;
-      padding: 15px;
-      font-size: 1.1em;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 0.9em;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.2s;
     }
-    .btn-confirm:hover { transform: scale(1.02); box-shadow: 0 0 20px var(--green); }
+    .btn-confirm:hover { transform: scale(1.02); box-shadow: 0 0 15px var(--green); }
     .btn-correct {
       background: linear-gradient(135deg, var(--orange), #cc6a00);
       color: #000;
       border: none;
-      border-radius: 8px;
-      padding: 15px;
-      font-size: 1.1em;
+      border-radius: 6px;
+      padding: 10px;
+      font-size: 0.9em;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.2s;
     }
-    .btn-correct:hover { transform: scale(1.02); box-shadow: 0 0 20px var(--orange); }
+    .btn-correct:hover { transform: scale(1.02); box-shadow: 0 0 15px var(--orange); }
     
     .correction-options {
       display: none;
-      margin-top: 15px;
-      padding-top: 15px;
+      margin-top: 8px;
+      padding-top: 8px;
       border-top: 1px solid #444;
-      animation: slideDown 0.3s;
     }
     .correction-options.active { display: block; }
-    @keyframes slideDown {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    .correction-title { font-size: 0.8em; color: var(--orange); margin-bottom: 10px; }
+    .correction-title { font-size: 0.7em; color: var(--orange); margin-bottom: 6px; }
     .correction-grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 8px;
+      gap: 4px;
     }
     .correction-btn {
       background: #333;
-      border: 2px solid #555;
+      border: 1px solid #555;
       color: #fff;
-      border-radius: 8px;
-      padding: 12px;
+      border-radius: 4px;
+      padding: 6px;
       cursor: pointer;
-      font-size: 0.9em;
+      font-size: 0.7em;
       transition: all 0.2s;
     }
     .correction-btn:hover { border-color: #fff; transform: scale(1.05); }
     .correction-btn.selected { border-color: var(--gold); background: rgba(255,215,0,0.2); }
     
     .status-bar {
-      margin-top: 15px;
-      padding: 10px;
-      border-radius: 6px;
-      font-size: 0.85em;
+      margin-top: 8px;
+      padding: 6px;
+      border-radius: 4px;
+      font-size: 0.7em;
       font-weight: bold;
     }
     .status-pending { background: rgba(255,215,0,0.1); border: 1px solid var(--gold); color: var(--gold); }
@@ -158,8 +160,8 @@
     .color-buttons {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 15px;
-      margin-top: 15px;
+      gap: 8px;
+      margin-top: 8px;
       opacity: 0.3;
       pointer-events: none;
       transition: all 0.3s;
@@ -169,225 +171,65 @@
       background: linear-gradient(135deg, var(--green), #00aa55);
       color: #000;
       border: none;
-      border-radius: 10px;
-      padding: 25px;
-      font-size: 1.5em;
+      border-radius: 6px;
+      padding: 15px;
+      font-size: 1.1em;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.2s;
     }
-    .btn-green:hover { transform: scale(1.05); box-shadow: 0 0 25px var(--green); }
+    .btn-green:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--green); }
     .btn-red {
       background: linear-gradient(135deg, var(--red), #aa0000);
       color: #fff;
       border: none;
-      border-radius: 10px;
-      padding: 25px;
-      font-size: 1.5em;
+      border-radius: 6px;
+      padding: 15px;
+      font-size: 1.1em;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.2s;
     }
-    .btn-red:hover { transform: scale(1.05); box-shadow: 0 0 25px var(--red); }
+    .btn-red:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--red); }
     
-    /* ===== TODOS LOS PANELES AVANZADOS ===== */
-    .trap-modal {
-      position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.8);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-    }
-    .trap-modal.active { display: flex; }
-    .trap-modal-content {
-      background: var(--panel);
-      padding: 25px;
-      border-radius: 12px;
-      border: 2px solid var(--orange);
+    .hint {
       text-align: center;
-      max-width: 300px;
-    }
-    .trap-modal-title { color: var(--orange); font-size: 1.2em; margin-bottom: 15px; }
-    .trap-modal-text { font-size: 0.9em; margin-bottom: 20px; color: #ccc; }
-    .trap-modal-buttons { display: flex; gap: 10px; justify-content: center; }
-    .trap-btn { padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
-    .trap-btn-confirm { background: var(--orange); color: #000; }
-    .trap-btn-cancel { background: #333; color: #fff; }
-    
-    .active-trap-banner {
-      width: 100%;
-      max-width: 500px;
-      background: linear-gradient(90deg, var(--purple), transparent);
-      border-left: 4px solid var(--purple);
-      padding: 12px;
-      margin-bottom: 15px;
-      display: none;
-      animation: pulse 2s infinite;
-    }
-    .active-trap-banner.active { display: block; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-    
-    .extreme-alert {
-      width: 100%;
-      max-width: 500px;
-      background: linear-gradient(90deg, var(--red), transparent);
-      border-left: 4px solid var(--red);
-      padding: 15px;
-      margin-bottom: 15px;
-      display: none;
-      animation: pulse-red 1.5s infinite;
-    }
-    .extreme-alert.active { display: block; }
-    @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
-    .extreme-title { font-size: 1.1em; font-weight: bold; margin-bottom: 5px; }
-    .extreme-text { font-size: 0.85em; color: #ccc; }
-    
-    .cross-detector {
-      width: 100%;
-      max-width: 500px;
-      background: var(--panel);
-      border: 2px solid var(--gold);
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 15px;
-    }
-    .cross-title { color: var(--gold); font-size: 0.9em; margin-bottom: 10px; text-align: center; }
-    .cross-active {
-      background: linear-gradient(90deg, var(--gold), transparent);
-      padding: 12px;
-      border-radius: 6px;
-      text-align: center;
-      font-size: 1.3em;
-      font-weight: bold;
-      display: none;
-    }
-    .cross-active.show { display: block; }
-    .cross-type-golden { color: var(--green); }
-    .cross-type-death { color: var(--red); }
-    
-    .ma-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-    .ma-item { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center; font-size: 0.8em; }
-    .ma-item.active { border: 1px solid var(--gold); background: rgba(255,215,0,0.1); }
-    .ma-item.trap { border: 1px solid var(--purple); opacity: 0.7; }
-    .ma-item.extreme { border: 2px solid var(--red); background: rgba(255,68,68,0.2); }
-    .ma-name { color: #888; font-size: 0.75em; }
-    .ma-val { font-weight: bold; font-size: 1.1em; }
-    .ma-up { color: var(--green); }
-    .ma-down { color: var(--red); }
-    .ma-extreme { color: var(--red); animation: blink 1s infinite; }
-    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-    
-    .current-candle-analysis {
-      width: 100%;
-      max-width: 500px;
-      background: var(--panel);
-      border: 2px solid var(--cyan);
-      border-radius: 10px;
-      padding: 15px;
-      margin-bottom: 15px;
-      display: none;
-    }
-    .current-candle-analysis.active { display: block; }
-    .current-title { color: var(--cyan); font-size: 0.9em; margin-bottom: 10px; text-align: center; font-weight: bold; }
-    .current-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .stat-box { background: rgba(0,0,0,0.3); padding: 8px; border-radius: 4px; text-align: center; }
-    .stat-label { font-size: 0.7em; color: #888; }
-    .stat-value { font-size: 1.2em; font-weight: bold; }
-    .current-verdict {
-      text-align: center;
-      padding: 10px;
-      border-radius: 6px;
-      font-weight: bold;
-    }
-    .verdict-strong-green { background: rgba(0,255,136,0.2); color: var(--green); border: 1px solid var(--green); }
-    .verdict-strong-red { background: rgba(255,68,68,0.2); color: var(--red); border: 1px solid var(--red); }
-    .verdict-weak { background: rgba(255,215,0,0.1); color: var(--gold); border: 1px solid var(--gold); }
-    
-    .trend-box {
-      width: 100%;
-      max-width: 500px;
-      background: var(--panel);
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      text-align: center;
-      border: 2px solid transparent;
-      position: relative;
-    }
-    .trend-box.bullish { border-color: var(--green); }
-    .trend-box.bearish { border-color: var(--red); }
-    .trend-box.neutral { border-color: var(--gold); }
-    .trend-box.weakening-bullish { border-color: var(--orange); }
-    .trend-box.strengthening-bearish { border-color: var(--cyan); }
-    .trend-box.extreme-bullish { 
-      border-color: var(--red); 
-      background: linear-gradient(135deg, var(--panel), rgba(255,0,0,0.1));
-      animation: pulse-border 2s infinite;
-    }
-    .trend-box.extreme-bearish { 
-      border-color: var(--green); 
-      background: linear-gradient(135deg, var(--panel), rgba(0,255,0,0.1));
-      animation: pulse-border 2s infinite;
-    }
-    @keyframes pulse-border { 
-      0%, 100% { box-shadow: 0 0 5px currentColor; } 
-      50% { box-shadow: 0 0 20px currentColor; } 
-    }
-    .trend-label { color: #888; font-size: 0.8em; margin-bottom: 5px; }
-    .trend-value { font-size: 1.2em; font-weight: bold; }
-    .trend-original { font-size: 0.75em; color: #666; text-decoration: line-through; margin-top: 5px; }
-    .trend-badge {
-      position: absolute;
-      top: 5px; right: 10px;
       font-size: 0.6em;
-      background: var(--purple);
-      color: #fff;
-      padding: 2px 8px;
-      border-radius: 4px;
-      display: none;
+      color: #555;
+      margin-top: 6px;
     }
-    .trend-box.adjusted .trend-badge { display: block; }
-    .extreme-badge {
-      position: absolute;
-      top: 5px; left: 10px;
-      font-size: 0.6em;
-      background: var(--red);
-      color: #fff;
-      padding: 2px 8px;
-      border-radius: 4px;
-      display: none;
+    .hint kbd {
+      background: #333;
+      padding: 1px 4px;
+      border-radius: 2px;
+      border: 1px solid #555;
     }
-    .trend-box.extreme-bullish .extreme-badge,
-    .trend-box.extreme-bearish .extreme-badge { display: block; }
-    .momentum-note {
-      font-size: 0.7em;
-      color: var(--orange);
-      margin-top: 5px;
-      font-style: italic;
+    
+    /* ===== COLUMNA CENTRAL: SEÑAL PRINCIPAL Y PROYECCIONES ===== */
+    .center-column {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
     }
     
     .main-signal {
-      width: 100%;
-      max-width: 500px;
-      padding: 40px 20px;
-      border-radius: 12px;
+      flex: 0 0 auto;
+      padding: 20px;
+      border-radius: 10px;
       text-align: center;
-      font-size: 2.2em;
+      font-size: 2.5em;
       font-weight: bold;
-      margin-bottom: 15px;
       border: 3px solid;
       position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100px;
     }
     .signal-buy { background: rgba(0,255,136,0.1); border-color: var(--green); color: var(--green); }
     .signal-sell { background: rgba(255,68,68,0.1); border-color: var(--red); color: var(--red); }
-    .signal-wait { background: rgba(255,215,0,0.05); border-color: var(--gold); color: var(--gold); font-size: 1.8em; }
+    .signal-wait { background: rgba(255,215,0,0.05); border-color: var(--gold); color: var(--gold); font-size: 2em; }
     .signal-conflict {
       background: repeating-linear-gradient(45deg, rgba(255,215,0,0.1), rgba(255,215,0,0.1) 10px, rgba(255,0,255,0.1) 10px, rgba(255,0,255,0.1) 20px);
       border-color: var(--orange);
@@ -421,10 +263,10 @@
     .manual-trap-badge {
       position: absolute;
       top: 5px; right: 10px;
-      font-size: 0.35em;
+      font-size: 0.3em;
       background: var(--purple);
       color: #fff;
-      padding: 3px 10px;
+      padding: 2px 8px;
       border-radius: 4px;
       display: none;
     }
@@ -432,10 +274,10 @@
     .conflict-badge {
       position: absolute;
       bottom: 5px; left: 10px;
-      font-size: 0.3em;
+      font-size: 0.25em;
       background: var(--orange);
       color: #000;
-      padding: 3px 10px;
+      padding: 2px 8px;
       border-radius: 4px;
       display: none;
     }
@@ -443,10 +285,10 @@
     .reversal-badge {
       position: absolute;
       top: 5px; left: 10px;
-      font-size: 0.35em;
+      font-size: 0.3em;
       background: var(--cyan);
       color: #000;
-      padding: 3px 10px;
+      padding: 2px 8px;
       border-radius: 4px;
       display: none;
     }
@@ -454,33 +296,38 @@
     .extreme-signal-badge {
       position: absolute;
       top: 5px; left: 10px;
-      font-size: 0.35em;
+      font-size: 0.3em;
       background: var(--red);
       color: #fff;
-      padding: 3px 10px;
+      padding: 2px 8px;
       border-radius: 4px;
       display: none;
     }
     .signal-extreme .extreme-signal-badge { display: block; }
     
-    .projections {
-      width: 100%;
-      max-width: 500px;
+    .center-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 15px;
+      gap: 8px;
+      flex: 1;
+      min-height: 0;
+    }
+    
+    .projections {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
     .proj-box {
       background: var(--panel);
-      padding: 15px;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
+      padding: 12px;
+      border-radius: 6px;
       border: 2px solid transparent;
-      position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
-    .proj-box:hover { transform: scale(1.02); }
     .proj-green { border-color: var(--green); }
     .proj-red { border-color: var(--red); }
     .proj-conflict { border-color: var(--orange); background: rgba(255,136,0,0.1); }
@@ -494,172 +341,177 @@
       0%, 100% { opacity: 1; } 
       50% { opacity: 0.8; } 
     }
-    .proj-label { font-size: 0.8em; color: #888; margin-bottom: 8px; }
-    .proj-sequence { font-size: 1.5em; letter-spacing: 4px; margin-bottom: 8px; }
-    .proj-signal { font-size: 1.1em; font-weight: bold; }
+    .proj-label { font-size: 0.75em; color: #888; margin-bottom: 4px; }
+    .proj-sequence { font-size: 1.3em; letter-spacing: 3px; margin-bottom: 4px; }
+    .proj-signal { font-size: 1em; font-weight: bold; }
     .proj-signal-buy { color: var(--green); }
     .proj-signal-sell { color: var(--red); }
     .proj-signal-hold { color: var(--gold); }
     .proj-signal-extreme { color: var(--red); animation: blink 1s infinite; }
-    .proj-confidence { font-size: 0.75em; color: #666; margin-top: 5px; }
-    .proj-reason { font-size: 0.7em; color: var(--purple); margin-top: 5px; font-style: italic; }
-    .proj-conflict-note { font-size: 0.7em; color: var(--orange); margin-top: 5px; font-weight: bold; }
-    .proj-reversal-note { font-size: 0.7em; color: var(--cyan); margin-top: 5px; font-weight: bold; }
+    .proj-confidence { font-size: 0.7em; color: #666; margin-top: 3px; }
+    .proj-reason { font-size: 0.65em; color: var(--purple); margin-top: 3px; font-style: italic; }
+    .proj-conflict-note { font-size: 0.65em; color: var(--orange); margin-top: 3px; font-weight: bold; }
+    .proj-reversal-note { font-size: 0.65em; color: var(--cyan); margin-top: 3px; font-weight: bold; }
     .proj-extreme-note { 
-      font-size: 0.7em; 
+      font-size: 0.65em; 
       color: var(--red); 
-      margin-top: 5px; 
+      margin-top: 3px; 
       font-weight: bold;
       background: rgba(255,68,68,0.2);
-      padding: 3px;
-      border-radius: 3px;
+      padding: 2px;
+      border-radius: 2px;
     }
     
-    .priority-explanation {
-      width: 100%;
-      max-width: 500px;
-      background: rgba(255,136,0,0.1);
-      border: 1px solid var(--orange);
-      border-radius: 8px;
+    .analysis-panel {
+      background: var(--panel);
+      border-radius: 6px;
       padding: 10px;
-      margin-bottom: 15px;
-      font-size: 0.75em;
-      display: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      overflow-y: auto;
     }
-    .priority-explanation.active { display: block; }
-    .priority-title { color: var(--orange); font-weight: bold; margin-bottom: 5px; }
-    .priority-item { color: #ccc; margin: 3px 0; }
-    .priority-item.extreme { color: var(--red); font-weight: bold; }
-    
+    .analysis-title {
+      font-size: 0.75em;
+      color: var(--blue);
+      font-weight: bold;
+      text-align: center;
+      border-bottom: 1px solid #333;
+      padding-bottom: 4px;
+    }
     .logic-explanation {
-      width: 100%;
-      max-width: 500px;
       background: rgba(0,255,136,0.05);
       border: 1px solid var(--green);
-      border-radius: 8px;
-      padding: 10px;
-      margin-bottom: 15px;
-      font-size: 0.75em;
-      display: none;
-    }
-    .logic-explanation.active { display: block; }
-    .logic-title { color: var(--green); font-weight: bold; margin-bottom: 5px; }
-    .logic-item { color: #ccc; margin: 3px 0; }
-    
-    .controls { display: flex; gap: 10px; margin-bottom: 15px; }
-    button { padding: 18px 35px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1.1em; }
-    .btn-reset { background: #333; color: #fff; }
-    .btn-clear-trap { background: var(--purple); color: #fff; font-size: 0.9em; padding: 10px 20px; }
-    
-    .history-container { width: 100%; max-width: 500px; margin-bottom: 10px; }
-    .history-label { color: #888; font-size: 0.8em; margin-bottom: 8px; text-align: center; }
-    .history { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
-    .candle {
-      width: 32px; height: 32px;
       border-radius: 4px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: all 0.2s;
-      position: relative;
-      flex-direction: column;
+      padding: 6px;
+      font-size: 0.7em;
     }
-    .candle:hover { transform: scale(1.2); }
-    .candle-g { background: var(--green); color: #000; }
-    .candle-r { background: var(--red); color: #fff; }
-    .candle-new { box-shadow: 0 0 10px var(--gold); }
-    .candle-trap { border: 2px solid var(--purple); box-shadow: 0 0 8px var(--purple); }
-    .candle-trap::after {
-      content: '✕';
+    .logic-title { color: var(--green); font-weight: bold; margin-bottom: 2px; font-size: 0.9em; }
+    .logic-item { color: #ccc; line-height: 1.3; }
+    
+    .priority-explanation {
+      background: rgba(255,136,0,0.1);
+      border: 1px solid var(--orange);
+      border-radius: 4px;
+      padding: 6px;
+      font-size: 0.65em;
+    }
+    .priority-title { color: var(--orange); font-weight: bold; margin-bottom: 2px; }
+    .priority-item { color: #ccc; margin: 2px 0; }
+    .priority-item.extreme { color: var(--red); font-weight: bold; }
+    
+    /* ===== COLUMNA DERECHA: INDICADORES Y ESTADÍSTICAS ===== */
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      overflow-y: auto;
+    }
+    
+    .trend-box {
+      background: var(--panel);
+      padding: 10px;
+      border-radius: 6px;
+      text-align: center;
+      border: 2px solid transparent;
+      position: relative;
+    }
+    .trend-box.bullish { border-color: var(--green); }
+    .trend-box.bearish { border-color: var(--red); }
+    .trend-box.neutral { border-color: var(--gold); }
+    .trend-box.weakening-bullish { border-color: var(--orange); }
+    .trend-box.strengthening-bearish { border-color: var(--cyan); }
+    .trend-box.extreme-bullish { 
+      border-color: var(--red); 
+      background: linear-gradient(135deg, var(--panel), rgba(255,0,0,0.1));
+      animation: pulse-border 2s infinite;
+    }
+    .trend-box.extreme-bearish { 
+      border-color: var(--green); 
+      background: linear-gradient(135deg, var(--panel), rgba(0,255,0,0.1));
+      animation: pulse-border 2s infinite;
+    }
+    @keyframes pulse-border { 
+      0%, 100% { box-shadow: 0 0 5px currentColor; } 
+      50% { box-shadow: 0 0 20px currentColor; } 
+    }
+    .trend-label { color: #888; font-size: 0.7em; margin-bottom: 3px; }
+    .trend-value { font-size: 1.3em; font-weight: bold; }
+    .trend-original { font-size: 0.65em; color: #666; text-decoration: line-through; margin-top: 2px; }
+    .trend-badge {
       position: absolute;
-      top: -5px; right: -5px;
+      top: 3px; right: 6px;
+      font-size: 0.55em;
       background: var(--purple);
       color: #fff;
-      font-size: 8px;
-      width: 12px; height: 12px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .candle-strength {
-      font-size: 7px;
-      position: absolute;
-      bottom: 2px;
-      font-weight: normal;
-    }
-    .strength-3-ind { color: var(--green); text-shadow: 0 0 3px var(--green); }
-    .strength-2-ind { color: rgba(0,0,0,0.5); }
-    .candle-r .strength-2-ind { color: rgba(255,255,255,0.6); }
-    .strength-1-ind { color: #666; font-size: 6px; }
-    
-    .recent-trend {
-      width: 100%;
-      max-width: 500px;
-      background: var(--panel);
-      padding: 12px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      border: 2px solid #333;
-    }
-    .recent-title { color: var(--blue); font-size: 0.8em; margin-bottom: 8px; font-weight: bold; }
-    .recent-sequence {
-      display: flex;
-      gap: 4px;
-      justify-content: center;
-      margin-bottom: 8px;
-    }
-    .recent-candle {
-      width: 24px; height: 24px;
+      padding: 1px 6px;
       border-radius: 3px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 10px;
-      font-weight: bold;
-      position: relative;
+      display: none;
     }
-    .recent-candle-g { background: var(--green); color: #000; }
-    .recent-candle-r { background: var(--red); color: #fff; }
-    .recent-analysis {
+    .trend-box.adjusted .trend-badge { display: block; }
+    .extreme-badge {
+      position: absolute;
+      top: 3px; left: 6px;
+      font-size: 0.55em;
+      background: var(--red);
+      color: #fff;
+      padding: 1px 6px;
+      border-radius: 3px;
+      display: none;
+    }
+    .trend-box.extreme-bullish .extreme-badge,
+    .trend-box.extreme-bearish .extreme-badge { display: block; }
+    .momentum-note {
+      font-size: 0.65em;
+      color: var(--orange);
+      margin-top: 2px;
+      font-style: italic;
+    }
+    
+    .cross-detector {
+      background: var(--panel);
+      border: 2px solid var(--gold);
+      border-radius: 6px;
+      padding: 8px;
+    }
+    .cross-title { color: var(--gold); font-size: 0.75em; margin-bottom: 6px; text-align: center; font-weight: bold; }
+    .cross-active {
+      background: linear-gradient(90deg, var(--gold), transparent);
+      padding: 6px;
+      border-radius: 4px;
       text-align: center;
       font-size: 0.9em;
-      padding: 5px;
-      border-radius: 4px;
+      font-weight: bold;
+      display: none;
+      margin-bottom: 6px;
     }
-    .recent-bullish { background: rgba(0,255,136,0.1); color: var(--green); }
-    .recent-bearish { background: rgba(255,68,68,0.1); color: var(--red); }
-    .recent-neutral { background: rgba(255,215,0,0.1); color: var(--gold); }
-    .recent-conflict { 
-      background: rgba(255,136,0,0.15); 
-      color: var(--orange); 
-      border: 1px solid var(--orange);
-    }
-    .recent-extreme { 
-      background: rgba(255,68,68,0.2); 
-      color: var(--red); 
-      border: 1px solid var(--red);
-      animation: blink 1s infinite;
-    }
+    .cross-active.show { display: block; }
+    .cross-type-golden { color: var(--green); }
+    .cross-type-death { color: var(--red); }
+    
+    .ma-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .ma-item { background: rgba(0,0,0,0.3); padding: 4px; border-radius: 3px; text-align: center; font-size: 0.65em; }
+    .ma-item.active { border: 1px solid var(--gold); background: rgba(255,215,0,0.1); }
+    .ma-item.trap { border: 1px solid var(--purple); opacity: 0.7; }
+    .ma-item.extreme { border: 1px solid var(--red); background: rgba(255,68,68,0.2); }
+    .ma-name { color: #888; font-size: 0.7em; }
+    .ma-val { font-weight: bold; font-size: 1em; }
+    .ma-up { color: var(--green); }
+    .ma-down { color: var(--red); }
+    .ma-extreme { color: var(--red); animation: blink 1s infinite; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     
     .momentum-indicator {
-      width: 100%;
-      max-width: 500px;
       background: var(--panel);
-      padding: 10px;
-      border-radius: 8px;
-      margin-bottom: 15px;
-      font-size: 0.8em;
+      padding: 8px;
+      border-radius: 6px;
       border: 1px solid #333;
     }
-    .momentum-title { color: var(--blue); margin-bottom: 5px; font-weight: bold; }
+    .momentum-title { color: var(--blue); font-size: 0.75em; margin-bottom: 4px; font-weight: bold; }
     .momentum-bar {
-      height: 20px;
+      height: 16px;
       background: #333;
-      border-radius: 10px;
+      border-radius: 8px;
       overflow: hidden;
       position: relative;
     }
@@ -693,24 +545,238 @@
     .momentum-labels {
       display: flex;
       justify-content: space-between;
-      margin-top: 5px;
-      font-size: 0.7em;
+      margin-top: 2px;
+      font-size: 0.6em;
       color: #666;
     }
+    .momentum-detail { text-align: center; margin-top: 2px; font-size: 0.65em; color: #888; }
     
-    .instruction { color: #666; font-size: 0.75em; text-align: center; margin-top: 5px; }
-    
-    .hint {
-      text-align: center;
-      font-size: 0.7em;
-      color: #555;
-      margin-top: 10px;
+    .recent-trend {
+      background: var(--panel);
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #333;
     }
-    .hint kbd {
-      background: #333;
-      padding: 2px 6px;
+    .recent-title { color: var(--blue); font-size: 0.7em; margin-bottom: 6px; font-weight: bold; }
+    .recent-sequence {
+      display: flex;
+      gap: 3px;
+      justify-content: center;
+      margin-bottom: 6px;
+    }
+    .recent-candle {
+      width: 20px; height: 20px;
       border-radius: 3px;
-      border: 1px solid #555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: bold;
+      position: relative;
+    }
+    .recent-candle-g { background: var(--green); color: #000; }
+    .recent-candle-r { background: var(--red); color: #fff; }
+    .recent-analysis {
+      text-align: center;
+      font-size: 0.75em;
+      padding: 4px;
+      border-radius: 3px;
+    }
+    .recent-bullish { background: rgba(0,255,136,0.1); color: var(--green); }
+    .recent-bearish { background: rgba(255,68,68,0.1); color: var(--red); }
+    .recent-neutral { background: rgba(255,215,0,0.1); color: var(--gold); }
+    .recent-conflict { 
+      background: rgba(255,136,0,0.15); 
+      color: var(--orange); 
+      border: 1px solid var(--orange);
+    }
+    .recent-extreme { 
+      background: rgba(255,68,68,0.2); 
+      color: var(--red); 
+      border: 1px solid var(--red);
+      animation: blink 1s infinite;
+    }
+    
+    .current-candle-analysis {
+      background: var(--panel);
+      border: 2px solid var(--cyan);
+      border-radius: 6px;
+      padding: 8px;
+    }
+    .current-title { color: var(--cyan); font-size: 0.75em; margin-bottom: 6px; text-align: center; font-weight: bold; }
+    .current-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+    .stat-box { background: rgba(0,0,0,0.3); padding: 4px; border-radius: 3px; text-align: center; }
+    .stat-label { font-size: 0.6em; color: #888; }
+    .stat-value { font-size: 1em; font-weight: bold; }
+    .current-verdict {
+      text-align: center;
+      padding: 4px;
+      border-radius: 3px;
+      font-weight: bold;
+      font-size: 0.8em;
+    }
+    .verdict-strong-green { background: rgba(0,255,136,0.2); color: var(--green); border: 1px solid var(--green); }
+    .verdict-strong-red { background: rgba(255,68,68,0.2); color: var(--red); border: 1px solid var(--red); }
+    .verdict-weak { background: rgba(255,215,0,0.1); color: var(--gold); border: 1px solid var(--gold); }
+    
+    /* ===== BARRA INFERIOR: HISTORIAL Y CONTROLES ===== */
+    .bottom-bar {
+      grid-column: 1 / -1;
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .history-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75em;
+      color: #888;
+    }
+    
+    .history {
+      display: flex;
+      gap: 4px;
+      overflow-x: auto;
+      padding: 4px;
+      flex-wrap: nowrap;
+    }
+    .candle {
+      width: 28px; height: 28px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      flex-shrink: 0;
+      flex-direction: column;
+    }
+    .candle:hover { transform: scale(1.1); }
+    .candle-g { background: var(--green); color: #000; }
+    .candle-r { background: var(--red); color: #fff; }
+    .candle-new { box-shadow: 0 0 8px var(--gold); }
+    .candle-trap { border: 2px solid var(--purple); box-shadow: 0 0 6px var(--purple); }
+    .candle-trap::after {
+      content: '✕';
+      position: absolute;
+      top: -4px; right: -4px;
+      background: var(--purple);
+      color: #fff;
+      font-size: 7px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .candle-strength {
+      font-size: 6px;
+      position: absolute;
+      bottom: 1px;
+      font-weight: normal;
+    }
+    .strength-3-ind { color: var(--green); text-shadow: 0 0 2px var(--green); }
+    .strength-2-ind { color: rgba(0,0,0,0.5); }
+    .candle-r .strength-2-ind { color: rgba(255,255,255,0.6); }
+    .strength-1-ind { color: #666; font-size: 5px; }
+    
+    .controls-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      align-items: center;
+    }
+    button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85em; }
+    .btn-reset { background: #333; color: #fff; }
+    .btn-clear-trap { background: var(--purple); color: #fff; display: none; }
+    .btn-clear-trap.active { display: block; }
+    
+    .instruction { 
+      color: #666; 
+      font-size: 0.65em; 
+      text-align: center; 
+    }
+    
+    /* ===== ALERTAS Y MODALES ===== */
+    .extreme-alert {
+      background: linear-gradient(90deg, var(--red), transparent);
+      border-left: 3px solid var(--red);
+      padding: 8px;
+      border-radius: 4px;
+      display: none;
+      animation: pulse-red 1.5s infinite;
+      font-size: 0.8em;
+    }
+    .extreme-alert.active { display: block; }
+    @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    .extreme-title { font-size: 0.9em; font-weight: bold; margin-bottom: 2px; }
+    .extreme-text { font-size: 0.75em; color: #ccc; }
+    
+    .active-trap-banner {
+      background: linear-gradient(90deg, var(--purple), transparent);
+      border-left: 3px solid var(--purple);
+      padding: 6px;
+      border-radius: 4px;
+      display: none;
+      animation: pulse 2s infinite;
+      font-size: 0.75em;
+    }
+    .active-trap-banner.active { display: block; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    
+    .trap-modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.8);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    .trap-modal.active { display: flex; }
+    .trap-modal-content {
+      background: var(--panel);
+      padding: 20px;
+      border-radius: 8px;
+      border: 2px solid var(--orange);
+      text-align: center;
+      max-width: 280px;
+    }
+    .trap-modal-title { color: var(--orange); font-size: 1em; margin-bottom: 10px; }
+    .trap-modal-text { font-size: 0.85em; margin-bottom: 15px; color: #ccc; }
+    .trap-modal-buttons { display: flex; gap: 8px; justify-content: center; }
+    .trap-btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 0.85em; }
+    .trap-btn-confirm { background: var(--orange); color: #000; }
+    .trap-btn-cancel { background: #333; color: #fff; }
+    
+    /* Scrollbars personalizadas */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1a1a1a; }
+    ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #555; }
+    
+    /* Responsive: en pantallas pequeñas, volver a layout vertical */
+    @media (max-width: 1200px) {
+      .main-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        overflow-y: auto;
+        height: auto;
+      }
+      body { overflow: auto; }
     }
   </style>
 </head>
@@ -731,194 +797,196 @@
     </div>
   </div>
 
-  <!-- ===== PANEL HÍBRIDO COMPLETO ===== -->
-  <div class="confirm-panel">
-    <div class="confirm-title">🤖 SISTEMA SUGIERE FUERZA DE VELA</div>
-    
-    <div class="suggestion-box" id="suggestion-box">
-      <div class="suggestion-label">Análisis automático del patrón:</div>
-      <div class="suggestion-strength strength-2" id="suggestion-bars">▰▰</div>
-      <div class="suggestion-text" id="suggestion-text">MEDIA</div>
-      <div class="suggestion-reason" id="suggestion-reason">Analizando...</div>
-      <div class="correction-notice" id="correction-notice"></div>
-    </div>
-    
-    <div id="step-confirm">
-      <div class="action-buttons">
-        <button class="btn-confirm" onclick="confirmStrength()">
-          ✓ CONFIRMAR<br>
-          <span style="font-size:0.7em;opacity:0.8;">Está correcto</span>
-        </button>
-        <button class="btn-correct" onclick="showCorrectionOptions()">
-          ✏️ CORREGIR<br>
-          <span style="font-size:0.7em;opacity:0.8;">Está equivocado</span>
-        </button>
+  <div class="main-container">
+    <!-- ===== COLUMNA IZQUIERDA ===== -->
+    <div class="left-column">
+      <div class="confirm-panel">
+        <div class="confirm-title">🤖 SISTEMA SUGIERE FUERZA</div>
+        
+        <div class="suggestion-box" id="suggestion-box">
+          <div class="suggestion-label">Análisis automático:</div>
+          <div class="suggestion-strength strength-2" id="suggestion-bars">▰▰</div>
+          <div class="suggestion-text" id="suggestion-text">MEDIA</div>
+          <div class="suggestion-reason" id="suggestion-reason">Analizando...</div>
+          <div class="correction-notice" id="correction-notice"></div>
+        </div>
+        
+        <div id="step-confirm">
+          <div class="action-buttons">
+            <button class="btn-confirm" onclick="confirmStrength()">✓ CONFIRMAR</button>
+            <button class="btn-correct" onclick="showCorrectionOptions()">✏️ CORREGIR</button>
+          </div>
+          <div class="status-bar status-pending" id="status-bar">
+            ⏳ PENDIENTE: Confirma o corrige
+          </div>
+        </div>
+        
+        <div class="correction-options" id="correction-options">
+          <div class="correction-title">Selecciona fuerza correcta:</div>
+          <div class="correction-grid">
+            <button class="correction-btn" onclick="correctStrength(3)" id="corr-3">
+              <div style="font-size:1.2em;color:var(--green);">▰▰▰</div>
+              <div style="font-size:0.8em;font-weight:bold;">FUERTE</div>
+            </button>
+            <button class="correction-btn" onclick="correctStrength(2)" id="corr-2">
+              <div style="font-size:1.2em;color:var(--gold);">▰▰</div>
+              <div style="font-size:0.8em;font-weight:bold;">MEDIA</div>
+            </button>
+            <button class="correction-btn" onclick="correctStrength(1)" id="corr-1">
+              <div style="font-size:1.2em;color:#888;">▰</div>
+              <div style="font-size:0.8em;font-weight:bold;">DÉBIL</div>
+            </button>
+          </div>
+        </div>
+        
+        <div class="color-buttons" id="color-buttons">
+          <button class="btn-green" onclick="addCandle('G')">
+            VERDE<br>
+            <span style="font-size:0.6em;" id="green-strength">Fuerza: 2/3</span>
+          </button>
+          <button class="btn-red" onclick="addCandle('R')">
+            ROJO<br>
+            <span style="font-size:0.6em;" id="red-strength">Fuerza: 2/3</span>
+          </button>
+        </div>
+        
+        <div class="hint">
+          Atajos: <kbd>C</kbd>=Confirmar | <kbd>E</kbd>=Corregir | <kbd>1/2/3</kbd>=Fuerza | <kbd>G/R</kbd>=Color
+        </div>
       </div>
-      <div class="status-bar status-pending" id="status-bar">
-        ⏳ PENDIENTE: Confirma o corrige la fuerza sugerida
+
+      <div class="active-trap-banner" id="trap-banner">
+        🎭 <strong>TRAMPA ACTIVA</strong> | Vela <span id="trap-info">--</span> excluida
       </div>
-    </div>
-    
-    <div class="correction-options" id="correction-options">
-      <div class="correction-title">Selecciona la fuerza correcta:</div>
-      <div class="correction-grid">
-        <button class="correction-btn strong-sel" onclick="correctStrength(3)" id="corr-3">
-          <div style="font-size:1.5em;color:var(--green);">▰▰▰</div>
-          <div style="font-weight:bold;">FUERTE</div>
-          <div style="font-size:0.7em;">Reversión importante</div>
-        </button>
-        <button class="correction-btn medium-sel selected" onclick="correctStrength(2)" id="corr-2">
-          <div style="font-size:1.5em;color:var(--gold);">▰▰</div>
-          <div style="font-weight:bold;">MEDIA</div>
-          <div style="font-size:0.7em;">Momentum normal</div>
-        </button>
-        <button class="correction-btn weak-sel" onclick="correctStrength(1)" id="corr-1">
-          <div style="font-size:1.5em;color:#888;">▰</div>
-          <div style="font-weight:bold;">DÉBIL</div>
-          <div style="font-size:0.7em;">Doji/indecisión</div>
-        </button>
-      </div>
-    </div>
-    
-    <div class="color-buttons" id="color-buttons">
-      <button class="btn-green" onclick="addCandle('G')">
-        VERDE 🟢<br>
-        <span style="font-size:0.6em;" id="green-strength">Fuerza: 2/3</span>
-      </button>
-      <button class="btn-red" onclick="addCandle('R')">
-        ROJO 🔴<br>
-        <span style="font-size:0.6em;" id="red-strength">Fuerza: 2/3</span>
-      </button>
-    </div>
-    
-    <div class="hint">
-      Atajos: <kbd>C</kbd>=Confirmar | <kbd>E</kbd>=Corregir | <kbd>1/2/3</kbd>=Fuerza | <kbd>G/R</kbd>=Color
-    </div>
-  </div>
 
-  <!-- ===== TODOS LOS PANELES AVANZADOS ===== -->
-  <div class="active-trap-banner" id="trap-banner">
-    🎭 <strong>TRAMPA MANUAL ACTIVA</strong> | 
-    Vela <span id="trap-info">--</span> excluida | 
-    Tendencia global recalculada
-  </div>
-
-  <div class="extreme-alert" id="extreme-alert">
-    <div class="extreme-title">⚠️ EXTREMO DETECTADO</div>
-    <div class="extreme-text" id="extreme-text">
-      Mercado en sobrecompra/sobreventa extrema. Alta probabilidad de reversión.
-    </div>
-  </div>
-
-  <div class="cross-detector">
-    <div class="cross-title">⚔️ DETECTOR MULTI-CRUCE MA (3 timeframes)</div>
-    <div class="cross-active" id="cross-alert">
-      <span id="cross-pair">MA2/MA10</span>: 
-      <span id="cross-type" class="cross-type-golden">GOLDEN CROSS</span>
-    </div>
-    <div class="ma-grid" id="ma-grid"></div>
-  </div>
-
-  <div class="current-candle-analysis" id="current-analysis">
-    <div class="current-title">🎯 ANÁLISIS VELA ACTUAL (Fuerza Confirmada)</div>
-    <div class="current-stats">
-      <div class="stat-box">
-        <div class="stat-label">Fuerza</div>
-        <div class="stat-value" id="current-strength">--</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-label">Origen</div>
-        <div class="stat-value" id="current-origin">--</div>
+      <div class="extreme-alert" id="extreme-alert">
+        <div class="extreme-title">⚠️ EXTREMO DETECTADO</div>
+        <div class="extreme-text" id="extreme-text"></div>
       </div>
     </div>
-    <div class="current-verdict" id="current-verdict">Analizando...</div>
-  </div>
 
-  <div class="recent-trend" id="recent-box">
-    <div class="recent-title">📊 CONTEXTO RECIENTE (Últimas 5 velas - Ponderado por Fuerza)</div>
-    <div class="recent-sequence" id="recent-sequence"></div>
-    <div class="recent-analysis" id="recent-analysis">Analizando...</div>
-  </div>
+    <!-- ===== COLUMNA CENTRAL ===== -->
+    <div class="center-column">
+      <div class="main-signal signal-wait" id="main-signal">
+        ESPERAR
+        <div class="manual-trap-badge">TRAMPA ACTIVA</div>
+        <div class="conflict-badge">⚠️ CONFLICTO</div>
+        <div class="reversal-badge">🔄 REVERSIÓN FUERTE</div>
+        <div class="extreme-signal-badge">⚠️ EXTREMO</div>
+      </div>
 
-  <div class="momentum-indicator" id="momentum-box" style="display: none;">
-    <div class="momentum-title">📈 Tendencia MA10 (con Dirección y Momentum)</div>
-    <div class="momentum-bar">
-      <div class="momentum-fill" id="momentum-fill"></div>
-      <div class="momentum-marker" style="left: 50%;"></div>
+      <div class="center-grid">
+        <div class="projections">
+          <div class="proj-box proj-green" id="proj-g-box">
+            <div class="proj-label">Si VERDE →</div>
+            <div class="proj-sequence" id="proj-g-seq">--</div>
+            <div class="proj-signal proj-signal-hold" id="proj-g-sig">HOLD</div>
+            <div class="proj-confidence" id="proj-g-conf">0%</div>
+            <div class="proj-reason" id="proj-g-reason"></div>
+            <div class="proj-conflict-note" id="proj-g-conflict"></div>
+            <div class="proj-reversal-note" id="proj-g-reversal"></div>
+            <div class="proj-extreme-note" id="proj-g-extreme"></div>
+          </div>
+          <div class="proj-box proj-red" id="proj-r-box">
+            <div class="proj-label">Si ROJO →</div>
+            <div class="proj-sequence" id="proj-r-seq">--</div>
+            <div class="proj-signal proj-signal-hold" id="proj-r-sig">HOLD</div>
+            <div class="proj-confidence" id="proj-r-conf">0%</div>
+            <div class="proj-reason" id="proj-r-reason"></div>
+            <div class="proj-conflict-note" id="proj-r-conflict"></div>
+            <div class="proj-reversal-note" id="proj-r-reversal"></div>
+            <div class="proj-extreme-note" id="proj-r-extreme"></div>
+          </div>
+        </div>
+
+        <div class="analysis-panel">
+          <div class="analysis-title">🧠 ANÁLISIS DEL SISTEMA</div>
+          
+          <div class="logic-explanation" id="logic-explanation">
+            <div class="logic-title">Lógica Actual:</div>
+            <div class="logic-item" id="logic-text">Analizando...</div>
+          </div>
+          
+          <div class="priority-explanation" id="priority-explanation">
+            <div class="priority-title">⚡ Prioridad de Señales:</div>
+            <div class="priority-item extreme">1. EXTREMO (>90% o <10%)</div>
+            <div class="priority-item">2. Reversión fuerte (fuerza 3/3)</div>
+            <div class="priority-item">3. Cruce MA válido</div>
+            <div class="priority-item">4. Patrón + contexto</div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="momentum-labels">
-      <span>Bajista</span>
-      <span>Neutral</span>
-      <span>Alcista</span>
+
+    <!-- ===== COLUMNA DERECHA ===== -->
+    <div class="right-column">
+      <div class="trend-box neutral" id="trend-box">
+        <div class="trend-badge">AJUSTADA</div>
+        <div class="extreme-badge">EXTREMO</div>
+        <div class="trend-label">TENDENCIA GLOBAL (MA10)</div>
+        <div class="trend-value" id="trend-value">NEUTRAL</div>
+        <div class="trend-original" id="trend-original"></div>
+        <div class="momentum-note" id="momentum-note"></div>
+      </div>
+
+      <div class="cross-detector">
+        <div class="cross-title">⚔️ DETECTOR MULTI-CRUCE MA</div>
+        <div class="cross-active" id="cross-alert">
+          <span id="cross-pair">MA2/MA10</span>: 
+          <span id="cross-type" class="cross-type-golden">GOLDEN CROSS</span>
+        </div>
+        <div class="ma-grid" id="ma-grid"></div>
+      </div>
+
+      <div class="momentum-indicator" id="momentum-box" style="display: none;">
+        <div class="momentum-title">📈 Momentum MA10</div>
+        <div class="momentum-bar">
+          <div class="momentum-fill" id="momentum-fill"></div>
+          <div class="momentum-marker" style="left: 50%;"></div>
+        </div>
+        <div class="momentum-labels">
+          <span>Bajista</span>
+          <span>Neutral</span>
+          <span>Alcista</span>
+        </div>
+        <div class="momentum-detail" id="momentum-detail"></div>
+      </div>
+
+      <div class="recent-trend" id="recent-box">
+        <div class="recent-title">📊 CONTEXTO RECIENTE (5 velas)</div>
+        <div class="recent-sequence" id="recent-sequence"></div>
+        <div class="recent-analysis" id="recent-analysis">Analizando...</div>
+      </div>
+
+      <div class="current-candle-analysis" id="current-analysis">
+        <div class="current-title">🎯 VELA ACTUAL</div>
+        <div class="current-stats">
+          <div class="stat-box">
+            <div class="stat-label">Fuerza</div>
+            <div class="stat-value" id="current-strength">--</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">Origen</div>
+            <div class="stat-value" id="current-origin">--</div>
+          </div>
+        </div>
+        <div class="current-verdict" id="current-verdict">--</div>
+      </div>
     </div>
-    <div style="text-align: center; margin-top: 5px; font-size: 0.75em; color: #888;" id="momentum-detail"></div>
-  </div>
 
-  <div class="trend-box neutral" id="trend-box">
-    <div class="trend-badge">AJUSTADA</div>
-    <div class="extreme-badge">EXTREMO</div>
-    <div class="trend-label">TENDENCIA GLOBAL (MA10 + Momentum de Dirección)</div>
-    <div class="trend-value" id="trend-value">NEUTRAL</div>
-    <div class="trend-original" id="trend-original"></div>
-    <div class="momentum-note" id="momentum-note"></div>
-  </div>
-
-  <div class="main-signal signal-wait" id="main-signal">
-    ESPERAR
-    <div class="manual-trap-badge">TRAMPA ACTIVA</div>
-    <div class="conflict-badge">⚠️ CONFLICTO</div>
-    <div class="reversal-badge">🔄 REVERSIÓN FUERTE</div>
-    <div class="extreme-signal-badge">⚠️ EXTREMO</div>
-  </div>
-
-  <div class="priority-explanation" id="priority-explanation">
-    <div class="priority-title">⚡ Prioridad de Señales:</div>
-    <div class="priority-item extreme">1. EXTREMO (>90% o <10%) - Esperar reversión</div>
-    <div class="priority-item">2. Vela fuerte de reversión (fuerza 3/3, ignora tendencia)</div>
-    <div class="priority-item">3. Cruce MA activo válido (no trampa)</div>
-    <div class="priority-item">4. Patrón de velas + contexto ponderado</div>
-  </div>
-
-  <div class="logic-explanation" id="logic-explanation">
-    <div class="logic-title">🧠 Lógica Actual del Sistema:</div>
-    <div class="logic-item" id="logic-text">Analizando condiciones de mercado...</div>
-  </div>
-
-  <div class="projections" id="projections">
-    <div class="proj-box proj-green" id="proj-g-box">
-      <div class="proj-label">Si VERDE →</div>
-      <div class="proj-sequence" id="proj-g-seq">--</div>
-      <div class="proj-signal proj-signal-hold" id="proj-g-sig">HOLD</div>
-      <div class="proj-confidence" id="proj-g-conf">0%</div>
-      <div class="proj-reason" id="proj-g-reason"></div>
-      <div class="proj-conflict-note" id="proj-g-conflict"></div>
-      <div class="proj-reversal-note" id="proj-g-reversal"></div>
-      <div class="proj-extreme-note" id="proj-g-extreme"></div>
-    </div>
-    <div class="proj-box proj-red" id="proj-r-box">
-      <div class="proj-label">Si ROJO →</div>
-      <div class="proj-sequence" id="proj-r-seq">--</div>
-      <div class="proj-signal proj-signal-hold" id="proj-r-sig">HOLD</div>
-      <div class="proj-confidence" id="proj-r-conf">0%</div>
-      <div class="proj-reason" id="proj-r-reason"></div>
-      <div class="proj-conflict-note" id="proj-r-conflict"></div>
-      <div class="proj-reversal-note" id="proj-r-reversal"></div>
-      <div class="proj-extreme-note" id="proj-r-extreme"></div>
-    </div>
-  </div>
-
-  <div class="controls">
-    <button class="btn-reset" onclick="reset()">↺ REINICIAR TODO</button>
-  </div>
-  <button class="btn-clear-trap" id="btn-clear-trap" onclick="clearTrap()" style="display:none;">
-    🗑 Limpiar Trampa y Restaurar
-  </button>
-
-  <div class="history-container">
-    <div class="history-label">HISTORIAL (Click para marcar trampa, indicador = fuerza)</div>
-    <div class="history" id="history"></div>
-    <div class="instruction">
-      ✓ = Confirmado por usuario | ✏️ = Corregido manualmente | ● = Trampa excluida
+    <!-- ===== BARRA INFERIOR ===== -->
+    <div class="bottom-bar">
+      <div class="history-header">
+        <span>HISTORIAL (Click para marcar trampa)</span>
+        <div class="controls-row">
+          <button class="btn-reset" onclick="reset()">↺ REINICIAR</button>
+          <button class="btn-clear-trap" id="btn-clear-trap" onclick="clearTrap()">🗑 Limpiar Trampa</button>
+        </div>
+      </div>
+      <div class="history" id="history"></div>
+      <div class="instruction">
+        ✓ = Confirmado | ✏️ = Corregido | ● = Trampa excluida | Indicador = fuerza (1-3)
+      </div>
     </div>
   </div>
 
@@ -944,24 +1012,21 @@ const EXTREME_THRESHOLDS = {
 
 // ===== VARIABLES GLOBALES =====
 let history = [];
-let manualStrengths = {};  // {index: {strength, origin, autoSuggested}}
+let manualStrengths = {};
 let manualTrapIndex = null;
 let pendingTrapIndex = null;
 let originalTrendMA = null;
-
-// Estado de confirmación híbrida
 let autoSuggestedStrength = 2;
 let confirmedStrength = null;
-let strengthOrigin = 'pending'; // 'pending', 'confirmed', 'corrected'
+let strengthOrigin = 'pending';
 
-// ===== CÁLCULO AUTOMÁTICO DE FUERZA (Versión 1 completa mejorada) =====
+// ===== CÁLCULO AUTOMÁTICO DE FUERZA =====
 function calculateAutoStrength() {
   if (history.length < 2) return 2;
   
   const last = history[history.length - 1];
   let consecutiveOpposite = 0;
   
-  // Contar velas opuestas consecutivas (desde el final)
   for (let i = history.length - 1; i >= 0; i--) {
     if (history[i] !== last) consecutiveOpposite++;
     else if (i < history.length - 1) break;
@@ -970,48 +1035,32 @@ function calculateAutoStrength() {
   const trendMA = calcMA(10, true);
   const prevTrendMA = calcPrevMA(10, true);
   
-  // Detectar extremos
   const isExtremeBullish = trendMA !== null && trendMA >= EXTREME_THRESHOLDS.overbought;
   const isExtremeBearish = trendMA !== null && trendMA <= EXTREME_THRESHOLDS.oversold;
-  const isWarningBullish = trendMA !== null && trendMA >= 80;
-  const isWarningBearish = trendMA !== null && trendMA <= 20;
   
-  // Detectar agotamiento
   let consecutiveSame = 0;
   for (let i = history.length - 1; i >= 0 && history[i] === last; i--) consecutiveSame++;
   
-  // Lógica de fuerza mejorada (de Versión 1)
-  let strength = 2; // Default media
+  let strength = 2;
   
-  // Caso 1: Extremo con reversión potencial
   if ((isExtremeBullish && last === 'R') || (isExtremeBearish && last === 'G')) {
-    strength = 3; // Reversión en extremo = muy fuerte
-  }
-  // Caso 2: 3+ velas opuestas = reversión fuerte
-  else if (consecutiveOpposite >= 3) {
     strength = 3;
-  }
-  // Caso 3: 2 velas opuestas + momentum favorable
-  else if (consecutiveOpposite === 2) {
+  } else if (consecutiveOpposite >= 3) {
+    strength = 3;
+  } else if (consecutiveOpposite === 2) {
     const maDirection = prevTrendMA !== null ? trendMA - prevTrendMA : 0;
     if ((last === 'G' && maDirection > 0) || (last === 'R' && maDirection < 0)) {
-      strength = 3; // Reversión con momentum confirmado
+      strength = 3;
     } else {
       strength = 2;
     }
-  }
-  // Caso 4: Agotamiento después de muchas del mismo color
-  else if (consecutiveSame >= 4) {
-    strength = 1; // Probable pausa o retroceso débil
-  }
-  // Caso 5: 1 vela opuesta (posible indecisión)
-  else if (consecutiveOpposite === 1) {
+  } else if (consecutiveSame >= 4) {
     strength = 1;
-  }
-  // Caso 6: Continuación con momentum fuerte
-  else if (consecutiveSame >= 2) {
+  } else if (consecutiveOpposite === 1) {
+    strength = 1;
+  } else if (consecutiveSame >= 2) {
     const maDirection = prevTrendMA !== null ? trendMA - prevTrendMA : 0;
-    if (Math.abs(maDirection) > 5) strength = 3; // Continuación fuerte
+    if (Math.abs(maDirection) > 5) strength = 3;
     else strength = 2;
   }
   
@@ -1020,15 +1069,14 @@ function calculateAutoStrength() {
 
 function getStrengthReason(strength) {
   const reasons = {
-    3: "Reversión potente detectada (3+ velas opuestas o extremo de mercado con confirmación)",
-    2: "Momentum estándar / continuación de tendencia / reversión sin confirmación fuerte",
-    1: "Indecisión, agotamiento del movimiento previo, o reversión débil"
+    3: "Reversión potente (3+ opuestas o extremo)",
+    2: "Momentum estándar / continuación",
+    1: "Indecisión o agotamiento"
   };
-  return reasons[strength] || "Análisis de patrón de velas y contexto MA";
+  return reasons[strength] || "Análisis de patrón";
 }
 
 // ===== FLUJO HÍBRIDO DE CONFIRMACIÓN =====
-
 function updateSuggestionPanel() {
   if (strengthOrigin !== 'pending') return;
   
@@ -1050,7 +1098,7 @@ function updateSuggestionPanel() {
   
   confirmedStrength = null;
   document.getElementById('status-bar').className = 'status-bar status-pending';
-  document.getElementById('status-bar').textContent = '⏳ PENDIENTE: Confirma o corrige la fuerza sugerida';
+  document.getElementById('status-bar').textContent = '⏳ PENDIENTE: Confirma o corrige';
   
   document.getElementById('correction-options').classList.remove('active');
   document.getElementById('color-buttons').classList.remove('active');
@@ -1063,7 +1111,7 @@ function confirmStrength() {
   
   document.getElementById('suggestion-box').classList.add('confirmed');
   document.getElementById('status-bar').className = 'status-bar status-confirmed';
-  document.getElementById('status-bar').textContent = '✓ CONFIRMADO: Usando fuerza ' + confirmedStrength + '/3 (sugerencia correcta)';
+  document.getElementById('status-bar').textContent = '✓ CONFIRMADO: Fuerza ' + confirmedStrength + '/3';
   
   document.getElementById('correction-options').classList.remove('active');
   showColorButtons();
@@ -1073,7 +1121,7 @@ function showCorrectionOptions() {
   document.getElementById('correction-options').classList.add('active');
   document.querySelectorAll('.correction-btn').forEach(btn => btn.classList.remove('selected'));
   document.getElementById('corr-' + autoSuggestedStrength).classList.add('selected');
-  document.getElementById('status-bar').textContent = '✏️ SELECCIONA la fuerza correcta abajo';
+  document.getElementById('status-bar').textContent = '✏️ SELECCIONA fuerza correcta';
 }
 
 function correctStrength(newStrength) {
@@ -1095,7 +1143,7 @@ function correctStrength(newStrength) {
   notice.classList.add('active');
   
   document.getElementById('status-bar').className = 'status-bar status-corrected';
-  document.getElementById('status-bar').textContent = `✏️ CORREGIDO: ${newStrength}/3 (auto sugería ${autoSuggestedStrength}/3)`;
+  document.getElementById('status-bar').textContent = `✏️ CORREGIDO: ${newStrength}/3 (auto: ${autoSuggestedStrength}/3)`;
   
   document.querySelectorAll('.correction-btn').forEach(btn => btn.classList.remove('selected'));
   document.getElementById('corr-' + newStrength).classList.add('selected');
@@ -1159,8 +1207,7 @@ function resetConfirmationPanel() {
   updateSuggestionPanel();
 }
 
-// ===== FUNCIONES DE ANÁLISIS COMPLETAS (Versión 1 + 2) =====
-
+// ===== FUNCIONES DE ANÁLISIS =====
 function getCandleStrength(index) {
   if (manualStrengths[index]) return manualStrengths[index].strength;
   return calculateHistoricalStrength(index);
@@ -1262,37 +1309,36 @@ function analyzeRecentTrend() {
   
   if (isExtremeBullish) return { 
     trend: 'bullish', sequence: recent, strengths, strength: consecutiveGreens, 
-    reason: `${consecutiveGreens} verdes fuertes seguidas (fuerza total: ${totalConsecutiveStrength})`,
+    reason: `${consecutiveGreens} verdes fuertes`,
     weightedScore, isExtreme: true 
   };
   if (isExtremeBearish) return { 
     trend: 'bearish', sequence: recent, strengths, strength: consecutiveReds, 
-    reason: `${consecutiveReds} rojas fuertes seguidas (fuerza total: ${totalConsecutiveStrength})`,
+    reason: `${consecutiveReds} rojas fuertes`,
     weightedScore, isExtreme: true 
   };
   
-  if (consecutiveGreens >= 3) return { trend: 'bullish', sequence: recent, strengths, strength: consecutiveGreens, reason: `${consecutiveGreens} verdes seguidas`, weightedScore };
-  if (consecutiveReds >= 3) return { trend: 'bearish', sequence: recent, strengths, strength: consecutiveReds, reason: `${consecutiveReds} rojas seguidas`, weightedScore };
+  if (consecutiveGreens >= 3) return { trend: 'bullish', sequence: recent, strengths, strength: consecutiveGreens, reason: `${consecutiveGreens} verdes`, weightedScore };
+  if (consecutiveReds >= 3) return { trend: 'bearish', sequence: recent, strengths, strength: consecutiveReds, reason: `${consecutiveReds} rojas`, weightedScore };
   
   if (lastTwoRed && weightedScore > 2) return { 
     trend: 'neutral', sequence: recent, strengths, strength: consecutiveReds, 
-    reason: `Conflicto: Score +${weightedScore.toFixed(1)} pero últimas 2 rojas`,
-    weightedScore, warning: 'momentum_change', detail: 'Momentum alcista pero cambiando' 
+    reason: `Conflicto: Score +${weightedScore.toFixed(1)}`,
+    weightedScore, warning: 'momentum_change', detail: 'Momentum cambiando' 
   };
   if (lastTwoGreen && weightedScore < -2) return { 
     trend: 'neutral', sequence: recent, strengths, strength: consecutiveGreens, 
-    reason: `Conflicto: Score ${weightedScore.toFixed(1)} pero últimas 2 verdes`,
-    weightedScore, warning: 'momentum_change', detail: 'Momentum bajista pero cambiando' 
+    reason: `Conflicto: Score ${weightedScore.toFixed(1)}`,
+    weightedScore, warning: 'momentum_change', detail: 'Momentum cambiando' 
   };
   
-  if (weightedScore > 3) return { trend: 'bullish', sequence: recent, strengths, strength: Math.abs(weightedScore), reason: `Mayoría verde ponderada (+${weightedScore.toFixed(1)})`, weightedScore };
-  if (weightedScore < -3) return { trend: 'bearish', sequence: recent, strengths, strength: Math.abs(weightedScore), reason: `Mayoría roja ponderada (${weightedScore.toFixed(1)})`, weightedScore };
+  if (weightedScore > 3) return { trend: 'bullish', sequence: recent, strengths, strength: Math.abs(weightedScore), reason: `Alcista +${weightedScore.toFixed(1)}`, weightedScore };
+  if (weightedScore < -3) return { trend: 'bearish', sequence: recent, strengths, strength: Math.abs(weightedScore), reason: `Bajista ${weightedScore.toFixed(1)}`, weightedScore };
   
-  return { trend: 'neutral', sequence: recent, strengths, strength: 0, reason: 'Equilibrio o conflicto de fuerzas', weightedScore };
+  return { trend: 'neutral', sequence: recent, strengths, strength: 0, reason: 'Equilibrio', weightedScore };
 }
 
-// ===== FUNCIONES MA COMPLETAS =====
-
+// ===== FUNCIONES MA =====
 function calcMA(period, useOriginal = false) {
   if (history.length < period) return null;
   let data = history;
@@ -1318,16 +1364,16 @@ function detectExtreme(trendMA, recentTrend) {
   if (trendMA === null) return null;
   
   if (trendMA >= EXTREME_THRESHOLDS.overbought && recentTrend.strength >= 4 && recentTrend.trend === 'bullish') {
-    return { type: 'extreme_bullish', level: trendMA, message: `SOBRECOMPRA EXTREMA: MA10 al ${trendMA.toFixed(0)}% con ${recentTrend.strength} velas verdes. Reversión bajista inminente.`, action: 'wait_sell', confidence: 0.85 };
+    return { type: 'extreme_bullish', level: trendMA, message: `SOBRECOMPRA EXTREMA: MA10 al ${trendMA.toFixed(0)}%`, action: 'wait_sell', confidence: 0.85 };
   }
   if (trendMA <= EXTREME_THRESHOLDS.oversold && recentTrend.strength >= 4 && recentTrend.trend === 'bearish') {
-    return { type: 'extreme_bearish', level: trendMA, message: `SOBREVENTA EXTREMA: MA10 al ${trendMA.toFixed(0)}% con ${recentTrend.strength} velas rojas. Reversión alcista inminente.`, action: 'wait_buy', confidence: 0.85 };
+    return { type: 'extreme_bearish', level: trendMA, message: `SOBREVENTA EXTREMA: MA10 al ${trendMA.toFixed(0)}%`, action: 'wait_buy', confidence: 0.85 };
   }
   if (trendMA >= 80 && recentTrend.trend === 'bullish' && recentTrend.strength >= 3) {
-    return { type: 'warning_bullish', level: trendMA, message: `Sobrecompra: MA10 al ${trendMA.toFixed(0)}%. Precaución con compras.`, action: 'caution', confidence: 0.60 };
+    return { type: 'warning_bullish', level: trendMA, message: `Sobrecompra: MA10 al ${trendMA.toFixed(0)}%`, action: 'caution', confidence: 0.60 };
   }
   if (trendMA <= 20 && recentTrend.trend === 'bearish' && recentTrend.strength >= 3) {
-    return { type: 'warning_bearish', level: trendMA, message: `Sobreventa: MA10 al ${trendMA.toFixed(0)}%. Oportunidad de compra cercana.`, action: 'caution', confidence: 0.60 };
+    return { type: 'warning_bearish', level: trendMA, message: `Sobreventa: MA10 al ${trendMA.toFixed(0)}%`, action: 'caution', confidence: 0.60 };
   }
   return null;
 }
@@ -1565,9 +1611,11 @@ function update() {
     trapBanner.classList.add('active');
     document.getElementById('trap-info').textContent = `#${manualTrapIndex + 1} (${history[manualTrapIndex]})`;
     btnClearTrap.style.display = 'block';
+    btnClearTrap.classList.add('active');
   } else {
     trapBanner.classList.remove('active');
     btnClearTrap.style.display = 'none';
+    btnClearTrap.classList.remove('active');
     originalTrendMA = null;
   }
   
@@ -1619,8 +1667,6 @@ function update() {
   
   // Señal principal con lógica completa
   const mainSignal = document.getElementById('main-signal');
-  const priorityExplanation = document.getElementById('priority-explanation');
-  const logicExplanation = document.getElementById('logic-explanation');
   
   let effectiveHistory = history;
   if (manualTrapIndex !== null) effectiveHistory = history.filter((_, idx) => idx !== manualTrapIndex);
@@ -1718,8 +1764,6 @@ function update() {
     '<div class="reversal-badge">🔄 REVERSIÓN FUERTE</div>' +
     '<div class="extreme-signal-badge">⚠️ EXTREMO</div>';
   
-  priorityExplanation.classList.toggle('active', showReversal || showExtreme || recentTrend.warning === 'momentum_change');
-  logicExplanation.classList.toggle('active', true);
   document.getElementById('logic-text').textContent = logicText;
   
   // Proyecciones completas
@@ -1834,8 +1878,6 @@ function reset() {
   pendingTrapIndex = null;
   originalTrendMA = null;
   resetConfirmationPanel();
-  document.getElementById('priority-explanation').classList.remove('active');
-  document.getElementById('logic-explanation').classList.remove('active');
   closeModal();
   update();
 }
