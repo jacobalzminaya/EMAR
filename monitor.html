@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Monitor Volume Profile - CMD Detector</title>
+  <style>
+    :root {
+      --green: #00c851;
+      --red: #ff4444;
+      --gold: #ffd700;
+      --blue: #00d4ff;
+      --orange: #ff8800;
+      --purple: #ff00ff;
+      --cyan: #00ffff;
+      --bg: #0d1117;
+      --panel: #161b22;
+      --border: #30363d;
+      --poc: #ffd700;
+      --vah: #00d4ff;
+      --val: #ff8800;
+      --bull: #00c851;
+      --bear: #ff4444;
+    }
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background: var(--bg);
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 8px;
+      font-size: 0.8em;
+    }
+    
+    /* Header minimalista */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+    }
+    
+    .header-title {
+      font-weight: 600;
+      color: var(--gold);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #444;
+      transition: all 0.3s;
+    }
+    
+    .status-dot.connected { 
+      background: var(--green); 
+      box-shadow: 0 0 8px var(--green);
+    }
+    .status-dot.disconnected { 
+      background: var(--red); 
+    }
+    
+    /* Panel principal combinado */
+    .main-panel {
+      flex: 1;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    /* Área de precio actual */
+    .price-header {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 15px;
+      background: rgba(0,0,0,0.3);
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .price-main {
+      font-size: 1.4em;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .price-main.up { color: var(--bull); }
+    .price-main.down { color: var(--bear); }
+    
+    .price-change {
+      font-size: 0.85em;
+      color: #888;
+    }
+    
+    /* Contenedor del gráfico + VP */
+    .chart-vp-container {
+      flex: 1;
+      display: flex;
+      position: relative;
+      min-height: 300px;
+    }
+    
+    /* Área de velas (izquierda) */
+    .candles-area {
+      flex: 1;
+      position: relative;
+      padding: 10px 5px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    
+    /* Líneas de precio de fondo */
+    .price-grid {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none;
+    }
+    
+    .grid-line {
+      position: absolute;
+      left: 0; right: 0;
+      border-top: 1px dashed rgba(255,255,255,0.05);
+    }
+    
+    /* Velas */
+    .candles-wrapper {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: flex-end;
+      justify-content: flex-end;
+      gap: 3px;
+      padding-right: 10px;
+    }
+    
+    .candle-stick {
+      width: 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    
+    .candle-wick {
+      width: 1px;
+      background: currentColor;
+      opacity: 0.5;
+    }
+    
+    .candle-body {
+      width: 100%;
+      border-radius: 1px;
+      position: relative;
+    }
+    
+    .candle-stick.bull { color: var(--bull); }
+    .candle-stick.bear { color: var(--bear); }
+    .candle-stick.bull .candle-body { background: var(--bull); }
+    .candle-stick.bear .candle-body { background: var(--bear); }
+    
+    /* Línea del POC */
+    .poc-line {
+      position: absolute;
+      left: 0; right: 0;
+      border-top: 2px solid var(--poc);
+      z-index: 10;
+      pointer-events: none;
+    }
+    
+    .poc-line::before {
+      content: 'POC';
+      position: absolute;
+      left: 5px;
+      top: -10px;
+      background: var(--poc);
+      color: #000;
+      font-size: 0.6em;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: bold;
+    }
+    
+    /* Área del Volume Profile (derecha) */
+    .vp-area {
+      width: 120px;
+      border-left: 1px solid var(--border);
+      background: rgba(0,0,0,0.2);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 10px 0;
+    }
+    
+    /* Barras de volumen horizontales */
+    .vp-bars-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+    
+    .vp-bar-row {
+      height: 12px;
+      display: flex;
+      align-items: center;
+      position: relative;
+      padding: 0 8px;
+    }
+    
+    .vp-bar {
+      height: 8px;
+      border-radius: 0 2px 2px 0;
+      transition: all 0.3s ease;
+      position: relative;
+      display: flex;
+    }
+    
+    /* Segmentos del volumen (alcista/bajista) */
+    .vp-segment {
+      height: 100%;
+      transition: all 0.3s;
+    }
+    
+    .vp-segment.bull { background: var(--bull); }
+    .vp-segment.bear { background: var(--bear); }
+    
+    /* Zonas especiales */
+    .vp-bar.poc .vp-segment { 
+      background: var(--poc) !important; 
+      box-shadow: 0 0 10px var(--poc);
+    }
+    .vp-bar.vah { opacity: 0.8; }
+    .vp-bar.vah .vp-segment.bull { background: var(--vah); }
+    .vp-bar.vah .vp-segment.bear { background: var(--vah); opacity: 0.6; }
+    .vp-bar.val { opacity: 0.8; }
+    .vp-bar.val .vp-segment.bull { background: var(--val); opacity: 0.6; }
+    .vp-bar.val .vp-segment.bear { background: var(--val); }
+    
+    /* Precio actual destacado */
+    .current-price-row {
+      position: absolute;
+      left: 0; right: 0;
+      height: 20px;
+      background: rgba(255,255,255,0.1);
+      border-top: 1px solid var(--gold);
+      border-bottom: 1px solid var(--gold);
+      display: flex;
+      align-items: center;
+      padding: 0 8px;
+      z-index: 20;
+    }
+    
+    .current-price-label {
+      position: absolute;
+      right: 5px;
+      background: var(--gold);
+      color: #000;
+      font-size: 0.65em;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-weight: bold;
+    }
+    
+    /* Labels de precios a la izquierda del VP */
+    .price-labels {
+      position: absolute;
+      left: -45px;
+      top: 0; bottom: 0;
+      width: 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 10px 0;
+      pointer-events: none;
+    }
+    
+    .price-label {
+      font-size: 0.65em;
+      color: #666;
+      text-align: right;
+      font-family: monospace;
+    }
+    
+    .price-label.highlight {
+      color: var(--gold);
+      font-weight: bold;
+    }
+    
+    /* Footer con stats */
+    .stats-footer {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-top: 1px solid var(--border);
+    }
+    
+    .stat-box {
+      background: var(--panel);
+      padding: 10px;
+      text-align: center;
+    }
+    
+    .stat-label {
+      font-size: 0.6em;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    
+    .stat-value {
+      font-size: 1.1em;
+      font-weight: bold;
+      font-family: monospace;
+    }
+    
+    .stat-value.poc { color: var(--poc); }
+    .stat-value.vah { color: var(--vah); }
+    .stat-value.val { color: var(--val); }
+    
+    /* Alerta contextual */
+    .context-alert {
+      padding: 8px 15px;
+      background: rgba(0,0,0,0.3);
+      border-top: 1px solid var(--border);
+      font-size: 0.8em;
+      text-align: center;
+      color: #888;
+    }
+    
+    .context-alert.poc { 
+      background: rgba(255,215,0,0.1); 
+      color: var(--poc);
+      border-top-color: var(--poc);
+    }
+    .context-alert.above { 
+      background: rgba(0,200,81,0.1); 
+      color: var(--bull);
+      border-top-color: var(--bull);
+    }
+    .context-alert.below { 
+      background: rgba(255,68,68,0.1); 
+      color: var(--bear);
+      border-top-color: var(--bear);
+    }
+    
+    /* Indicador de liquidez */
+    .liquidity-indicator {
+      position: absolute;
+      right: 5px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.6em;
+      color: #666;
+    }
+    
+    .liquidity-label {
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      letter-spacing: 2px;
+    }
+    
+    /* Responsive */
+    @media (max-width: 400px) {
+      .vp-area { width: 100px; }
+      .candle-stick { width: 6px; }
+    }
+    
+    /* Animaciones */
+    @keyframes pulse-poc {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+    
+    .vp-bar.poc {
+      animation: pulse-poc 2s infinite;
+    }
+    
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-title">
+      <span>📊</span>
+      <span>Volume Profile Monitor</span>
+    </div>
+    <div class="status-dot disconnected" id="status-dot"></div>
+  </div>
+
+  <div class="main-panel">
+    <!-- Header de precio -->
+    <div class="price-header">
+      <div>
+        <div class="price-main" id="current-price">--</div>
+        <div class="price-change" id="price-info">Esperando datos...</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 0.7em; color: #666;">Velas</div>
+        <div style="font-size: 1.2em; font-weight: bold;" id="candle-count">0</div>
+      </div>
+    </div>
+    
+    <!-- Área combinada Chart + VP -->
+    <div class="chart-vp-container">
+      <!-- Velas -->
+      <div class="candles-area">
+        <div class="price-grid" id="price-grid"></div>
+        <div class="candles-wrapper" id="candles-wrapper">
+          <!-- Velas se generan aquí -->
+        </div>
+        <!-- Línea POC -->
+        <div class="poc-line" id="poc-line" style="display: none;"></div>
+      </div>
+      
+      <!-- Volume Profile -->
+      <div class="vp-area">
+        <div class="price-labels" id="price-labels"></div>
+        <div class="vp-bars-container" id="vp-bars">
+          <!-- Barras de volumen -->
+        </div>
+        <!-- Precio actual destacado -->
+        <div class="current-price-row" id="current-price-row" style="display: none;">
+          <div class="current-price-label" id="current-price-label">--</div>
+        </div>
+        <div class="liquidity-indicator">
+          <span class="liquidity-label">LIQUIDITY</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Stats -->
+    <div class="stats-footer">
+      <div class="stat-box">
+        <div class="stat-label">POC</div>
+        <div class="stat-value poc" id="stat-poc">--</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">VAH</div>
+        <div class="stat-value vah" id="stat-vah">--</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">VAL</div>
+        <div class="stat-value val" id="stat-val">--</div>
+      </div>
+    </div>
+    
+    <!-- Alerta contextual -->
+    <div class="context-alert" id="context-alert">
+      Conecte el detector CMD para ver el análisis
+    </div>
+  </div>
+
+<script>
+const CONFIG = {
+  rows: 20,
+  valueAreaPercent: 70,
+  channelName: 'cmd-detector-vp',
+  maxCandles: 15
+};
+
+let state = {
+  history: [],
+  vp: null,
+  connected: false
+};
+
+// Comunicación
+let bc = null;
+if (typeof BroadcastChannel !== 'undefined') {
+  bc = new BroadcastChannel(CONFIG.channelName);
+  bc.onmessage = (e) => {
+    if (e.data?.type === 'vp-update') handleData(e.data.payload);
+  };
+}
+
+// Polling fallback
+setInterval(() => {
+  if (state.connected) return;
+  try {
+    const data = JSON.parse(localStorage.getItem('cmd-vp-data') || '{}');
+    if (data.timestamp && Date.now() - data.timestamp < 5000) {
+      handleData(data);
+    }
+  } catch(e) {}
+}, 200);
+
+function handleData(data) {
+  if (!data?.history?.length) return;
+  
+  state.history = data.history;
+  state.vp = data.volumeProfile;
+  state.connected = true;
+  
+  document.getElementById('status-dot').className = 'status-dot connected';
+  document.getElementById('candle-count').textContent = data.history.length;
+  
+  render();
+}
+
+function calculateVP(history) {
+  if (history.length < 5) return null;
+  
+  // Generar datos de precios sintéticos
+  const lookback = Math.min(history.length, 30);
+  const priceLevels = [];
+  let price = 50;
+  
+  for (let i = history.length - lookback; i < history.length; i++) {
+    const candle = history[i];
+    const prev = i > 0 ? history[i-1] : candle;
+    const strength = candle === prev ? 2.5 : 3;
+    
+    const move = (candle === 'G' ? 1 : -1) * (strength * 1.2 + Math.random() * 2);
+    const close = Math.max(10, Math.min(90, price + move));
+    const high = Math.max(price, close) + Math.random() * 3;
+    const low = Math.min(price, close) - Math.random() * 3;
+    
+    priceLevels.push({
+      open: price,
+      high, low,
+      close,
+      volume: strength * 20 + Math.random() * 50,
+      upVol: candle === 'G' ? 0.7 : 0.3,
+      candle
+    });
+    
+    price = close;
+  }
+  
+  // Calcular rango
+  const prices = priceLevels.flatMap(p => [p.high, p.low]);
+  const minP = Math.min(...prices) - 2;
+  const maxP = Math.max(...prices) + 2;
+  const range = maxP - minP;
+  
+  // Crear histograma
+  const rowH = range / CONFIG.rows;
+  const histogram = [];
+  
+  for (let i = 0; i < CONFIG.rows; i++) {
+    const low = minP + (i * rowH);
+    const high = low + rowH;
+    const mid = (low + high) / 2;
+    
+    let vol = 0, upV = 0, downV = 0;
+    
+    priceLevels.forEach(c => {
+      const overlap = Math.max(0, Math.min(c.high, high) - Math.max(c.low, low));
+      if (overlap > 0) {
+        const ratio = overlap / (c.high - c.low + 0.001);
+        const v = c.volume * ratio;
+        vol += v;
+        upV += v * c.upVol;
+        downV += v * (1 - c.upVol);
+      }
+    });
+    
+    histogram.push({
+      price: mid,
+      low, high,
+      volume: vol,
+      upVolume: upV,
+      downVolume: downV
+    });
+  }
+  
+  // Encontrar POC
+  const maxVol = Math.max(...histogram.map(h => h.volume));
+  const pocIdx = histogram.findIndex(h => h.volume === maxVol);
+  histogram[pocIdx].isPOC = true;
+  
+  // Value Area
+  const totalVol = histogram.reduce((s, h) => s + h.volume, 0);
+  let vaVol = histogram[pocIdx].volume;
+  let vahIdx = pocIdx, valIdx = pocIdx;
+  
+  while (vaVol < totalVol * 0.7 && (vahIdx < CONFIG.rows - 1 || valIdx > 0)) {
+    const up = vahIdx < CONFIG.rows - 1 ? histogram[vahIdx + 1].volume : 0;
+    const down = valIdx > 0 ? histogram[valIdx - 1].volume : 0;
+    
+    if (up >= down && vahIdx < CONFIG.rows - 1) {
+      vahIdx++;
+      vaVol += histogram[vahIdx].volume;
+      histogram[vahIdx].inVA = true;
+    } else if (valIdx > 0) {
+      valIdx--;
+      vaVol += histogram[valIdx].volume;
+      histogram[valIdx].inVA = true;
+    } else break;
+  }
+  
+  histogram[vahIdx].isVAH = true;
+  histogram[valIdx].isVAL = true;
+  
+  // Posición actual
+  const lastPrice = priceLevels[priceLevels.length - 1].close;
+  const currentIdx = histogram.findIndex(h => lastPrice >= h.low && lastPrice <= h.high);
+  
+  let position = 'unknown';
+  if (currentIdx === pocIdx) position = 'poc';
+  else if (currentIdx >= valIdx && currentIdx <= vahIdx) position = 'inside';
+  else if (currentIdx > vahIdx) position = 'above';
+  else if (currentIdx < valIdx) position = 'below';
+  
+  return {
+    histogram: histogram.reverse(), // De arriba a abajo
+    poc: histogram[CONFIG.rows - 1 - pocIdx].price,
+    vah: histogram[CONFIG.rows - 1 - vahIdx].price,
+    val: histogram[CONFIG.rows - 1 - valIdx].price,
+    currentPrice: lastPrice,
+    currentIdx: CONFIG.rows - 1 - currentIdx,
+    pocIdx: CONFIG.rows - 1 - pocIdx,
+    minPrice: minP,
+    maxPrice: maxP,
+    position
+  };
+}
+
+function render() {
+  const vp = calculateVP(state.history);
+  if (!vp) return;
+  
+  // Precio actual
+  const priceEl = document.getElementById('current-price');
+  priceEl.textContent = vp.currentPrice.toFixed(2) + '%';
+  priceEl.className = 'price-main ' + (state.history[state.history.length-1] === 'G' ? 'up' : 'down');
+  
+  document.getElementById('price-info').textContent = 
+    `Rango: ${vp.minPrice.toFixed(0)}% - ${vp.maxPrice.toFixed(0)}%`;
+  
+  // Stats
+  document.getElementById('stat-poc').textContent = vp.poc.toFixed(1) + '%';
+  document.getElementById('stat-vah').textContent = vp.vah.toFixed(1) + '%';
+  document.getElementById('stat-val').textContent = vp.val.toFixed(1) + '%';
+  
+  // Renderizar velas (últimas N)
+  const candlesWrapper = document.getElementById('candles-wrapper');
+  const recent = state.history.slice(-CONFIG.maxCandles);
+  const priceRange = vp.maxPrice - vp.minPrice;
+  
+  candlesWrapper.innerHTML = recent.map((c, i) => {
+    const idx = state.history.length - recent.length + i;
+    const isLast = i === recent.length - 1;
+    
+    // Calcular altura proporcional
+    const getY = (p) => 100 - ((p - vp.minPrice) / priceRange * 100);
+    
+    // Simular OHLC para visualización
+    const prevC = idx > 0 ? state.history[idx-1] : c;
+    const strength = c === prevC ? 2.5 : 3;
+    const move = (c === 'G' ? 1 : -1) * strength;
+    
+    const open = vp.currentPrice - (recent.length - 1 - i) * move * 0.5;
+    const close = open + move;
+    const high = Math.max(open, close) + 2;
+    const low = Math.min(open, close) - 2;
+    
+    const bodyTop = getY(Math.max(open, close));
+    const bodyBottom = getY(Math.min(open, close));
+    const wickTop = getY(high);
+    const wickBottom = getY(low);
+    
+    const bodyHeight = Math.max(2, bodyBottom - bodyTop);
+    
+    return `
+      <div class="candle-stick ${c === 'G' ? 'bull' : 'bear'}" 
+           style="height: 100%; justify-content: flex-end;">
+        <div class="candle-wick" style="height: ${wickTop}%;"></div>
+        <div class="candle-body" style="height: ${bodyHeight}%;"></div>
+        <div class="candle-wick" style="height: ${100 - wickBottom}%;"></div>
+      </div>
+    `;
+  }).join('');
+  
+  // Línea POC
+  const pocLine = document.getElementById('poc-line');
+  const pocY = ((vp.maxPrice - vp.poc) / priceRange * 100);
+  pocLine.style.display = 'block';
+  pocLine.style.top = pocY + '%';
+  
+  // Grid de precios
+  const grid = document.getElementById('price-grid');
+  grid.innerHTML = '';
+  for (let i = 0; i <= 5; i++) {
+    const y = (i / 5) * 100;
+    const price = vp.maxPrice - (i / 5) * priceRange;
+    grid.innerHTML += `<div class="grid-line" style="top: ${y}%;"></div>`;
+  }
+  
+  // Renderizar barras VP
+  const vpContainer = document.getElementById('vp-bars');
+  const maxVol = Math.max(...vp.histogram.map(h => h.volume));
+  
+  vpContainer.innerHTML = vp.histogram.map((row, i) => {
+    const width = (row.volume / maxVol) * 100;
+    const upRatio = row.volume > 0 ? row.upVolume / row.volume : 0.5;
+    const upWidth = width * upRatio;
+    const downWidth = width * (1 - upRatio);
+    
+    let barClass = '';
+    if (row.isPOC) barClass = 'poc';
+    else if (row.isVAH) barClass = 'vah';
+    else if (row.isVAL) barClass = 'val';
+    
+    return `
+      <div class="vp-bar-row">
+        <div class="vp-bar ${barClass}" style="width: ${Math.max(5, width)}%;">
+          <div class="vp-segment bull" style="width: ${upRatio * 100}%;"></div>
+          <div class="vp-segment bear" style="width: ${(1-upRatio) * 100}%;"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  // Labels de precios
+  const labelsContainer = document.getElementById('price-labels');
+  labelsContainer.innerHTML = '';
+  for (let i = 0; i < CONFIG.rows; i += 4) {
+    const row = vp.histogram[i];
+    const isHighlight = row.isPOC || row.isVAH || row.isVAL;
+    labelsContainer.innerHTML += `
+      <div class="price-label ${isHighlight ? 'highlight' : ''}">
+        ${row.price.toFixed(0)}%
+      </div>
+    `;
+  }
+  
+  // Precio actual destacado en VP
+  const currentRow = document.getElementById('current-price-row');
+  const currentY = (vp.currentIdx / CONFIG.rows) * 100;
+  currentRow.style.display = 'flex';
+  currentRow.style.top = currentY + '%';
+  document.getElementById('current-price-label').textContent = vp.currentPrice.toFixed(1) + '%';
+  
+  // Alerta contextual
+  const alertEl = document.getElementById('context-alert');
+  const messages = {
+    'poc': { text: '🎯 EN POC - Máxima liquidez, soporte/resistencia fuerte', class: 'poc' },
+    'inside': { text: '📊 DENTRO VALUE AREA - Equilibrio del mercado', class: '' },
+    'above': { text: '⚠️ SOBRE VAH - Zona de sobrecompra relativa', class: 'above' },
+    'below': { text: '⚠️ BAJO VAL - Zona de sobreventa relativa', class: 'below' }
+  };
+  
+  const msg = messages[vp.position] || messages['inside'];
+  alertEl.textContent = msg.text;
+  alertEl.className = 'context-alert ' + msg.class;
+}
+
+// Inicializar
+console.log('📊 Monitor VP iniciado. Esperando datos...');
+</script>
+
+</body>
+</html>
