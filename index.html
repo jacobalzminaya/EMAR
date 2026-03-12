@@ -1527,6 +1527,9 @@
 
   <div class="controls">
     <button class="btn-reset" onclick="reset()">↺ REINICIAR TODO</button>
+  <button class="btn-reset" onclick="openMonitor()" style="background: var(--purple); margin-left: 10px;">
+    📊 Monitor VP
+  </button>
   </div>
   <button class="btn-clear-trap" id="btn-clear-trap" onclick="clearTrap()" style="display:none;">
     🗑 Limpiar Trampa y Restaurar
@@ -1541,6 +1544,44 @@
   </div>
 
 <script>
+// ===== MONITOR EXTERNO INTEGRATION =====
+(function() {
+  const channel = typeof BroadcastChannel !== 'undefined' ? 
+    new BroadcastChannel('cmd-detector-vp') : null;
+  
+  function sendToMonitor() {
+    const data = {
+      type: 'vp-update',
+      payload: {
+        history: history,
+        volumeProfile: volumeProfile,
+        cmdState: cmdState,
+        timestamp: Date.now()
+      }
+    };
+    
+    if (channel) channel.postMessage(data);
+    try {
+      localStorage.setItem('cmd-vp-data', JSON.stringify(data.payload));
+    } catch(e) {}
+  }
+  
+  // Hook into existing update function
+  const origUpdate = update;
+  update = function() {
+    origUpdate();
+    sendToMonitor();
+  };
+  
+  window.openMonitor = function() {
+    window.open('monitor.html', 'VPMonitor', 
+      'width=380,height=600,right=0,top=0,resizable=yes');
+  };
+  
+  console.log('Monitor integration ready. Use openMonitor()');
+})();
+
+
 // ===== CONFIGURACIÓN COMPLETA =====
 const MA_CONFIG = {
   crosses: [
