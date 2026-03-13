@@ -3,23 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Monitor Volume Profile - CMD Detector</title>
+  <title>Monitor Trading Pro - Señales & Proyecciones</title>
   <style>
     :root {
-      --green: #00c851;
+      --green: #00ff88;
       --red: #ff4444;
       --gold: #ffd700;
       --blue: #00d4ff;
       --orange: #ff8800;
       --purple: #ff00ff;
       --cyan: #00ffff;
-      --bg: #0d1117;
+      --bg: #0a0a0a;
       --panel: #161b22;
       --border: #30363d;
-      --poc: #ffd700;
+      --poc: #ff00ff;
       --vah: #00d4ff;
       --val: #ff8800;
-      --bull: #00c851;
+      --bull: #00ff88;
       --bear: #ff4444;
     }
     
@@ -28,37 +28,38 @@
     body {
       background: var(--bg);
       color: #fff;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Segoe UI', Roboto, sans-serif;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      padding: 8px;
-      font-size: 0.8em;
+      padding: 10px;
+      font-size: 0.85em;
     }
     
-    /* Header minimalista */
+    /* ===== HEADER ===== */
     .header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 6px 10px;
+      padding: 10px 15px;
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      margin-bottom: 8px;
+      border-radius: 10px;
+      margin-bottom: 10px;
     }
     
     .header-title {
-      font-weight: 600;
+      font-weight: 700;
       color: var(--gold);
+      font-size: 1.1em;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 8px;
     }
     
     .status-dot {
-      width: 8px;
-      height: 8px;
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       background: #444;
       transition: all 0.3s;
@@ -66,35 +67,287 @@
     
     .status-dot.connected { 
       background: var(--green); 
-      box-shadow: 0 0 8px var(--green);
-    }
-    .status-dot.disconnected { 
-      background: var(--red); 
+      box-shadow: 0 0 10px var(--green);
+      animation: pulse-dot 2s infinite;
     }
     
-    /* Panel principal combinado */
-    .main-panel {
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    /* ===== PANEL DE SEÑAL PRINCIPAL ===== */
+    .signal-panel {
+      width: 100%;
+      background: linear-gradient(135deg, var(--panel) 0%, #1a1a2e 100%);
+      border: 3px solid #444;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 10px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .signal-panel::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--val), var(--poc), var(--vah));
+    }
+    
+    .signal-panel.buy {
+      border-color: var(--green);
+      background: linear-gradient(135deg, rgba(0,255,136,0.1) 0%, var(--panel) 100%);
+      animation: pulse-buy 2s infinite;
+    }
+    
+    .signal-panel.sell {
+      border-color: var(--red);
+      background: linear-gradient(135deg, rgba(255,68,68,0.1) 0%, var(--panel) 100%);
+      animation: pulse-sell 2s infinite;
+    }
+    
+    .signal-panel.neutral {
+      border-color: var(--gold);
+      background: linear-gradient(135deg, rgba(255,215,0,0.05) 0%, var(--panel) 100%);
+    }
+    
+    .signal-panel.extreme {
+      border-color: var(--cyan);
+      background: linear-gradient(135deg, rgba(0,255,255,0.1) 0%, var(--panel) 100%);
+      animation: pulse-extreme 1.5s infinite;
+    }
+    
+    @keyframes pulse-buy {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,136,0.4); }
+      50% { box-shadow: 0 0 30px 10px rgba(0,255,136,0.2); }
+    }
+    
+    @keyframes pulse-sell {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255,68,68,0.4); }
+      50% { box-shadow: 0 0 30px 10px rgba(255,68,68,0.2); }
+    }
+    
+    @keyframes pulse-extreme {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(0,255,255,0.4); }
+      50% { box-shadow: 0 0 30px 10px rgba(0,255,255,0.2); }
+    }
+    
+    .signal-icon {
+      font-size: 3em;
+      margin-bottom: 10px;
+    }
+    
+    .signal-text {
+      font-size: 2.5em;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: 10px;
+    }
+    
+    .signal-panel.buy .signal-text { color: var(--green); text-shadow: 0 0 20px var(--green); }
+    .signal-panel.sell .signal-text { color: var(--red); text-shadow: 0 0 20px var(--red); }
+    .signal-panel.neutral .signal-text { color: var(--gold); }
+    .signal-panel.extreme .signal-text { color: var(--cyan); text-shadow: 0 0 20px var(--cyan); }
+    
+    .signal-reason {
+      font-size: 0.9em;
+      color: #aaa;
+      margin-bottom: 15px;
+      line-height: 1.4;
+    }
+    
+    .confidence-bar {
+      width: 100%;
+      height: 8px;
+      background: #333;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    
+    .confidence-fill {
+      height: 100%;
+      transition: all 0.5s;
+      border-radius: 4px;
+    }
+    
+    .confidence-fill.high { background: linear-gradient(90deg, var(--green), #00aa55); }
+    .confidence-fill.medium { background: linear-gradient(90deg, var(--gold), #ff8800); }
+    .confidence-fill.low { background: linear-gradient(90deg, #666, #999); }
+    
+    .confidence-label {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 5px;
+      font-size: 0.75em;
+      color: #888;
+    }
+    
+    /* ===== PANEL DE PROYECCIONES ===== */
+    .projections-panel {
+      width: 100%;
+      background: var(--panel);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 10px;
+    }
+    
+    .projections-title {
+      color: var(--blue);
+      font-size: 1em;
+      font-weight: bold;
+      margin-bottom: 15px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .price-targets {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+    
+    .target-box {
+      background: rgba(0,0,0,0.4);
+      border: 2px solid #444;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+      position: relative;
+      transition: all 0.3s;
+    }
+    
+    .target-box.buy-target {
+      border-color: var(--green);
+      background: rgba(0,255,136,0.05);
+    }
+    
+    .target-box.sell-target {
+      border-color: var(--red);
+      background: rgba(255,68,68,0.05);
+    }
+    
+    .target-label {
+      font-size: 0.75em;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    
+    .target-price {
+      font-size: 1.8em;
+      font-weight: bold;
+      font-family: 'Courier New', monospace;
+      margin-bottom: 5px;
+    }
+    
+    .target-box.buy-target .target-price { color: var(--green); }
+    .target-box.sell-target .target-price { color: var(--red); }
+    
+    .target-probability {
+      font-size: 0.8em;
+      color: #aaa;
+    }
+    
+    .target-arrow {
+      font-size: 1.5em;
+      margin: 5px 0;
+    }
+    
+    .target-details {
+      font-size: 0.7em;
+      color: #666;
+      margin-top: 8px;
+      line-height: 1.3;
+    }
+    
+    /* ===== PANEL DE ESTADO DEL MERCADO ===== */
+    .market-state-panel {
+      width: 100%;
+      background: var(--panel);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 10px;
+    }
+    
+    .market-state-title {
+      color: var(--purple);
+      font-size: 0.9em;
+      font-weight: bold;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    
+    .state-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+    
+    .state-item {
+      background: rgba(0,0,0,0.3);
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+    
+    .state-item.active {
+      border-color: currentColor;
+      background: rgba(255,255,255,0.05);
+    }
+    
+    .state-label {
+      font-size: 0.65em;
+      color: #888;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    
+    .state-value {
+      font-size: 1em;
+      font-weight: bold;
+    }
+    
+    .state-item.cmd-consolidation { color: var(--gold); }
+    .state-item.cmd-manipulation { color: var(--orange); }
+    .state-item.cmd-distribution { color: var(--red); }
+    .state-item.cmd-accumulation { color: var(--green); }
+    
+    .state-item.vp-poc { color: var(--poc); }
+    .state-item.vp-vah { color: var(--vah); }
+    .state-item.vp-val { color: var(--val); }
+    .state-item.vp-inside { color: #aaa; }
+    
+    /* ===== PANEL DE CHART + VP ===== */
+    .chart-panel {
       flex: 1;
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 10px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      position: relative;
+      min-height: 250px;
     }
     
-    /* Área de precio actual */
     .price-header {
       display: flex;
       justify-content: space-between;
-      padding: 10px 15px;
+      padding: 12px 15px;
       background: rgba(0,0,0,0.3);
       border-bottom: 1px solid var(--border);
     }
     
     .price-main {
-      font-size: 1.4em;
+      font-size: 1.6em;
       font-weight: bold;
       font-family: 'Courier New', monospace;
     }
@@ -102,20 +355,13 @@
     .price-main.up { color: var(--bull); }
     .price-main.down { color: var(--bear); }
     
-    .price-change {
-      font-size: 0.85em;
-      color: #888;
-    }
-    
-    /* Contenedor del gráfico + VP */
     .chart-vp-container {
       flex: 1;
       display: flex;
       position: relative;
-      min-height: 300px;
+      min-height: 200px;
     }
     
-    /* Área de velas (izquierda) */
     .candles-area {
       flex: 1;
       position: relative;
@@ -125,20 +371,6 @@
       justify-content: space-between;
     }
     
-    /* Líneas de precio de fondo */
-    .price-grid {
-      position: absolute;
-      top: 0; left: 0; right: 0; bottom: 0;
-      pointer-events: none;
-    }
-    
-    .grid-line {
-      position: absolute;
-      left: 0; right: 0;
-      border-top: 1px dashed rgba(255,255,255,0.05);
-    }
-    
-    /* Velas */
     .candles-wrapper {
       position: relative;
       flex: 1;
@@ -166,7 +398,6 @@
     .candle-body {
       width: 100%;
       border-radius: 1px;
-      position: relative;
     }
     
     .candle-stick.bull { color: var(--bull); }
@@ -174,7 +405,6 @@
     .candle-stick.bull .candle-body { background: var(--bull); }
     .candle-stick.bear .candle-body { background: var(--bear); }
     
-    /* Línea del POC */
     .poc-line {
       position: absolute;
       left: 0; right: 0;
@@ -196,7 +426,6 @@
       font-weight: bold;
     }
     
-    /* Área del Volume Profile (derecha) */
     .vp-area {
       width: 120px;
       border-left: 1px solid var(--border);
@@ -208,7 +437,6 @@
       padding: 10px 0;
     }
     
-    /* Barras de volumen horizontales */
     .vp-bars-container {
       flex: 1;
       display: flex;
@@ -233,7 +461,6 @@
       display: flex;
     }
     
-    /* Segmentos del volumen (alcista/bajista) */
     .vp-segment {
       height: 100%;
       transition: all 0.3s;
@@ -242,7 +469,6 @@
     .vp-segment.bull { background: var(--bull); }
     .vp-segment.bear { background: var(--bear); }
     
-    /* Zonas especiales */
     .vp-bar.poc .vp-segment { 
       background: var(--poc) !important; 
       box-shadow: 0 0 10px var(--poc);
@@ -254,14 +480,13 @@
     .vp-bar.val .vp-segment.bull { background: var(--val); opacity: 0.6; }
     .vp-bar.val .vp-segment.bear { background: var(--val); }
     
-    /* Precio actual destacado */
     .current-price-row {
       position: absolute;
       left: 0; right: 0;
       height: 20px;
       background: rgba(255,255,255,0.1);
-      border-top: 1px solid var(--gold);
-      border-bottom: 1px solid var(--gold);
+      border-top: 2px solid var(--gold);
+      border-bottom: 2px solid var(--gold);
       display: flex;
       align-items: center;
       padding: 0 8px;
@@ -273,13 +498,12 @@
       right: 5px;
       background: var(--gold);
       color: #000;
-      font-size: 0.65em;
+      font-size: 0.7em;
       padding: 2px 6px;
       border-radius: 3px;
       font-weight: bold;
     }
     
-    /* Labels de precios a la izquierda del VP */
     .price-labels {
       position: absolute;
       left: -45px;
@@ -304,7 +528,7 @@
       font-weight: bold;
     }
     
-    /* Footer con stats */
+    /* ===== STATS FOOTER ===== */
     .stats-footer {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -315,19 +539,19 @@
     
     .stat-box {
       background: var(--panel);
-      padding: 10px;
+      padding: 12px;
       text-align: center;
     }
     
     .stat-label {
-      font-size: 0.6em;
+      font-size: 0.65em;
       color: #888;
       text-transform: uppercase;
       margin-bottom: 4px;
     }
     
     .stat-value {
-      font-size: 1.1em;
+      font-size: 1.2em;
       font-weight: bold;
       font-family: monospace;
     }
@@ -336,58 +560,51 @@
     .stat-value.vah { color: var(--vah); }
     .stat-value.val { color: var(--val); }
     
-    /* Alerta contextual */
-    .context-alert {
-      padding: 8px 15px;
-      background: rgba(0,0,0,0.3);
-      border-top: 1px solid var(--border);
-      font-size: 0.8em;
+    /* ===== ALERTAS ===== */
+    .alert-box {
+      padding: 10px 15px;
+      border-radius: 8px;
+      margin-top: 10px;
+      font-size: 0.85em;
       text-align: center;
-      color: #888;
+      display: none;
     }
     
-    .context-alert.poc { 
-      background: rgba(255,215,0,0.1); 
-      color: var(--poc);
-      border-top-color: var(--poc);
-    }
-    .context-alert.above { 
-      background: rgba(0,200,81,0.1); 
-      color: var(--bull);
-      border-top-color: var(--bull);
-    }
-    .context-alert.below { 
-      background: rgba(255,68,68,0.1); 
-      color: var(--bear);
-      border-top-color: var(--bear);
+    .alert-box.show { display: block; }
+    
+    .alert-warning {
+      background: rgba(255,136,0,0.1);
+      border: 1px solid var(--orange);
+      color: var(--orange);
     }
     
-    /* Indicador de liquidez */
-    .liquidity-indicator {
-      position: absolute;
-      right: 5px;
-      top: 50%;
-      transform: translateY(-50%);
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 0.6em;
-      color: #666;
+    .alert-success {
+      background: rgba(0,255,136,0.1);
+      border: 1px solid var(--green);
+      color: var(--green);
     }
     
-    .liquidity-label {
-      writing-mode: vertical-rl;
-      text-orientation: mixed;
-      letter-spacing: 2px;
+    .alert-danger {
+      background: rgba(255,68,68,0.1);
+      border: 1px solid var(--red);
+      color: var(--red);
     }
     
-    /* Responsive */
+    .alert-info {
+      background: rgba(0,212,255,0.1);
+      border: 1px solid var(--blue);
+      color: var(--blue);
+    }
+    
+    /* ===== RESPONSIVE ===== */
     @media (max-width: 400px) {
       .vp-area { width: 100px; }
       .candle-stick { width: 6px; }
+      .signal-text { font-size: 2em; }
+      .price-targets { grid-template-columns: 1fr; }
     }
     
-    /* Animaciones */
+    /* ===== ANIMACIONES ===== */
     @keyframes pulse-poc {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.7; }
@@ -397,7 +614,6 @@
       animation: pulse-poc 2s infinite;
     }
     
-    /* Scrollbar */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: #444; border-radius: 2px; }
@@ -408,53 +624,108 @@
   <div class="header">
     <div class="header-title">
       <span>📊</span>
-      <span>Volume Profile Monitor</span>
+      <span>Monitor Trading Pro</span>
     </div>
     <div class="status-dot disconnected" id="status-dot"></div>
   </div>
 
-  <div class="main-panel">
-    <!-- Header de precio -->
+  <!-- PANEL DE SEÑAL PRINCIPAL -->
+  <div class="signal-panel neutral" id="signal-panel">
+    <div class="signal-icon" id="signal-icon">⏸️</div>
+    <div class="signal-text" id="signal-text">ESPERAR</div>
+    <div class="signal-reason" id="signal-reason">
+      Conecte el detector para recibir señales de trading
+    </div>
+    <div class="confidence-bar">
+      <div class="confidence-fill low" id="confidence-fill" style="width: 0%"></div>
+    </div>
+    <div class="confidence-label">
+      <span>Confianza</span>
+      <span id="confidence-text">0%</span>
+    </div>
+    <div class="alert-box" id="alert-box"></div>
+  </div>
+
+  <!-- PANEL DE PROYECCIONES -->
+  <div class="projections-panel">
+    <div class="projections-title">
+      <span>🎯</span>
+      <span>PROYECCIONES DE PRECIO</span>
+    </div>
+    <div class="price-targets">
+      <div class="target-box" id="target-buy">
+        <div class="target-label">Objetivo Alcista</div>
+        <div class="target-arrow">⬆️</div>
+        <div class="target-price" id="target-buy-price">--</div>
+        <div class="target-probability" id="target-buy-prob">Prob: --%</div>
+        <div class="target-details" id="target-buy-details">
+          Esperando señal de compra...
+        </div>
+      </div>
+      <div class="target-box" id="target-sell">
+        <div class="target-label">Objetivo Bajista</div>
+        <div class="target-arrow">⬇️</div>
+        <div class="target-price" id="target-sell-price">--</div>
+        <div class="target-probability" id="target-sell-prob">Prob: --%</div>
+        <div class="target-details" id="target-sell-details">
+          Esperando señal de venta...
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL DE ESTADO DEL MERCADO -->
+  <div class="market-state-panel">
+    <div class="market-state-title">🧠 ESTADO DEL MERCADO</div>
+    <div class="state-grid">
+      <div class="state-item" id="state-cmd">
+        <div class="state-label">Fase CMD</div>
+        <div class="state-value" id="cmd-value">--</div>
+      </div>
+      <div class="state-item" id="state-vp">
+        <div class="state-label">Posición VP</div>
+        <div class="state-value" id="vp-value">--</div>
+      </div>
+      <div class="state-item">
+        <div class="state-label">Tendencia MA10</div>
+        <div class="state-value" id="trend-value">--</div>
+      </div>
+      <div class="state-item">
+        <div class="state-label">Momentum</div>
+        <div class="state-value" id="momentum-value">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL DE CHART + VP -->
+  <div class="chart-panel">
     <div class="price-header">
       <div>
         <div class="price-main" id="current-price">--</div>
-        <div class="price-change" id="price-info">Esperando datos...</div>
+        <div style="font-size: 0.75em; color: #888;" id="price-range">Rango: --</div>
       </div>
       <div style="text-align: right;">
         <div style="font-size: 0.7em; color: #666;">Velas</div>
-        <div style="font-size: 1.2em; font-weight: bold;" id="candle-count">0</div>
+        <div style="font-size: 1.3em; font-weight: bold;" id="candle-count">0</div>
       </div>
     </div>
     
-    <!-- Área combinada Chart + VP -->
     <div class="chart-vp-container">
-      <!-- Velas -->
       <div class="candles-area">
         <div class="price-grid" id="price-grid"></div>
-        <div class="candles-wrapper" id="candles-wrapper">
-          <!-- Velas se generan aquí -->
-        </div>
-        <!-- Línea POC -->
+        <div class="candles-wrapper" id="candles-wrapper"></div>
         <div class="poc-line" id="poc-line" style="display: none;"></div>
       </div>
       
-      <!-- Volume Profile -->
       <div class="vp-area">
         <div class="price-labels" id="price-labels"></div>
-        <div class="vp-bars-container" id="vp-bars">
-          <!-- Barras de volumen -->
-        </div>
-        <!-- Precio actual destacado -->
+        <div class="vp-bars-container" id="vp-bars"></div>
         <div class="current-price-row" id="current-price-row" style="display: none;">
           <div class="current-price-label" id="current-price-label">--</div>
-        </div>
-        <div class="liquidity-indicator">
-          <span class="liquidity-label">LIQUIDITY</span>
         </div>
       </div>
     </div>
     
-    <!-- Stats -->
     <div class="stats-footer">
       <div class="stat-box">
         <div class="stat-label">POC</div>
@@ -469,11 +740,6 @@
         <div class="stat-value val" id="stat-val">--</div>
       </div>
     </div>
-    
-    <!-- Alerta contextual -->
-    <div class="context-alert" id="context-alert">
-      Conecte el detector CMD para ver el análisis
-    </div>
   </div>
 
 <script>
@@ -481,13 +747,17 @@ const CONFIG = {
   rows: 20,
   valueAreaPercent: 70,
   channelName: 'cmd-detector-vp',
-  maxCandles: 15
+  maxCandles: 15,
+  minHistory: 10
 };
 
 let state = {
   history: [],
   vp: null,
-  connected: false
+  cmd: null,
+  trend: null,
+  connected: false,
+  lastSignal: null
 };
 
 // Comunicación
@@ -515,18 +785,373 @@ function handleData(data) {
   
   state.history = data.history;
   state.vp = data.volumeProfile;
+  state.cmd = data.cmdState;
   state.connected = true;
   
   document.getElementById('status-dot').className = 'status-dot connected';
   document.getElementById('candle-count').textContent = data.history.length;
   
+  calculateSignal();
   render();
+}
+
+// ===== CÁLCULO DE SEÑAL Y PROYECCIONES =====
+
+function calculateSignal() {
+  if (state.history.length < CONFIG.minHistory) {
+    updateSignalPanel('neutral', '⏸️', 'ESPERAR', 
+      'Necesitas al menos ' + CONFIG.minHistory + ' velas para generar señales', 0);
+    return;
+  }
+  
+  const vp = calculateVP(state.history);
+  const cmd = state.cmd || { phase: 'none', probability: 0 };
+  const trend = calculateTrend();
+  
+  let signal = 'neutral';
+  let icon = '⏸️';
+  let text = 'ESPERAR';
+  let reason = 'Sin señales claras en el mercado';
+  let confidence = 50;
+  let alertType = null;
+  let alertMsg = '';
+  
+  // Análisis de Fase CMD
+  const cmdPhase = cmd.phase || 'none';
+  const cmdProb = cmd.probability || 0;
+  
+  // Análisis de posición en Volume Profile
+  const vpPos = vp?.currentPosition || 'unknown';
+  const nearPOC = vp && Math.abs(vp.currentPrice - vp.poc) < 5;
+  
+  // DETECCIÓN DE SEÑALES FUERTES
+  
+  // 1. Señal de COMPRA
+  if (cmdPhase === 'accumulation' && cmdProb > 0.6) {
+    signal = 'buy';
+    icon = '🚀';
+    text = 'COMPRAR';
+    reason = `📥 Acumulación institucional detectada (${Math.round(cmdProb*100)}%). Los "smart money" están comprando.`;
+    confidence = 85;
+    alertType = 'success';
+    alertMsg = '⚡ FUERTE SEÑAL: Fase de acumulación confirmada';
+  }
+  else if (vpPos === 'below' && trend.direction === 'up') {
+    signal = 'buy';
+    icon = '⬆️';
+    text = 'COMPRAR';
+    reason = `📊 Precio bajo VAL (${vp.val.toFixed(1)}%) + momentum alcista. Regreso al POC (${vp.poc.toFixed(1)}%) probable.`;
+    confidence = 75;
+    alertType = 'success';
+    alertMsg = '🎯 Precio en zona de sobreventa (debajo de VAL)';
+  }
+  else if (nearPOC && trend.direction === 'up' && trend.strength > 2) {
+    signal = 'buy';
+    icon = '🎯';
+    text = 'COMPRAR';
+    reason = `🎯 Reversión alcista en POC (${vp.poc.toFixed(1)}%). Soporte fuerte confirmado.`;
+    confidence = 80;
+    alertType = 'success';
+    alertMsg = '🎯 Rebote en Point of Control (POC)';
+  }
+  else if (trend.extreme === 'oversold' && trend.direction === 'up') {
+    signal = 'buy';
+    icon = '🔥';
+    text = 'COMPRAR';
+    reason = `⚡ Sobreventa extrema (${trend.ma10.toFixed(0)}%) + reversión alcista. Oportunidad de compra.`;
+    confidence = 90;
+    alertType = 'success';
+    alertMsg = '🔥 EXTREMO: Sobreventa extrema con reversión';
+  }
+  
+  // 2. Señal de VENTA
+  else if (cmdPhase === 'distribution' && cmdProb > 0.6) {
+    signal = 'sell';
+    icon = '🔻';
+    text = 'VENDER';
+    reason = `🏦 Distribución institucional detectada (${Math.round(cmdProb*100)}%). Los "smart money" están vendiendo.`;
+    confidence = 85;
+    alertType = 'danger';
+    alertMsg = '⚠️ FUERTE SEÑAL: Fase de distribución confirmada';
+  }
+  else if (vpPos === 'above' && trend.direction === 'down') {
+    signal = 'sell';
+    icon = '⬇️';
+    text = 'VENDER';
+    reason = `📊 Precio sobre VAH (${vp.vah.toFixed(1)}%) + momentum bajista. Regreso al POC (${vp.poc.toFixed(1)}%) probable.`;
+    confidence = 75;
+    alertType = 'danger';
+    alertMsg = '🎯 Precio en zona de sobrecompra (sobre VAH)';
+  }
+  else if (nearPOC && trend.direction === 'down' && trend.strength > 2) {
+    signal = 'sell';
+    icon = '🎯';
+    text = 'VENDER';
+    reason = `🎯 Reversión bajista en POC (${vp.poc.toFixed(1)}%). Resistencia fuerte confirmada.`;
+    confidence = 80;
+    alertType = 'danger';
+    alertMsg = '🎯 Rechazo en Point of Control (POC)';
+  }
+  else if (trend.extreme === 'overbought' && trend.direction === 'down') {
+    signal = 'sell';
+    icon = '🔥';
+    text = 'VENDER';
+    reason = `⚡ Sobrecompra extrema (${trend.ma10.toFixed(0)}%) + reversión bajista. Oportunidad de venta.`;
+    confidence = 90;
+    alertType = 'danger';
+    alertMsg = '🔥 EXTREMO: Sobrecompra extrema con reversión';
+  }
+  
+  // 3. Señal NEUTRA con advertencias
+  else if (cmdPhase === 'manipulation' && cmdProb > 0.7) {
+    signal = 'neutral';
+    icon = '⚠️';
+    text = 'ESPERAR';
+    reason = `🎭 Manipulación detectada (${Math.round(cmdProb*100)}%). Posible falso quiebre. NO operar.`;
+    confidence = 30;
+    alertType = 'warning';
+    alertMsg = '⚠️ MANIPULACIÓN: Esperar confirmación antes de operar';
+  }
+  else if (cmdPhase === 'consolidation' && cmdProb > 0.6) {
+    signal = 'neutral';
+    icon = '📊';
+    text = 'ESPERAR';
+    reason = `📊 Mercado en consolidación (${Math.round(cmdProb*100)}%). Rango estrecho, esperar ruptura.`;
+    confidence = 40;
+    alertType = 'info';
+    alertMsg = 'ℹ️ CONSOLIDACIÓN: Esperar breakout del rango';
+  }
+  else if (vpPos === 'inside') {
+    signal = 'neutral';
+    icon = '⚖️';
+    text = 'ESPERAR';
+    reason = `⚖️ Precio dentro del Value Area (${vp.val.toFixed(1)}% - ${vp.vah.toFixed(1)}%). Zona de equilibrio.`;
+    confidence = 50;
+    alertType = 'info';
+    alertMsg = 'ℹ️ Equilibrio de mercado dentro del Value Area';
+  }
+  
+  updateSignalPanel(signal, icon, text, reason, confidence, alertType, alertMsg);
+  updateProjections(vp, trend, signal, confidence);
+  updateMarketState(cmd, vp, trend);
+}
+
+function updateSignalPanel(signal, icon, text, reason, confidence, alertType, alertMsg) {
+  const panel = document.getElementById('signal-panel');
+  panel.className = 'signal-panel ' + signal;
+  
+  document.getElementById('signal-icon').textContent = icon;
+  document.getElementById('signal-text').textContent = text;
+  document.getElementById('signal-reason').textContent = reason;
+  
+  const fill = document.getElementById('confidence-fill');
+  fill.style.width = confidence + '%';
+  fill.className = 'confidence-fill ' + (confidence > 70 ? 'high' : confidence > 40 ? 'medium' : 'low');
+  
+  document.getElementById('confidence-text').textContent = confidence + '%';
+  
+  const alertBox = document.getElementById('alert-box');
+  if (alertType) {
+    alertBox.className = 'alert-box show alert-' + alertType;
+    alertBox.textContent = alertMsg;
+  } else {
+    alertBox.className = 'alert-box';
+  }
+}
+
+function updateProjections(vp, trend, signal, confidence) {
+  if (!vp || !vp.poc) {
+    document.getElementById('target-buy-price').textContent = '--';
+    document.getElementById('target-sell-price').textContent = '--';
+    return;
+  }
+  
+  const currentPrice = vp.currentPrice;
+  const poc = vp.poc;
+  const vah = vp.vah;
+  const val = vp.val;
+  
+  // Calcular objetivos basados en la señal
+  let buyTarget, sellTarget, buyProb, sellProb;
+  
+  if (signal === 'buy') {
+    // Si hay señal de compra, objetivo es subir hacia VAH o más allá
+    buyTarget = vah + (vah - poc) * 0.5; // Extensión más allá de VAH
+    sellTarget = val; // Stop loss debajo de VAL
+    buyProb = confidence;
+    sellProb = 100 - confidence;
+  } else if (signal === 'sell') {
+    // Si hay señal de venta, objetivo es bajar hacia VAL o más allá
+    buyTarget = vah; // Stop loss sobre VAH
+    sellTarget = val - (poc - val) * 0.5; // Extensión más allá de VAL
+    buyProb = 100 - confidence;
+    sellProb = confidence;
+  } else {
+    // Neutral: objetivos hacia los límites del Value Area
+    buyTarget = vah;
+    sellTarget = val;
+    buyProb = 50;
+    sellProb = 50;
+  }
+  
+  // Actualizar panel de compra
+  const buyBox = document.getElementById('target-buy');
+  buyBox.className = 'target-box ' + (signal === 'buy' ? 'buy-target' : '');
+  document.getElementById('target-buy-price').textContent = buyTarget.toFixed(1) + '%';
+  document.getElementById('target-buy-prob').textContent = 'Prob: ' + buyProb + '%';
+  
+  let buyDetails = '';
+  if (signal === 'buy') {
+    const potential = ((buyTarget - currentPrice) / currentPrice * 100).toFixed(1);
+    buyDetails = `Potencial: +${potential}% | Stop: ${val.toFixed(1)}%`;
+  } else if (signal === 'sell') {
+    buyDetails = `Stop loss si vendes | Nivel: ${vah.toFixed(1)}%`;
+  } else {
+    buyDetails = `Resistencia en ${vah.toFixed(1)}%`;
+  }
+  document.getElementById('target-buy-details').textContent = buyDetails;
+  
+  // Actualizar panel de venta
+  const sellBox = document.getElementById('target-sell');
+  sellBox.className = 'target-box ' + (signal === 'sell' ? 'sell-target' : '');
+  document.getElementById('target-sell-price').textContent = sellTarget.toFixed(1) + '%';
+  document.getElementById('target-sell-prob').textContent = 'Prob: ' + sellProb + '%';
+  
+  let sellDetails = '';
+  if (signal === 'sell') {
+    const potential = ((currentPrice - sellTarget) / currentPrice * 100).toFixed(1);
+    sellDetails = `Potencial: +${potential}% | Stop: ${vah.toFixed(1)}%`;
+  } else if (signal === 'buy') {
+    sellDetails = `Stop loss si compras | Nivel: ${val.toFixed(1)}%`;
+  } else {
+    sellDetails = `Soporte en ${val.toFixed(1)}%`;
+  }
+  document.getElementById('target-sell-details').textContent = sellDetails;
+}
+
+function updateMarketState(cmd, vp, trend) {
+  // Actualizar Fase CMD
+  const cmdEl = document.getElementById('state-cmd');
+  const cmdValue = document.getElementById('cmd-value');
+  
+  const phase = cmd?.phase || 'none';
+  const phaseNames = {
+    'consolidation': 'Consolidación',
+    'manipulation': 'Manipulación',
+    'distribution': 'Distribución',
+    'accumulation': 'Acumulación',
+    'none': 'Ninguna'
+  };
+  
+  cmdEl.className = 'state-item cmd-' + phase;
+  if (phase !== 'none') cmdEl.classList.add('active');
+  cmdValue.textContent = phaseNames[phase] + (cmd?.probability ? ' (' + Math.round(cmd.probability*100) + '%)' : '');
+  
+  // Actualizar Posición VP
+  const vpEl = document.getElementById('state-vp');
+  const vpValue = document.getElementById('vp-value');
+  
+  const pos = vp?.currentPosition || 'unknown';
+  const posNames = {
+    'poc': 'En POC',
+    'inside': 'Dentro VA',
+    'above': 'Sobre VAH',
+    'below': 'Bajo VAL',
+    'unknown': '--'
+  };
+  
+  vpEl.className = 'state-item vp-' + pos;
+  if (pos !== 'unknown') vpEl.classList.add('active');
+  vpValue.textContent = posNames[pos];
+  
+  // Actualizar Tendencia
+  const trendValue = document.getElementById('trend-value');
+  if (trend) {
+    const trendNames = {
+      'bullish': 'Alcista',
+      'bearish': 'Bajista',
+      'neutral': 'Neutral'
+    };
+    trendValue.textContent = trendNames[trend.direction] + ' (' + trend.ma10.toFixed(0) + '%)';
+    // CORREGIDO: Usar valores hexadecimales en lugar de var(--color)
+    trendValue.style.color = trend.direction === 'bullish' ? '#00ff88' : 
+                             trend.direction === 'bearish' ? '#ff4444' : '#ffd700';
+  } else {
+    trendValue.textContent = '--';
+    trendValue.style.color = '#aaa';
+  }
+  
+  // Actualizar Momentum
+  const momValue = document.getElementById('momentum-value');
+  if (trend) {
+    const mom = trend.momentum;
+    let momText = 'Neutro';
+    if (mom > 5) momText = 'Fuerte +' + mom.toFixed(1);
+    else if (mom > 0) momText = 'Débil +' + mom.toFixed(1);
+    else if (mom < -5) momText = 'Fuerte ' + mom.toFixed(1);
+    else if (mom < 0) momText = 'Débil ' + mom.toFixed(1);
+    momValue.textContent = momText;
+    // CORREGIDO: Usar valores hexadecimales en lugar de var(--color)
+    momValue.style.color = mom > 0 ? '#00ff88' : mom < 0 ? '#ff4444' : '#aaa';
+  } else {
+    momValue.textContent = '--';
+    momValue.style.color = '#aaa';
+  }
+}
+
+function calculateTrend() {
+  if (state.history.length < 10) return null;
+  
+  const ma10 = calcMA(10);
+  const prevMA10 = calcPrevMA(10);
+  const momentum = prevMA10 !== null ? ma10 - prevMA10 : 0;
+  
+  let direction = 'neutral';
+  let strength = 0;
+  let extreme = null;
+  
+  if (ma10 >= 90) {
+    direction = 'down';
+    extreme = 'overbought';
+    strength = 4;
+  } else if (ma10 <= 10) {
+    direction = 'up';
+    extreme = 'oversold';
+    strength = 4;
+  } else if (ma10 > 60 && momentum > 0) {
+    direction = 'up';
+    strength = 3;
+  } else if (ma10 < 40 && momentum < 0) {
+    direction = 'down';
+    strength = 3;
+  } else if (momentum > 3) {
+    direction = 'up';
+    strength = 2;
+  } else if (momentum < -3) {
+    direction = 'down';
+    strength = 2;
+  } else {
+    strength = 1;
+  }
+  
+  return { ma10, prevMA10, momentum, direction, strength, extreme };
+}
+
+function calcMA(period) {
+  if (state.history.length < period) return 50;
+  const slice = state.history.slice(-period);
+  return (slice.filter(h => h === 'G').length / period) * 100;
+}
+
+function calcPrevMA(period) {
+  if (state.history.length <= period) return null;
+  const slice = state.history.slice(-period - 1, -1);
+  return (slice.filter(h => h === 'G').length / period) * 100;
 }
 
 function calculateVP(history) {
   if (history.length < 5) return null;
   
-  // Generar datos de precios sintéticos
   const lookback = Math.min(history.length, 30);
   const priceLevels = [];
   let price = 50;
@@ -542,9 +1167,7 @@ function calculateVP(history) {
     const low = Math.min(price, close) - Math.random() * 3;
     
     priceLevels.push({
-      open: price,
-      high, low,
-      close,
+      open: price, high, low, close,
       volume: strength * 20 + Math.random() * 50,
       upVol: candle === 'G' ? 0.7 : 0.3,
       candle
@@ -553,13 +1176,11 @@ function calculateVP(history) {
     price = close;
   }
   
-  // Calcular rango
   const prices = priceLevels.flatMap(p => [p.high, p.low]);
   const minP = Math.min(...prices) - 2;
   const maxP = Math.max(...prices) + 2;
   const range = maxP - minP;
   
-  // Crear histograma
   const rowH = range / CONFIG.rows;
   const histogram = [];
   
@@ -582,20 +1203,15 @@ function calculateVP(history) {
     });
     
     histogram.push({
-      price: mid,
-      low, high,
-      volume: vol,
-      upVolume: upV,
-      downVolume: downV
+      price: mid, low, high,
+      volume: vol, upVolume: upV, downVolume: downV
     });
   }
   
-  // Encontrar POC
   const maxVol = Math.max(...histogram.map(h => h.volume));
   const pocIdx = histogram.findIndex(h => h.volume === maxVol);
   histogram[pocIdx].isPOC = true;
   
-  // Value Area
   const totalVol = histogram.reduce((s, h) => s + h.volume, 0);
   let vaVol = histogram[pocIdx].volume;
   let vahIdx = pocIdx, valIdx = pocIdx;
@@ -618,7 +1234,6 @@ function calculateVP(history) {
   histogram[vahIdx].isVAH = true;
   histogram[valIdx].isVAL = true;
   
-  // Posición actual
   const lastPrice = priceLevels[priceLevels.length - 1].close;
   const currentIdx = histogram.findIndex(h => lastPrice >= h.low && lastPrice <= h.high);
   
@@ -629,16 +1244,15 @@ function calculateVP(history) {
   else if (currentIdx < valIdx) position = 'below';
   
   return {
-    histogram: histogram.reverse(), // De arriba a abajo
+    histogram: histogram.reverse(),
     poc: histogram[CONFIG.rows - 1 - pocIdx].price,
     vah: histogram[CONFIG.rows - 1 - vahIdx].price,
     val: histogram[CONFIG.rows - 1 - valIdx].price,
     currentPrice: lastPrice,
     currentIdx: CONFIG.rows - 1 - currentIdx,
     pocIdx: CONFIG.rows - 1 - pocIdx,
-    minPrice: minP,
-    maxPrice: maxP,
-    position
+    minPrice: minP, maxPrice: maxP,
+    currentPosition: position
   };
 }
 
@@ -648,10 +1262,10 @@ function render() {
   
   // Precio actual
   const priceEl = document.getElementById('current-price');
-  priceEl.textContent = vp.currentPrice.toFixed(2) + '%';
+  priceEl.textContent = vp.currentPrice.toFixed(1) + '%';
   priceEl.className = 'price-main ' + (state.history[state.history.length-1] === 'G' ? 'up' : 'down');
   
-  document.getElementById('price-info').textContent = 
+  document.getElementById('price-range').textContent = 
     `Rango: ${vp.minPrice.toFixed(0)}% - ${vp.maxPrice.toFixed(0)}%`;
   
   // Stats
@@ -659,7 +1273,7 @@ function render() {
   document.getElementById('stat-vah').textContent = vp.vah.toFixed(1) + '%';
   document.getElementById('stat-val').textContent = vp.val.toFixed(1) + '%';
   
-  // Renderizar velas (últimas N)
+  // Velas
   const candlesWrapper = document.getElementById('candles-wrapper');
   const recent = state.history.slice(-CONFIG.maxCandles);
   const priceRange = vp.maxPrice - vp.minPrice;
@@ -668,10 +1282,7 @@ function render() {
     const idx = state.history.length - recent.length + i;
     const isLast = i === recent.length - 1;
     
-    // Calcular altura proporcional
     const getY = (p) => 100 - ((p - vp.minPrice) / priceRange * 100);
-    
-    // Simular OHLC para visualización
     const prevC = idx > 0 ? state.history[idx-1] : c;
     const strength = c === prevC ? 2.5 : 3;
     const move = (c === 'G' ? 1 : -1) * strength;
@@ -685,12 +1296,10 @@ function render() {
     const bodyBottom = getY(Math.min(open, close));
     const wickTop = getY(high);
     const wickBottom = getY(low);
-    
     const bodyHeight = Math.max(2, bodyBottom - bodyTop);
     
     return `
-      <div class="candle-stick ${c === 'G' ? 'bull' : 'bear'}" 
-           style="height: 100%; justify-content: flex-end;">
+      <div class="candle-stick ${c === 'G' ? 'bull' : 'bear'}" style="height: 100%; justify-content: flex-end;">
         <div class="candle-wick" style="height: ${wickTop}%;"></div>
         <div class="candle-body" style="height: ${bodyHeight}%;"></div>
         <div class="candle-wick" style="height: ${100 - wickBottom}%;"></div>
@@ -704,24 +1313,21 @@ function render() {
   pocLine.style.display = 'block';
   pocLine.style.top = pocY + '%';
   
-  // Grid de precios
+  // Grid
   const grid = document.getElementById('price-grid');
   grid.innerHTML = '';
   for (let i = 0; i <= 5; i++) {
     const y = (i / 5) * 100;
-    const price = vp.maxPrice - (i / 5) * priceRange;
-    grid.innerHTML += `<div class="grid-line" style="top: ${y}%;"></div>`;
+    grid.innerHTML += `<div style="position:absolute;left:0;right:0;border-top:1px dashed rgba(255,255,255,0.05);top:${y}%;"></div>`;
   }
   
-  // Renderizar barras VP
+  // VP Bars
   const vpContainer = document.getElementById('vp-bars');
   const maxVol = Math.max(...vp.histogram.map(h => h.volume));
   
   vpContainer.innerHTML = vp.histogram.map((row, i) => {
     const width = (row.volume / maxVol) * 100;
     const upRatio = row.volume > 0 ? row.upVolume / row.volume : 0.5;
-    const upWidth = width * upRatio;
-    const downWidth = width * (1 - upRatio);
     
     let barClass = '';
     if (row.isPOC) barClass = 'poc';
@@ -738,7 +1344,7 @@ function render() {
     `;
   }).join('');
   
-  // Labels de precios
+  // Labels
   const labelsContainer = document.getElementById('price-labels');
   labelsContainer.innerHTML = '';
   for (let i = 0; i < CONFIG.rows; i += 4) {
@@ -751,29 +1357,15 @@ function render() {
     `;
   }
   
-  // Precio actual destacado en VP
+  // Precio actual en VP
   const currentRow = document.getElementById('current-price-row');
   const currentY = (vp.currentIdx / CONFIG.rows) * 100;
   currentRow.style.display = 'flex';
   currentRow.style.top = currentY + '%';
   document.getElementById('current-price-label').textContent = vp.currentPrice.toFixed(1) + '%';
-  
-  // Alerta contextual
-  const alertEl = document.getElementById('context-alert');
-  const messages = {
-    'poc': { text: '🎯 EN POC - Máxima liquidez, soporte/resistencia fuerte', class: 'poc' },
-    'inside': { text: '📊 DENTRO VALUE AREA - Equilibrio del mercado', class: '' },
-    'above': { text: '⚠️ SOBRE VAH - Zona de sobrecompra relativa', class: 'above' },
-    'below': { text: '⚠️ BAJO VAL - Zona de sobreventa relativa', class: 'below' }
-  };
-  
-  const msg = messages[vp.position] || messages['inside'];
-  alertEl.textContent = msg.text;
-  alertEl.className = 'context-alert ' + msg.class;
 }
 
-// Inicializar
-console.log('📊 Monitor VP iniciado. Esperando datos...');
+console.log('📊 Monitor Trading Pro iniciado. Esperando datos...');
 </script>
 
 </body>
