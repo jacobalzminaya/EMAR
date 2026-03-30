@@ -916,8 +916,11 @@ function doAddCandle(color, str) {
   if (currentPrediction && candles.length > 0) verifyPrediction({ color, strength: str });
   candles.push({ color, strength: str });
   const seq = candles.map(c => c.color + c.strength).join(' ');
-  try { localStorage.setItem('cmd-backtest-sequence', seq); localStorage.setItem('cmd-backtest-timestamp', Date.now().toString()); } catch(e) {}
-  try { const bc = new BroadcastChannel('cmd-detector-vp'); bc.postMessage({ type: 'candle-added', sequence: seq, count: candles.length }); } catch(e) {}
+  // Write to BOTH keys:
+  // cmd-backtest-sequence = for backtesting own use
+  // cmd-bt-manual = dedicated key for index to receive (avoids loop)
+  try { localStorage.setItem('cmd-backtest-sequence', seq); localStorage.setItem('cmd-bt-manual', seq); localStorage.setItem('cmd-backtest-timestamp', Date.now().toString()); } catch(e) {}
+  try { const bc = new BroadcastChannel('cmd-bt-to-index'); bc.postMessage({ type: 'bt-candle', sequence: seq }); } catch(e) {}
   // Reset tab 0 state
   selectedStrength = null; selectedColor = null;
   document.querySelectorAll('.strength-btn,.color-btn,.vis-candle-wrap').forEach(b => b.classList.remove('selected','sel-g','sel-r'));
