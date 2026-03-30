@@ -959,8 +959,12 @@ function inferStrength(index) {
   const maDir     = prevTrend !== null ? trendMA - prevTrend : 0;
 
   // Spike reciente: vela fuerte seguida de vela débil
+  // Use manualStrengths directly (NOT getCandleStrength) to avoid infinite recursion
   const recentStr = [];
-  for (let i = Math.max(0, lookAt - 3); i <= lookAt; i++) recentStr.push(getCandleStrength(i) || 2);
+  for (let i = Math.max(0, lookAt - 3); i <= lookAt; i++) {
+    const ms = manualStrengths[i];
+    recentStr.push(ms ? ms.strength : 2); // fallback 2 avoids recursive call
+  }
   const hasSpike = recentStr.length >= 2 &&
     recentStr[recentStr.length - 2] >= 3 &&
     recentStr[recentStr.length - 1] <= 1.5;
