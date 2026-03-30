@@ -1324,33 +1324,30 @@ hook();
   updateBtPred();
 
   // ── Receive candles FROM backtesting → register in index ──
-  // Backtesting writes full sequence; index replays any new candles
-  var _lastBtLen = 0;
+  // Uses a dedicated key 'cmd-bt-manual' written ONLY by backtesting
+  // to avoid loop (index writes cmd-backtest-sequence, not this key)
+  var _lastBtManualLen = 0;
   function syncFromBt() {
-    var seq = localStorage.getItem('cmd-backtest-sequence');
+    var seq = localStorage.getItem('cmd-bt-manual');
     if (!seq) return;
     var tokens = seq.trim().toUpperCase().split(/\s+/).filter(Boolean);
     var newCandles = [];
     tokens.forEach(function(t){ var m=t.match(/^([GR])(\d+\.?\d*)$/); if(m) newCandles.push({color:m[1],str:parseFloat(m[2])}); });
-    if (newCandles.length > _lastBtLen) {
-      // New candles added in backtesting — register each one via quickAddCandle
-      for (var i=_lastBtLen; i<newCandles.length; i++) {
+    if (newCandles.length > _lastBtManualLen) {
+      for (var i=_lastBtManualLen; i<newCandles.length; i++) {
         var nc = newCandles[i];
         if (typeof quickAddCandle === 'function') quickAddCandle(nc.color, nc.str);
-        else if (typeof addCandle === 'function') addCandle(nc.color, nc.str);
       }
-      _lastBtLen = newCandles.length;
-    } else if (newCandles.length < _lastBtLen) {
-      // Sequence was reset
-      _lastBtLen = newCandles.length;
+      _lastBtManualLen = newCandles.length;
+    } else if (newCandles.length < _lastBtManualLen) {
+      _lastBtManualLen = 0; // reset
     }
   }
-  setInterval(syncFromBt, 1500);
-  window.addEventListener('storage', function(e){ if(e.key==='cmd-backtest-sequence') syncFromBt(); });
-  // Also listen to broadcast from backtesting
+  setInterval(syncFromBt, 1000);
+  window.addEventListener('storage', function(e){ if(e.key==='cmd-bt-manual') syncFromBt(); });
   if (typeof BroadcastChannel !== 'undefined') {
-    var bcBt = new BroadcastChannel('cmd-detector-vp');
-    bcBt.onmessage = function(e){ if(e.data && e.data.type==='candle-added') syncFromBt(); };
+    var bcBt = new BroadcastChannel('cmd-bt-to-index');
+    bcBt.onmessage = function(e){ if(e.data && e.data.type==='bt-candle') syncFromBt(); };
   }
 })();
 
