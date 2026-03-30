@@ -1326,50 +1326,49 @@ hook();
   // ── Receive candles FROM backtesting → register in index ──
   // Only registers candles added AFTER this session started (no stale data)
   // Uses session timestamp to filter old backtesting entries
-  var _btSessionStart = Date.now();
-  var _lastBtManualLen = -1; // -1 = not initialized yet
+  // ── Backtesting → Index sync ──────────────────────────────────
+  // Tracks FULL sequence from backtesting, compares with index history
+  // Uses history.length (logic.js) as the authoritative candle count
+  var _btSyncEnabled = true;
 
   function syncFromBt() {
-    // Only sync if backtesting wrote AFTER this index session started
-    var tsRaw = localStorage.getItem('cmd-bt-manual-ts');
-    if (!tsRaw) return;
-    var ts = parseInt(tsRaw) || 0;
-    if (ts < _btSessionStart) return; // stale data from previous session
-
+    if (!_btSyncEnabled) return;
     var seq = localStorage.getItem('cmd-bt-manual');
     if (!seq) return;
     var tokens = seq.trim().toUpperCase().split(/\s+/).filter(Boolean);
-    var newCandles = [];
+    var parsed = [];
     tokens.forEach(function(t){
       var m = t.match(/^([GR])(\d+\.?\d*)$/);
-      if (m) newCandles.push({ color: m[1], str: parseFloat(m[2]) });
+      if (m) parsed.push({ color: m[1], str: parseFloat(m[2]) });
     });
 
-    // Initialize baseline on first valid call
-    if (_lastBtManualLen === -1) {
-      _lastBtManualLen = newCandles.length;
-      return;
-    }
+    // Use logic.js history.length as source of truth
+    var currentLen = (typeof history !== 'undefined') ? history.length : 0;
 
-    if (newCandles.length > _lastBtManualLen) {
-      for (var i = _lastBtManualLen; i < newCandles.length; i++) {
-        var nc = newCandles[i];
+    if (parsed.length > currentLen) {
+      // Register only the NEW candles (from currentLen onward)
+      for (var i = currentLen; i < parsed.length; i++) {
+        var nc = parsed[i];
         if (typeof quickAddCandle === 'function') quickAddCandle(nc.color, nc.str);
       }
-      _lastBtManualLen = newCandles.length;
-    } else if (newCandles.length < _lastBtManualLen) {
-      _lastBtManualLen = newCandles.length; // backtesting was reset
     }
+    // If parsed.length < currentLen: backtesting was reset, do nothing
+    // (user controls reset explicitly via reset button)
   }
 
-  // Only listen via events — no setInterval polling (avoids constant firing)
+  // Listen via BroadcastChannel (works across tabs/windows)
+  if (typeof BroadcastChannel !== 'undefined') {
+    var bcBt = new BroadcastChannel('cmd-bt-to-index');
+    bcBt.onmessage = function(e) {
+      if (e.data && e.data.type === 'bt-candle') syncFromBt();
+    };
+  }
+  // Fallback: storage event (same origin, different tab)
   window.addEventListener('storage', function(e) {
     if (e.key === 'cmd-bt-manual') syncFromBt();
   });
-  if (typeof BroadcastChannel !== 'undefined') {
-    var bcBt = new BroadcastChannel('cmd-bt-to-index');
-    bcBt.onmessage = function(e) { if (e.data && e.data.type === 'bt-candle') syncFromBt(); };
-  }
+  // Safety poll: every 1.5s catch any missed events
+  setInterval(syncFromBt, 1500);
 })();
 
 window.toggleLog=function(){
