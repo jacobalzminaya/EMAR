@@ -495,169 +495,162 @@
 
 <script>
 // ═══════════════════════════════════════════════════════════════
-// BACKTESTING BRIDGE — usa logic.js como cerebro real
-// Reemplaza el motor simplificado con update() de logic.js
-// Siempre emite VERDE o ROJA, nunca ESPERAR
+// BACKTESTING — Usa logic.js como cerebro real
 // ═══════════════════════════════════════════════════════════════
+var candles = [];
+var autoSync = true;
+var selectedStrength = null;
+var selectedColor = null;
+var predictionLog = [];
+var currentPrediction = null;
 
-let candles = [];
-let autoSync = true;
-let selectedStrength = null;
-let selectedColor = null;
-let predictionLog = [];
-let currentPrediction = null;
-
-// ═══════════════════════════════════════════════════════════════
-// BRIDGE: usa logic.js update() como cerebro real
-// MA, CMD, patrones, prioridades, Fibonacci — todo el motor real
-// ═══════════════════════════════════════════════════════════════
-
-// ── Wrap update() to capture signal after each candle ─────────
+// ── Anti-loop flag: update() fires during addCandle, not polling ──
+var _insideAdd = false;
 var _btOrigUpdate = null;
-var _btCapture    = null; // function to call after each update
 
 function hookLogicUpdate() {
   if (typeof update !== 'function') { setTimeout(hookLogicUpdate, 100); return; }
+  if (_btOrigUpdate) return; // already hooked
   _btOrigUpdate = update;
   window.update = function() {
-    try { _btOrigUpdate.apply(this, arguments); } catch(e) { console.error('[bt/update]', e); }
-    try { if (_btCapture) _btCapture(); } catch(e) {}
+    try { _btOrigUpdate.apply(this, arguments); } catch(e) { console.error('[bt]', e); }
+    // Only capture signal when we triggered the update (not from polling)
+    if (_insideAdd) captureSignal();
   };
-  console.log('✓ backtesting: logic.js update() hookeado');
-  // Initial load
+  console.log('✓ backtesting: logic.js hookeado');
   loadFromIndex();
 }
 
-// ── Read signal from logic.js DOM after update() ──────────────
-function readSignalFromLogic() {
-  var mainSig = document.getElementById('main-signal');
-  if (!mainSig) return null;
-  var cls = mainSig.className || '';
-  var clone = mainSig.cloneNode(true);
+// ── Read signal from logic.js DOM ─────────────────────────────
+function captureSignal() {
+  var el = document.getElementById('main-signal');
+  if (!el) return;
+  var cls = el.className || '';
+  var clone = el.cloneNode(true);
   clone.querySelectorAll('div').forEach(function(d){ d.remove(); });
   var text = clone.textContent.trim();
-  
-  // Map class to direction G/R
-  var dir = null;
-  if (cls.indexOf('signal-buy') >= 0 || cls.indexOf('signal-accumulation') >= 0 || cls.indexOf('signal-strong-reversal') >= 0) dir = 'G';
-  else if (cls.indexOf('signal-sell') >= 0 || cls.indexOf('signal-distribution') >= 0) dir = 'R';
-  else dir = null; // ESPERAR/CONFLICT → commit to dominant projection
-  
-  // If ESPERAR, use dominant projection branch
-  if (!dir) {
-    var gConf = parseFloat(document.getElementById('proj-g-conf')?.textContent) || 0;
-    var rConf = parseFloat(document.getElementById('proj-r-conf')?.textContent) || 0;
-    dir = gConf >= rConf ? 'G' : 'R';
+
+  var dir;
+  if (/signal-buy|signal-accumulation|signal-strong-reversal/.test(cls)) dir = 'G';
+  else if (/signal-sell|signal-distribution/.test(cls)) dir = 'R';
+  else {
+    // ESPERAR → pick dominant projection
+    var gC = parseFloat((document.getElementById('proj-g-conf') || {}).textContent) || 0;
+    var rC = parseFloat((document.getElementById('proj-r-conf') || {}).textContent) || 0;
+    dir = gC >= rC ? 'G' : 'R';
   }
-  
-  // Confidence from max projection
-  var gC = parseFloat(document.getElementById('proj-g-conf')?.textContent) || 50;
-  var rC = parseFloat(document.getElementById('proj-r-conf')?.textContent) || 50;
-  var conf = dir === 'G' ? Math.round(gC) : Math.round(rC);
-  if (conf <= 0) conf = 55;
-  
-  // Logic text as reason
-  var reason = (document.getElementById('logic-text')?.textContent || '').slice(0, 80);
-  
-  return { direction: dir, confidence: conf, reason: reason, signalText: text, signalClass: cls };
+
+  var gConf = parseFloat((document.getElementById('proj-g-conf') || {}).textContent) || 50;
+  var rConf = parseFloat((document.getElementById('proj-r-conf') || {}).textContent) || 50;
+  var conf = Math.round(dir === 'G' ? gConf : rConf);
+  if (conf < 50) conf = 55;
+
+  var reason = ((document.getElementById('logic-text') || {}).textContent || '').slice(0, 100);
+
+  currentPrediction = {
+    direction: dir, confidence: conf, reason: reason,
+    signalText: text, candleIndex: candles.length, timestamp: Date.now()
+  };
+  showPrediction(dir, conf, reason);
+  publishPrediction(dir, conf, reason);
+
+  // Update MA display
+  var ltEl = document.getElementById('logic-text');
+  var lt = ltEl ? ltEl.textContent : '';
+  var m = lt.match(/MA10:\s*([\d.]+)%/);
+  if (m) {
+    var v = parseFloat(m[1]);
+    var el10 = document.getElementById('ma10');
+    if (el10) {
+      el10.textContent = v.toFixed(1) + '%';
+      el10.className = 'ma-value ' + (v > 52 ? 'bull' : v < 48 ? 'bear' : '');
+      if (el10.closest('.ma-item')) el10.closest('.ma-item').className = 'ma-item ' + (v > 52 ? 'bull' : v < 48 ? 'bear' : '');
+    }
+  }
 }
 
-// ── MA values from logic.js ────────────────────────────────────
-function updateMAsFromLogic() {
-  var md = document.getElementById('momentum-detail')?.textContent || '';
-  var m  = md.match(/MA10:\s*([\d.]+)%/);
-  var ma10val = m ? parseFloat(m[1]) : null;
-  
-  [3, 5, 10, 20].forEach(function(p) {
-    var el = document.getElementById('ma' + p);
-    if (!el) return;
-    // Approximate from logic.js data (MA10 is the main one)
-    var val = p === 10 && ma10val !== null ? ma10val : null;
-    if (val === null) { el.textContent = '--'; el.className = 'ma-value'; el.closest('.ma-item').className = 'ma-item'; return; }
-    el.textContent = val.toFixed(1) + '%';
-    var trend = val > 52 ? 'bull' : val < 48 ? 'bear' : '';
-    el.className = 'ma-value ' + trend;
-    el.closest('.ma-item').className = 'ma-item ' + trend;
-  });
-}
-
-// ── Core add: uses logic.js quickAddCandle ─────────────────────
+// ── Core add candle ────────────────────────────────────────────
 function doAddCandle(color, str) {
-  // Capture CURRENT prediction before adding (to compare with real next)
+  // Verify previous prediction before adding
   if (currentPrediction && candles.length > 0) {
     verifyPrediction({ color: color, strength: str });
   }
-  
-  // Track candles array for UI history
+
   candles.push({ color: color, strength: str });
-  
-  // Use logic.js to register the candle — this triggers full analysis
-  if (typeof quickAddCandle === 'function') {
-    quickAddCandle(color, str);
+
+  // Call logic.js — set flag so _btCapture fires
+  _insideAdd = true;
+  try {
+    if (typeof quickAddCandle === 'function') quickAddCandle(color, str);
+  } finally {
+    _insideAdd = false;
   }
-  
-  // Write to sync keys for index
+
+  // Write sync keys
   var seq = candles.map(function(c){ return c.color + c.strength; }).join(' ');
   var now = Date.now().toString();
-  try { 
+  try {
     localStorage.setItem('cmd-backtest-sequence', seq);
     localStorage.setItem('cmd-bt-manual', seq);
     localStorage.setItem('cmd-bt-manual-ts', now);
     localStorage.setItem('cmd-backtest-timestamp', now);
   } catch(e) {}
-  try { var bc2 = new BroadcastChannel('cmd-bt-to-index'); bc2.postMessage({ type: 'bt-candle', sequence: seq }); } catch(e) {}
-  
-  // Reset UI state
-  selectedStrength = null; selectedColor = null;
-  document.querySelectorAll('.strength-btn,.color-btn,.vis-candle-wrap').forEach(function(b){ b.classList.remove('selected','sel-g','sel-r'); });
+  try {
+    var bc = new BroadcastChannel('cmd-bt-to-index');
+    bc.postMessage({ type: 'bt-candle', sequence: seq });
+  } catch(e) {}
+
+  // Reset UI
+  selectedStrength = null;
+  selectedColor = null;
+  document.querySelectorAll('.strength-btn,.color-btn,.vis-candle-wrap')
+    .forEach(function(b){ b.classList.remove('selected','sel-g','sel-r'); });
   updateAllAddBtns();
   document.getElementById('totalCandles').textContent = candles.length;
   document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
   updateHistory();
-  // logic.js update() fires automatically via quickAddCandle → addCandle
 }
 
-// ── After each logic.js update: capture new signal ─────────────
-_btCapture = function() {
-  var sig = readSignalFromLogic();
-  if (!sig) return;
-  currentPrediction = {
-    direction:   sig.direction,
-    confidence:  sig.confidence,
-    reason:      sig.reason,
-    signalText:  sig.signalText,
-    signalClass: sig.signalClass,
-    candleIndex: candles.length,
-    timestamp:   Date.now()
-  };
-  showPrediction({ direction: sig.direction, confidence: sig.confidence, reason: sig.reason });
-  publishPrediction(sig.direction, sig.confidence, sig.reason);
-  updateMAsFromLogic();
-};
-
-// ── Sync from index (read-only, no candle injection) ──────────
+// ── Sync from index (NO quickAddCandle to avoid loop) ─────────
+var _lastSyncLen = 0;
+var _syncLock = false;
 function loadFromIndex() {
-  if (!autoSync) return;
+  if (!autoSync || _syncLock) return;
+  _syncLock = true;
+  setTimeout(function(){ _syncLock = false; }, 1000);
+
   var sequence = localStorage.getItem('cmd-backtest-sequence');
   if (!sequence) {
     document.getElementById('emptyState').style.display = 'block';
     document.getElementById('mainContent').style.display = 'none';
     return;
   }
-  // Parse sequence into candles array (for UI display only)
+
   var tokens = sequence.trim().toUpperCase().split(/\s+/).filter(Boolean);
   var parsed = [];
-  tokens.forEach(function(t){ var m=t.match(/^([GR])(\d+\.?\d*)$/); if(m) parsed.push({color:m[1],strength:parseFloat(m[2])}); });
-  
-  // Only sync if index has MORE candles than us (index is master when not adding here)
-  if (parsed.length > candles.length) {
-    // Replay new candles through logic.js
-    for (var i = candles.length; i < parsed.length; i++) {
+  tokens.forEach(function(t){
+    var m = t.match(/^([GR])(\d+\.?\d*)$/);
+    if (m) parsed.push({ color: m[1], strength: parseFloat(m[2]) });
+  });
+
+  // Use logic.js history as authority
+  var histLen = (typeof history !== 'undefined') ? history.length : candles.length;
+
+  if (parsed.length > histLen) {
+    for (var i = histLen; i < parsed.length; i++) {
       candles.push(parsed[i]);
-      if (typeof quickAddCandle === 'function') quickAddCandle(parsed[i].color, parsed[i].strength);
+      _insideAdd = true;
+      try {
+        if (typeof quickAddCandle === 'function') quickAddCandle(parsed[i].color, parsed[i].strength);
+      } finally {
+        _insideAdd = false;
+      }
     }
+  } else {
+    // Just rebuild candles array from history without re-adding
+    if (parsed.length > candles.length) candles = parsed.slice();
   }
-  
+
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('mainContent').style.display = 'block';
   document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
@@ -665,117 +658,219 @@ function loadFromIndex() {
   updateHistory();
 }
 
-// ── Verify prediction vs real candle ──────────────────────────
-function verifyPrediction(actualCandle) {
+// ── Tab switching ──────────────────────────────────────────────
+function switchTab(n) {
+  [0,1,2].forEach(function(i) {
+    var p = document.getElementById('tab-' + i);
+    var b = document.getElementById('tab-btn-' + i);
+    if (p) p.style.display = i === n ? 'block' : 'none';
+    if (b) b.classList.toggle('inp-tab-active', i === n);
+  });
+}
+
+// ── Tab 0: Visual candle ───────────────────────────────────────
+function selectStrengthVis(str) {
+  selectedStrength = str;
+  document.querySelectorAll('.vis-candle-wrap').forEach(function(w) {
+    w.classList.remove('sel-g','sel-r');
+    if (parseFloat(w.dataset.str) === str) w.classList.add(selectedColor === 'R' ? 'sel-r' : 'sel-g');
+  });
+  updateAllAddBtns();
+}
+
+function selectColor(col) {
+  selectedColor = col;
+  document.querySelectorAll('.color-btn').forEach(function(b) {
+    b.classList.toggle('selected',
+      (col === 'G' && b.classList.contains('green')) ||
+      (col === 'R' && !b.classList.contains('green')));
+  });
+  if (selectedStrength !== null) selectStrengthVis(selectedStrength);
+  updateAllAddBtns();
+}
+
+function updateAllAddBtns() {
+  var btn = document.getElementById('btnAdd0');
+  if (!btn) return;
+  var ready = !!(selectedStrength && selectedColor);
+  btn.disabled = !ready;
+  if (ready) {
+    btn.textContent = '➕ REGISTRAR ' + (selectedColor === 'G' ? 'VERDE' : 'ROJA') + ' F' + selectedStrength;
+    btn.style.background = selectedColor === 'G' ? 'var(--green)' : 'var(--red)';
+    btn.style.color = '#000';
+  } else {
+    btn.textContent = '➕ REGISTRAR Y VERIFICAR';
+    btn.style.background = '';
+    btn.style.color = '';
+  }
+}
+
+function addCandle() {
+  if (!selectedStrength || !selectedColor) return;
+  doAddCandle(selectedColor, selectedStrength);
+}
+
+// ── Tab 2: Quick add ───────────────────────────────────────────
+function quickAdd(color, str) {
+  doAddCandle(color, parseFloat(str));
+}
+
+// ── Tab 1: WiFi bars ───────────────────────────────────────────
+(function setupWifi() {
+  var SL = {'1':'Doji','1.5':'Pequeña','2':'Normal','2.5':'Grande','3':'Fuerte','4':'Engulfing'};
+  function setupSide(groupId, side) {
+    var g = document.getElementById(groupId);
+    if (!g) return;
+    var bars = Array.from(g.querySelectorAll('.wbt-bar'));
+    var lbl  = document.getElementById('wbt-lbl');
+    bars.forEach(function(bar, idx) {
+      bar.addEventListener('mouseenter', function() {
+        bars.forEach(function(b, i){ b.classList.toggle('hov', i <= idx); });
+        var str = parseFloat(bar.dataset.str);
+        if (lbl) {
+          lbl.textContent = (side === 'G' ? '▲ ' : '▼ ') + 'F' + str + ' ' + (SL[String(str)] || '');
+          lbl.style.color = side === 'G' ? 'rgba(0,230,118,.9)' : 'rgba(255,68,68,.9)';
+        }
+      });
+      bar.addEventListener('click', function() {
+        var str = parseFloat(bar.dataset.str);
+        doAddCandle(side, str);
+        bars.forEach(function(b){ b.classList.remove('hov'); });
+        if (lbl) {
+          lbl.textContent = (side === 'G' ? '▲ ' : '▼ ') + 'F' + str + ' ✓';
+          lbl.style.color = side === 'G' ? 'var(--green)' : 'var(--red)';
+          setTimeout(function(){ lbl.textContent = '–'; lbl.style.color = 'var(--muted)'; }, 800);
+        }
+      });
+    });
+    g.addEventListener('mouseleave', function() {
+      bars.forEach(function(b){ b.classList.remove('hov'); });
+      if (lbl) { lbl.textContent = '–'; lbl.style.color = 'var(--muted)'; }
+    });
+  }
+  function init() { setupSide('wbt-g','G'); setupSide('wbt-r','R'); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+
+// ── Prediction display ─────────────────────────────────────────
+function showPrediction(dir, conf, reason) {
+  var isG = dir === 'G';
+  var box = document.getElementById('predBox');
+  var dirEl = document.getElementById('predDirection');
+  var confEl = document.getElementById('predConfidence');
+  var reasEl = document.getElementById('predReason');
+  if (box)  box.className  = 'prediction-box ' + (isG ? 'bull' : 'bear');
+  if (dirEl){ dirEl.className = 'pred-direction ' + (isG ? 'bull' : 'bear'); dirEl.textContent = isG ? 'VERDE 🟢' : 'ROJA 🔴'; }
+  if (confEl){ confEl.className = 'pred-confidence ' + (isG ? 'bull' : 'bear'); confEl.textContent = 'Confianza: ' + conf + '%'; }
+  if (reasEl) reasEl.textContent = (reason || '').slice(0, 120);
+}
+
+function publishPrediction(dir, conf, reason) {
+  var hits  = predictionLog.filter(function(e){ return e.result === 'hit'; }).length;
+  var total = predictionLog.length;
+  var acc   = total > 0 ? Math.round(hits / total * 100) : null;
+  var p = JSON.stringify({ direction: dir, confidence: conf, reason: reason, hits: hits, total: total, accuracy: acc });
+  try { localStorage.setItem('cmd-bt-prediction', p); } catch(e) {}
+  try { var bc = new BroadcastChannel('cmd-bt-channel'); bc.postMessage({ type: 'prediction' }); } catch(e) {}
+}
+
+// ── Verify + Log ───────────────────────────────────────────────
+function verifyPrediction(actual) {
   if (!currentPrediction) return;
-  var isHit = currentPrediction.direction === actualCandle.color;
+  var isHit = currentPrediction.direction === actual.color;
   var entry = {
     id: predictionLog.length + 1,
     prediction: currentPrediction,
-    actual: actualCandle,
-    result: isHit ? 'hit' : 'miss',
-    analysis: buildAnalysis(currentPrediction, actualCandle, isHit)
+    actual: actual,
+    result: isHit ? 'hit' : 'miss'
   };
   predictionLog.unshift(entry);
   updateLogDisplay();
   updateStats();
 }
 
-function buildAnalysis(pred, actual, isHit) {
-  if (isHit) return { summary: 'Correcto', details: pred.reason || pred.signalText, suggestion: null };
-  var pLabel = pred.direction==='G'?'VERDE':'ROJA';
-  var aLabel = actual.color==='G'?'VERDE':'ROJA';
-  return {
-    summary: 'Predije ' + pLabel + ', salió ' + aLabel + ' F' + actual.strength,
-    details: 'Señal: "' + (pred.signalText||'').slice(0,60) + '" · ' + (pred.reason||'').slice(0,60),
-    suggestion: 'Revisar el log del index para ver qué prioridad fue determinante'
-  };
-}
-
-// ── Stats & display (unchanged) ────────────────────────────────
-function showPrediction(pred) {
-  var isG  = pred.direction === 'G';
-  var box  = document.getElementById('predBox');
-  var dir  = document.getElementById('predDirection');
-  var conf = document.getElementById('predConfidence');
-  var reas = document.getElementById('predReason');
-  if (box)  box.className  = 'prediction-box ' + (isG?'bull':'bear');
-  if (dir)  { dir.className = 'pred-direction ' + (isG?'bull':'bear'); dir.textContent = isG?'VERDE 🟢':'ROJA 🔴'; }
-  if (conf) { conf.className = 'pred-confidence ' + (isG?'bull':'bear'); conf.textContent = 'Confianza: ' + pred.confidence + '%'; }
-  if (reas) reas.textContent = (pred.reason||'').slice(0,120);
-}
-
-function publishPrediction(dir, confidence, reason) {
-  var hits  = predictionLog.filter(function(e){ return e.result==='hit'; }).length;
-  var total = predictionLog.length;
-  var acc   = total > 0 ? Math.round(hits/total*100) : null;
-  var payload = JSON.stringify({ direction: dir, confidence: confidence, reason: reason, hits: hits, total: total, accuracy: acc });
-  try { localStorage.setItem('cmd-bt-prediction', payload); } catch(e) {}
-  try { var bc3 = new BroadcastChannel('cmd-bt-channel'); bc3.postMessage({ type: 'prediction' }); } catch(e) {}
-}
-
 function updateLogDisplay() {
-  var container = document.getElementById('logEntries');
-  if (!predictionLog.length) { container.innerHTML = '<div class="log-empty">Las predicciones aparecerán aquí...</div>'; return; }
-  container.innerHTML = predictionLog.map(function(entry) {
-    var isG    = entry.prediction.direction === 'G';
-    var actIsG = entry.actual.color === 'G';
-    var predCol = isG    ? 'var(--green)' : 'var(--red)';
-    var actCol  = actIsG ? 'var(--green)' : 'var(--red)';
-    return '<div class="log-entry ' + entry.result + '">' +
+  var c = document.getElementById('logEntries');
+  if (!c) return;
+  if (!predictionLog.length) { c.innerHTML = '<div class="log-empty">Las predicciones aparecerán aquí...</div>'; return; }
+  c.innerHTML = predictionLog.map(function(e) {
+    var isG = e.prediction.direction === 'G', aIsG = e.actual.color === 'G';
+    var pCol = isG ? 'var(--green)' : 'var(--red)';
+    var aCol = aIsG ? 'var(--green)' : 'var(--red)';
+    return '<div class="log-entry ' + e.result + '">' +
       '<div class="log-entry-header">' +
-        '<span class="log-entry-num">#' + entry.id + ' · Vela #' + entry.prediction.candleIndex + '</span>' +
-        '<span class="log-entry-result ' + entry.result + '">' + (entry.result==='hit'?'✓ ACIERTO':'✗ FALLÓ') + '</span>' +
+        '<span class="log-entry-num">#' + e.id + ' · Vela #' + e.prediction.candleIndex + '</span>' +
+        '<span class="log-entry-result ' + e.result + '">' + (e.result === 'hit' ? '✓ ACIERTO' : '✗ FALLÓ') + '</span>' +
       '</div>' +
       '<div class="log-prediction">' +
         '<div class="log-pred-box predicted"><div class="log-pred-label">Predije</div>' +
-          '<div class="log-pred-value" style="color:' + predCol + '">' + (isG?'🟢 VERDE':'🔴 ROJA') + '</div>' +
-          '<div style="font-size:10px;color:var(--muted)">' + entry.prediction.confidence + '%</div></div>' +
+          '<div class="log-pred-value" style="color:' + pCol + '">' + (isG ? '🟢 VERDE' : '🔴 ROJA') + '</div>' +
+          '<div style="font-size:10px;color:var(--muted)">' + e.prediction.confidence + '%</div></div>' +
         '<div style="color:var(--muted)">→</div>' +
-        '<div class="log-pred-box actual ' + (entry.result==='hit'?'correct':'wrong') + '">' +
+        '<div class="log-pred-box actual ' + (e.result === 'hit' ? 'correct' : 'wrong') + '">' +
           '<div class="log-pred-label">Resultado</div>' +
-          '<div class="log-pred-value" style="color:' + actCol + '">' + (actIsG?'🟢':'🔴') + ' F' + entry.actual.strength + '</div>' +
+          '<div class="log-pred-value" style="color:' + aCol + '">' + (aIsG ? '🟢' : '🔴') + ' F' + e.actual.strength + '</div>' +
         '</div>' +
       '</div>' +
-      (entry.result === 'miss' ? '<div class="log-analysis"><div class="log-analysis-title">⚠️ Error</div>' +
-        '<div class="log-analysis-text">' + entry.analysis.details + '</div>' +
-        (entry.analysis.suggestion ? '<div style="margin-top:6px;color:var(--gold)"><strong>💡</strong> ' + entry.analysis.suggestion + '</div>' : '') +
-        '</div>' : '') +
-      '</div>';
+      (e.result === 'miss' ? '<div class="log-analysis"><div class="log-analysis-title">⚠️ Error</div>' +
+        '<div class="log-analysis-text">' + (e.prediction.reason || '').slice(0, 100) + '</div></div>' : '') +
+    '</div>';
   }).join('');
 }
 
 function updateStats() {
-  var hits  = predictionLog.filter(function(e){ return e.result==='hit'; }).length;
+  var hits  = predictionLog.filter(function(e){ return e.result === 'hit'; }).length;
   var total = predictionLog.length;
-  var acc   = total > 0 ? Math.round(hits/total*100) : 0;
-  document.getElementById('statHits').textContent     = '✓ ' + hits;
-  document.getElementById('statMisses').textContent   = '✗ ' + (total-hits);
-  document.getElementById('statAccuracy').textContent = acc + '%';
+  var acc   = total > 0 ? Math.round(hits / total * 100) : 0;
+  var h = document.getElementById('statHits'), m = document.getElementById('statMisses'), a = document.getElementById('statAccuracy');
+  if (h) h.textContent = '✓ ' + hits;
+  if (m) m.textContent = '✗ ' + (total - hits);
+  if (a) a.textContent = acc + '%';
 }
+
 function clearLog() { predictionLog = []; updateLogDisplay(); updateStats(); }
+
 function updateHistory() {
-  var flow   = document.getElementById('historyFlow');
-  var recent = candles.slice(-20);
-  if (flow) flow.innerHTML = recent.map(function(c){ return '<span class="candle-pill ' + c.color.toLowerCase() + '">' + c.color + c.strength + '</span>'; }).join('');
+  var f = document.getElementById('historyFlow');
+  if (!f) return;
+  f.innerHTML = candles.slice(-20).map(function(c){
+    return '<span class="candle-pill ' + c.color.toLowerCase() + '">' + c.color + c.strength + '</span>';
+  }).join('');
 }
+
+// ── Sync controls ──────────────────────────────────────────────
 function toggleSync() {
   autoSync = !autoSync;
   var btn = document.getElementById('btnToggle'), badge = document.getElementById('syncStatus');
-  if (autoSync) { btn.innerHTML='⏸️ Pausar Sync'; badge.className='sync-badge active'; badge.textContent='🟢 Sincronizado'; loadFromIndex(); }
-  else { btn.innerHTML='▶️ Reanudar Sync'; badge.className='sync-badge paused'; badge.textContent='⏸️ Sync Pausado'; }
+  if (autoSync) {
+    if (btn) btn.innerHTML = '⏸️ Pausar Sync';
+    if (badge) { badge.className = 'sync-badge active'; badge.textContent = '🟢 Sincronizado'; }
+    loadFromIndex();
+  } else {
+    if (btn) btn.innerHTML = '▶️ Reanudar Sync';
+    if (badge) { badge.className = 'sync-badge paused'; badge.textContent = '⏸️ Sync Pausado'; }
+  }
 }
 function manualRefresh() { loadFromIndex(); }
 
-window.addEventListener('storage', function(e){ if (e.key==='cmd-backtest-sequence' && autoSync) loadFromIndex(); });
+// ── Storage / broadcast listeners ─────────────────────────────
+window.addEventListener('storage', function(e) {
+  if (e.key === 'cmd-backtest-sequence' && autoSync) loadFromIndex();
+});
 if (typeof BroadcastChannel !== 'undefined') {
-  var bc4 = new BroadcastChannel('cmd-detector-vp');
-  bc4.onmessage = function(e){ if (e.data?.type==='candle-added' && autoSync) loadFromIndex(); };
+  try {
+    var _bcIn = new BroadcastChannel('cmd-detector-vp');
+    _bcIn.onmessage = function(e) { if (e.data && e.data.type === 'candle-added' && autoSync) loadFromIndex(); };
+  } catch(e) {}
 }
 
-// ── Start: hook logic.js once it's ready ──────────────────────
+// ── Start ──────────────────────────────────────────────────────
 hookLogicUpdate();
-setInterval(function(){ if (autoSync) loadFromIndex(); }, 3000);
+// Slow poll — only for cross-tab sync, not to re-add candles
+setInterval(function() {
+  if (autoSync && !_syncLock && !_insideAdd) loadFromIndex();
+}, 8000);
 </script>
 
 
