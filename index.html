@@ -1324,30 +1324,51 @@ hook();
   updateBtPred();
 
   // ── Receive candles FROM backtesting → register in index ──
-  // Uses a dedicated key 'cmd-bt-manual' written ONLY by backtesting
-  // to avoid loop (index writes cmd-backtest-sequence, not this key)
-  var _lastBtManualLen = 0;
+  // Only registers candles added AFTER this session started (no stale data)
+  // Uses session timestamp to filter old backtesting entries
+  var _btSessionStart = Date.now();
+  var _lastBtManualLen = -1; // -1 = not initialized yet
+
   function syncFromBt() {
+    // Only sync if backtesting wrote AFTER this index session started
+    var tsRaw = localStorage.getItem('cmd-bt-manual-ts');
+    if (!tsRaw) return;
+    var ts = parseInt(tsRaw) || 0;
+    if (ts < _btSessionStart) return; // stale data from previous session
+
     var seq = localStorage.getItem('cmd-bt-manual');
     if (!seq) return;
     var tokens = seq.trim().toUpperCase().split(/\s+/).filter(Boolean);
     var newCandles = [];
-    tokens.forEach(function(t){ var m=t.match(/^([GR])(\d+\.?\d*)$/); if(m) newCandles.push({color:m[1],str:parseFloat(m[2])}); });
+    tokens.forEach(function(t){
+      var m = t.match(/^([GR])(\d+\.?\d*)$/);
+      if (m) newCandles.push({ color: m[1], str: parseFloat(m[2]) });
+    });
+
+    // Initialize baseline on first valid call
+    if (_lastBtManualLen === -1) {
+      _lastBtManualLen = newCandles.length;
+      return;
+    }
+
     if (newCandles.length > _lastBtManualLen) {
-      for (var i=_lastBtManualLen; i<newCandles.length; i++) {
+      for (var i = _lastBtManualLen; i < newCandles.length; i++) {
         var nc = newCandles[i];
         if (typeof quickAddCandle === 'function') quickAddCandle(nc.color, nc.str);
       }
       _lastBtManualLen = newCandles.length;
     } else if (newCandles.length < _lastBtManualLen) {
-      _lastBtManualLen = 0; // reset
+      _lastBtManualLen = newCandles.length; // backtesting was reset
     }
   }
-  setInterval(syncFromBt, 1000);
-  window.addEventListener('storage', function(e){ if(e.key==='cmd-bt-manual') syncFromBt(); });
+
+  // Only listen via events — no setInterval polling (avoids constant firing)
+  window.addEventListener('storage', function(e) {
+    if (e.key === 'cmd-bt-manual') syncFromBt();
+  });
   if (typeof BroadcastChannel !== 'undefined') {
     var bcBt = new BroadcastChannel('cmd-bt-to-index');
-    bcBt.onmessage = function(e){ if(e.data && e.data.type==='bt-candle') syncFromBt(); };
+    bcBt.onmessage = function(e) { if (e.data && e.data.type === 'bt-candle') syncFromBt(); };
   }
 })();
 
