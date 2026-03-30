@@ -174,6 +174,54 @@
   width: 100%; padding: 10px; background: transparent; border: 1px solid var(--red); 
   color: var(--red); border-radius: 6px; font-size: 11px; cursor: pointer; margin-top: 10px;
 }
+
+/* ── Tab styles ── */
+.inp-tab { transition: all .15s; }
+.inp-tab:hover { color: var(--text) !important; }
+
+/* ── Tab 0: Visual candle ── */
+.vis-candle-wrap {
+  display: flex; flex-direction: column; align-items: center; cursor: pointer;
+  gap: 2px; padding: 4px 3px; border-radius: 5px; border: 1px solid transparent;
+  transition: all .15s; min-width: 32px;
+}
+.vis-candle-wrap:hover { border-color: var(--muted); background: rgba(255,255,255,.04); }
+.vis-candle-wrap.sel-g { border-color: var(--green); background: rgba(0,230,118,.1); }
+.vis-candle-wrap.sel-r { border-color: var(--red);   background: rgba(255,68,68,.1); }
+.vis-candle-body {
+  width: 16px; border-radius: 2px;
+  background: #444; border: 1px solid #666; transition: all .15s;
+}
+.vis-candle-wrap.sel-g .vis-candle-body { background: var(--green); border-color: var(--green); box-shadow: 0 0 8px rgba(0,230,118,.4); }
+.vis-candle-wrap.sel-r .vis-candle-body { background: var(--red);   border-color: var(--red);   box-shadow: 0 0 8px rgba(255,68,68,.4); }
+.vis-candle-wick { width: 2px; background: #555; border-radius: 1px; }
+.vis-candle-wrap.sel-g .vis-candle-wick { background: rgba(0,230,118,.7); }
+.vis-candle-wrap.sel-r .vis-candle-wick { background: rgba(255,68,68,.7); }
+.vis-candle-lbl { font-size: 9px; color: var(--muted); text-align: center; margin-top: 3px; line-height: 1.3; font-weight: 700; }
+
+/* ── Tab 1: WiFi bars ── */
+.wifi-side-bt { display: flex; align-items: flex-end; gap: 5px; }
+.wifi-side-bt.red { flex-direction: row-reverse; }
+.wbt-bar { width: 22px; border-radius: 3px 3px 0 0; cursor: pointer; transition: all .1s; }
+.wbt-bar.g { background: rgba(0,190,70,.15); border: 1px solid rgba(0,190,70,.25); }
+.wbt-bar.r { background: rgba(190,50,50,.15); border: 1px solid rgba(190,50,50,.25); }
+.wbt-bar.g.hov { background: rgba(0,220,90,.8); border-color: var(--green); box-shadow: 0 0 8px rgba(0,230,118,.5); }
+.wbt-bar.r.hov { background: rgba(205,48,48,.8); border-color: var(--red);   box-shadow: 0 0 8px rgba(255,68,68,.5); }
+
+/* ── Tab 2: Quick buttons ── */
+.quick-btn {
+  padding: 10px 4px; border: 2px solid; border-radius: 7px; cursor: pointer;
+  font-size: 12px; font-weight: 700; line-height: 1.3; text-align: center;
+  transition: all .15s;
+}
+.quick-btn.g { background: rgba(0,230,118,.08); border-color: rgba(0,230,118,.3); color: var(--green); }
+.quick-btn.r { background: rgba(255,68,68,.08);  border-color: rgba(255,68,68,.3);  color: var(--red); }
+.quick-btn.g:hover { background: rgba(0,230,118,.2); border-color: var(--green); }
+.quick-btn.r:hover { background: rgba(255,68,68,.2);  border-color: var(--red); }
+.quick-btn.g:active { background: rgba(0,230,118,.35); transform: scale(.97); }
+.quick-btn.r:active { background: rgba(255,68,68,.35);  transform: scale(.97); }
+.quick-btn.wide { grid-column: span 2; padding: 10px; }
+.quick-btn small { font-size: 9px; opacity: .7; font-weight: 400; }
 </style>
 </head>
 <body>
@@ -244,30 +292,111 @@
        <div class="pred-reason" id="predReason">--</div>
      </div>
 
-     <!-- Insert New Candle -->
-     <div class="card">
-       <div class="card-title">🎯 Registrar Siguiente Vela</div>
-       <div class="input-section">
-         <div class="input-title">Fuerza:</div>
-         <div class="strength-selector">
-           <button class="strength-btn" data-strength="1" onclick="selectStrength(1)">F1</button>
-           <button class="strength-btn" data-strength="1.5" onclick="selectStrength(1.5)">F1.5</button>
-           <button class="strength-btn" data-strength="2" onclick="selectStrength(2)">F2</button>
-           <button class="strength-btn" data-strength="2.5" onclick="selectStrength(2.5)">F2.5</button>
-           <button class="strength-btn" data-strength="3" onclick="selectStrength(3)">F3</button>
-           <button class="strength-btn" data-strength="4" onclick="selectStrength(4)">F4</button>
-         </div>
+     <!-- Insert New Candle — 3 tabs -->
+     <div class="card" style="padding:0;overflow:hidden;">
 
-         <div class="input-title">Color:</div>
-         <div class="color-selector">
-           <button class="color-btn green" onclick="selectColor('G')">🟢 VERDE</button>
-           <button class="color-btn red" onclick="selectColor('R')">🔴 ROJA</button>
-         </div>
-
-         <button class="btn-add" id="btnAdd" onclick="addCandle()" disabled>
-           ➕ REGISTRAR Y VERIFICAR
-         </button>
+       <!-- Tab headers -->
+       <div style="display:flex;border-bottom:1px solid var(--border);">
+         <button class="inp-tab active" id="tab-btn-0" onclick="switchTab(0)" style="flex:1;padding:10px 4px;background:transparent;border:none;border-bottom:2px solid var(--cyan);color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.5px;">📊 Visual</button>
+         <button class="inp-tab" id="tab-btn-1" onclick="switchTab(1)" style="flex:1;padding:10px 4px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.5px;">⚡ WiFi</button>
+         <button class="inp-tab" id="tab-btn-2" onclick="switchTab(2)" style="flex:1;padding:10px 4px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.5px;">🎯 Rápido</button>
        </div>
+
+       <!-- TAB 0: Visual candle selector con tamaño real -->
+       <div class="inp-panel" id="tab-0" style="padding:14px;">
+         <div style="font-size:10px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">Selecciona fuerza — toca la vela</div>
+         <div style="display:flex;align-items:flex-end;justify-content:center;gap:6px;padding-bottom:6px;">
+           <!-- Each candle: body height proportional to strength, click = select -->
+           <div class="vis-candle-wrap" data-str="1" onclick="selectStrengthVis(1)">
+             <div class="vis-candle-body" style="height:14px;"></div>
+             <div class="vis-candle-wick top" style="height:4px;"></div>
+             <div class="vis-candle-wick bot" style="height:4px;"></div>
+             <div class="vis-candle-lbl">F1<br><span style="font-size:8px;opacity:.6;">Doji</span></div>
+           </div>
+           <div class="vis-candle-wrap" data-str="1.5" onclick="selectStrengthVis(1.5)">
+             <div class="vis-candle-body" style="height:22px;"></div>
+             <div class="vis-candle-wick top" style="height:5px;"></div>
+             <div class="vis-candle-wick bot" style="height:5px;"></div>
+             <div class="vis-candle-lbl">F1.5<br><span style="font-size:8px;opacity:.6;">Peq.</span></div>
+           </div>
+           <div class="vis-candle-wrap" data-str="2" onclick="selectStrengthVis(2)">
+             <div class="vis-candle-body" style="height:34px;"></div>
+             <div class="vis-candle-wick top" style="height:7px;"></div>
+             <div class="vis-candle-wick bot" style="height:7px;"></div>
+             <div class="vis-candle-lbl">F2<br><span style="font-size:8px;opacity:.6;">Normal</span></div>
+           </div>
+           <div class="vis-candle-wrap" data-str="2.5" onclick="selectStrengthVis(2.5)">
+             <div class="vis-candle-body" style="height:46px;"></div>
+             <div class="vis-candle-wick top" style="height:8px;"></div>
+             <div class="vis-candle-wick bot" style="height:6px;"></div>
+             <div class="vis-candle-lbl">F2.5<br><span style="font-size:8px;opacity:.6;">Grande</span></div>
+           </div>
+           <div class="vis-candle-wrap" data-str="3" onclick="selectStrengthVis(3)">
+             <div class="vis-candle-body" style="height:62px;"></div>
+             <div class="vis-candle-wick top" style="height:9px;"></div>
+             <div class="vis-candle-wick bot" style="height:5px;"></div>
+             <div class="vis-candle-lbl">F3<br><span style="font-size:8px;opacity:.6;">Fuerte</span></div>
+           </div>
+           <div class="vis-candle-wrap" data-str="4" onclick="selectStrengthVis(4)">
+             <div class="vis-candle-body" style="height:82px;"></div>
+             <div class="vis-candle-wick top" style="height:4px;"></div>
+             <div class="vis-candle-wick bot" style="height:4px;"></div>
+             <div class="vis-candle-lbl">F4<br><span style="font-size:8px;opacity:.6;">Engulf.</span></div>
+           </div>
+         </div>
+         <!-- Color buttons -->
+         <div class="color-selector" style="margin-top:10px;">
+           <button class="color-btn green" onclick="selectColor('G')">🟢 VERDE</button>
+           <button class="color-btn red"   onclick="selectColor('R')">🔴 ROJA</button>
+         </div>
+         <button class="btn-add" id="btnAdd0" onclick="addCandle()" disabled>➕ REGISTRAR Y VERIFICAR</button>
+       </div>
+
+       <!-- TAB 1: WiFi triangle (like index.html) -->
+       <div class="inp-panel" id="tab-1" style="display:none;padding:14px;">
+         <div style="font-size:10px;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px;">Toca la barra → registra al instante</div>
+         <div style="display:flex;justify-content:center;align-items:flex-end;gap:5px;padding-bottom:4px;">
+           <!-- GREEN ascending -->
+           <div class="wifi-side-bt green" id="wbt-g">
+             <div class="wbt-bar g" data-str="1"   style="height:16px;" title="F1 Doji"></div>
+             <div class="wbt-bar g" data-str="1.5" style="height:26px;" title="F1.5"></div>
+             <div class="wbt-bar g" data-str="2"   style="height:38px;" title="F2 Normal"></div>
+             <div class="wbt-bar g" data-str="2.5" style="height:52px;" title="F2.5"></div>
+             <div class="wbt-bar g" data-str="3"   style="height:67px;" title="F3 Fuerte"></div>
+             <div class="wbt-bar g" data-str="4"   style="height:84px;" title="F4 Engulfing"></div>
+           </div>
+           <!-- RED descending (row-reverse) -->
+           <div class="wifi-side-bt red" id="wbt-r">
+             <div class="wbt-bar r" data-str="1"   style="height:16px;" title="F1 Doji"></div>
+             <div class="wbt-bar r" data-str="1.5" style="height:26px;" title="F1.5"></div>
+             <div class="wbt-bar r" data-str="2"   style="height:38px;" title="F2 Normal"></div>
+             <div class="wbt-bar r" data-str="2.5" style="height:52px;" title="F2.5"></div>
+             <div class="wbt-bar r" data-str="3"   style="height:67px;" title="F3 Fuerte"></div>
+             <div class="wbt-bar r" data-str="4"   style="height:84px;" title="F4 Engulfing"></div>
+           </div>
+         </div>
+         <div style="display:flex;justify-content:space-between;margin-top:4px;padding:0 2px;">
+           <span style="font-size:10px;font-weight:700;color:rgba(0,230,118,.6);">▲ Verde</span>
+           <span id="wbt-lbl" style="font-size:10px;font-weight:700;color:var(--muted);">–</span>
+           <span style="font-size:10px;font-weight:700;color:rgba(255,68,68,.6);">Roja ▼</span>
+         </div>
+       </div>
+
+       <!-- TAB 2: Rápido — 6 big buttons VERDE/ROJA por fuerza, 1 click registra -->
+       <div class="inp-panel" id="tab-2" style="display:none;padding:14px;">
+         <div style="font-size:10px;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">Un toque = registrar inmediatamente</div>
+         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;">
+           <button class="quick-btn g" onclick="quickAdd('G',1)">🟢 F1<br><small>Doji</small></button>
+           <button class="quick-btn g" onclick="quickAdd('G',2)">🟢 F2<br><small>Normal</small></button>
+           <button class="quick-btn g" onclick="quickAdd('G',3)">🟢 F3<br><small>Fuerte</small></button>
+           <button class="quick-btn r" onclick="quickAdd('R',1)">🔴 F1<br><small>Doji</small></button>
+           <button class="quick-btn r" onclick="quickAdd('R',2)">🔴 F2<br><small>Normal</small></button>
+           <button class="quick-btn r" onclick="quickAdd('R',3)">🔴 F3<br><small>Fuerte</small></button>
+           <button class="quick-btn g wide" onclick="quickAdd('G',4)">🟢 F4 · Engulfing verde</button>
+           <button class="quick-btn r wide" onclick="quickAdd('R',4)">🔴 F4 · Engulfing roja</button>
+         </div>
+       </div>
+
      </div>
 
      <!-- Recent History -->
@@ -664,13 +793,7 @@ function selectStrength(s) {
   document.querySelectorAll('.strength-btn').forEach(btn => btn.classList.toggle('selected', parseFloat(btn.dataset.strength) === s));
   updateAddButton();
 }
-function selectColor(col) {
-  selectedColor = col;
-  document.querySelectorAll('.color-btn').forEach(btn => {
-    btn.classList.toggle('selected', (col === 'G' && btn.classList.contains('green')) || (col === 'R' && !btn.classList.contains('green')));
-  });
-  updateAddButton();
-}
+function selectColor(col) { selectColorAll(col); }
 function updateAddButton() {
   const btn = document.getElementById('btnAdd');
   btn.disabled = !(selectedStrength && selectedColor);
@@ -682,22 +805,122 @@ function updateAddButton() {
 }
 function addCandle() {
   if (!selectedStrength || !selectedColor) return;
-  if (currentPrediction && candles.length > 0) verifyPrediction({ color: selectedColor, strength: selectedStrength });
-  candles.push({ color: selectedColor, strength: selectedStrength });
-  const seq = candles.map(c => c.color + c.strength).join(' ');
-  try { localStorage.setItem('cmd-backtest-sequence', seq); localStorage.setItem('cmd-backtest-timestamp', Date.now().toString()); } catch(e) {}
-  try { const bc = new BroadcastChannel('cmd-detector-vp'); bc.postMessage({ type: 'candle-added', sequence: seq, count: candles.length }); } catch(e) {}
-  selectedStrength = null; selectedColor = null;
-  document.querySelectorAll('.strength-btn, .color-btn').forEach(b => b.classList.remove('selected'));
-  updateAddButton();
-  document.getElementById('btnAdd').textContent = '➕ REGISTRAR Y VERIFICAR';
-  document.getElementById('btnAdd').style.background = '';
-  updateMAs(); generatePrediction(); updateHistory();
+  doAddCandle(selectedColor, selectedStrength);
 }
 function updateHistory() {
   const flow = document.getElementById('historyFlow');
   const recent = candles.slice(-20);
   flow.innerHTML = recent.map((c, i) => `<span class="candle-pill ${c.color.toLowerCase()}">${c.color}${c.strength}</span>`).join('');
+}
+
+// ─── Tab switching ───────────────────────────────────────────
+function switchTab(n) {
+  [0,1,2].forEach(i => {
+    document.getElementById('tab-'+i).style.display = i===n ? 'block' : 'none';
+    const btn = document.getElementById('tab-btn-'+i);
+    if (!btn) return;
+    btn.style.borderBottomColor = i===n ? 'var(--cyan)' : 'transparent';
+    btn.style.color = i===n ? 'var(--cyan)' : 'var(--muted)';
+  });
+}
+
+// ─── Tab 0: Visual candle selection ──────────────────────────
+function selectStrengthVis(str) {
+  selectedStrength = str;
+  document.querySelectorAll('.vis-candle-wrap').forEach(w => {
+    w.classList.remove('sel-g','sel-r');
+    if (parseFloat(w.dataset.str) === str) {
+      w.classList.add(selectedColor === 'R' ? 'sel-r' : 'sel-g');
+    }
+  });
+  updateAllAddBtns();
+}
+
+// Override selectColor to also update visual tab
+const _origSelectColor = selectColor;
+function selectColorAll(col) {
+  selectedColor = col;
+  // Update color buttons in tab 0
+  document.querySelectorAll('.color-btn').forEach(btn => {
+    btn.classList.toggle('selected',
+      (col==='G' && btn.classList.contains('green')) ||
+      (col==='R' && !btn.classList.contains('green')));
+  });
+  // Re-color the selected candle if any
+  if (selectedStrength !== null) selectStrengthVis(selectedStrength);
+  updateAllAddBtns();
+}
+
+function updateAllAddBtns() {
+  ['btnAdd0'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.disabled = !(selectedStrength && selectedColor);
+    if (!btn.disabled) {
+      btn.textContent = '➕ REGISTRAR ' + (selectedColor==='G'?'VERDE':'ROJA') + ' F' + selectedStrength;
+      btn.style.background = selectedColor==='G' ? 'var(--green)' : 'var(--red)';
+      btn.style.color = '#000';
+    } else {
+      btn.textContent = '➕ REGISTRAR Y VERIFICAR';
+      btn.style.background = '';
+      btn.style.color = '';
+    }
+  });
+}
+
+// ─── Tab 1: WiFi bars ────────────────────────────────────────
+(function setupWifi() {
+  function setupSide(groupId, side) {
+    const g = document.getElementById(groupId);
+    if (!g) return;
+    const bars = Array.from(g.querySelectorAll('.wbt-bar'));
+    const lbl  = document.getElementById('wbt-lbl');
+    const SL   = {'1':'Doji','1.5':'Pequeña','2':'Normal','2.5':'Grande','3':'Fuerte','4':'Engulfing'};
+    bars.forEach((bar, idx) => {
+      bar.addEventListener('mouseenter', () => {
+        bars.forEach((b,i) => { b.classList.toggle('hov', i<=idx); });
+        const str = parseFloat(bar.dataset.str);
+        if (lbl) { lbl.textContent = (side==='G'?'▲ ':'▼ ')+'F'+str+' '+(SL[String(str)]||''); lbl.style.color = side==='G'?'rgba(0,230,118,.9)':'rgba(255,68,68,.9)'; }
+      });
+      bar.addEventListener('click', () => {
+        const str = parseFloat(bar.dataset.str);
+        // WiFi tab: click = immediate register (no confirm needed)
+        if (lbl) { lbl.textContent = (side==='G'?'▲ ':'▼ ')+'F'+str+' → Registrada!'; lbl.style.color = side==='G'?'var(--green)':'var(--red)'; }
+        doAddCandle(side, str);
+        setTimeout(() => { if(lbl) { lbl.textContent='–'; lbl.style.color='var(--muted)'; } bars.forEach(b=>b.classList.remove('hov')); }, 800);
+      });
+    });
+    g.addEventListener('mouseleave', () => {
+      bars.forEach(b => b.classList.remove('hov'));
+      if (lbl) { lbl.textContent='–'; lbl.style.color='var(--muted)'; }
+    });
+  }
+  // Setup after DOM ready
+  document.addEventListener('DOMContentLoaded', () => {
+    setupSide('wbt-g','G');
+    setupSide('wbt-r','R');
+  });
+})();
+
+// ─── Tab 2: Quick add (1 click, no confirm) ──────────────────
+function quickAdd(color, str) {
+  doAddCandle(color, str);
+}
+
+// ─── Core add (shared by all tabs) ───────────────────────────
+function doAddCandle(color, str) {
+  if (currentPrediction && candles.length > 0) verifyPrediction({ color, strength: str });
+  candles.push({ color, strength: str });
+  const seq = candles.map(c => c.color + c.strength).join(' ');
+  try { localStorage.setItem('cmd-backtest-sequence', seq); localStorage.setItem('cmd-backtest-timestamp', Date.now().toString()); } catch(e) {}
+  try { const bc = new BroadcastChannel('cmd-detector-vp'); bc.postMessage({ type: 'candle-added', sequence: seq, count: candles.length }); } catch(e) {}
+  // Reset tab 0 state
+  selectedStrength = null; selectedColor = null;
+  document.querySelectorAll('.strength-btn,.color-btn,.vis-candle-wrap').forEach(b => b.classList.remove('selected','sel-g','sel-r'));
+  updateAllAddBtns();
+  document.getElementById('totalCandles').textContent = candles.length;
+  document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+  updateMAs(); generatePrediction(); updateHistory();
 }
 
 // ─── Init ─────────────────────────────────────────────────────
