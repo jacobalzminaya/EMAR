@@ -176,8 +176,14 @@
 }
 
 /* ── Tab styles ── */
-.inp-tab { transition: all .15s; }
-.inp-tab:hover { color: var(--text) !important; }
+.inp-tab {
+  flex: 1; padding: 10px 4px; background: transparent; border: none;
+  border-bottom: 2px solid transparent; color: var(--muted);
+  font-size: 11px; font-weight: 700; cursor: pointer; letter-spacing: .5px;
+  transition: all .15s;
+}
+.inp-tab:hover { color: var(--text); }
+.inp-tab-active { border-bottom-color: var(--cyan) !important; color: var(--cyan) !important; }
 
 /* ── Tab 0: Visual candle ── */
 .vis-candle-wrap {
@@ -297,9 +303,9 @@
 
        <!-- Tab headers -->
        <div style="display:flex;border-bottom:1px solid var(--border);">
-         <button class="inp-tab active" id="tab-btn-0" onclick="switchTab(0)" style="flex:1;padding:10px 4px;background:transparent;border:none;border-bottom:2px solid var(--cyan);color:var(--cyan);font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.5px;">📊 Visual</button>
-         <button class="inp-tab" id="tab-btn-1" onclick="switchTab(1)" style="flex:1;padding:10px 4px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.5px;">⚡ WiFi</button>
-         <button class="inp-tab" id="tab-btn-2" onclick="switchTab(2)" style="flex:1;padding:10px 4px;background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.5px;">🎯 Rápido</button>
+         <button class="inp-tab inp-tab-active" id="tab-btn-0" onclick="switchTab(0)">📊 Visual</button>
+         <button class="inp-tab" id="tab-btn-1" onclick="switchTab(1)">⚡ WiFi</button>
+         <button class="inp-tab" id="tab-btn-2" onclick="switchTab(2)">🎯 Rápido</button>
        </div>
 
        <!-- TAB 0: Visual candle selector con tamaño real -->
@@ -819,8 +825,7 @@ function switchTab(n) {
     document.getElementById('tab-'+i).style.display = i===n ? 'block' : 'none';
     const btn = document.getElementById('tab-btn-'+i);
     if (!btn) return;
-    btn.style.borderBottomColor = i===n ? 'var(--cyan)' : 'transparent';
-    btn.style.color = i===n ? 'var(--cyan)' : 'var(--muted)';
+    btn.classList.toggle('inp-tab-active', i===n);
   });
 }
 
@@ -895,11 +900,10 @@ function updateAllAddBtns() {
       if (lbl) { lbl.textContent='–'; lbl.style.color='var(--muted)'; }
     });
   }
-  // Setup after DOM ready
-  document.addEventListener('DOMContentLoaded', () => {
-    setupSide('wbt-g','G');
-    setupSide('wbt-r','R');
-  });
+  // Setup immediately or on DOM ready
+  function initWifi() { setupSide('wbt-g','G'); setupSide('wbt-r','R'); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initWifi);
+  else initWifi();
 })();
 
 // ─── Tab 2: Quick add (1 click, no confirm) ──────────────────
