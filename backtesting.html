@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proyector CMD — Log de Retroalimentación</title>
+<style>
+ :root {
+   --bg:       #0a0a0f;
+   --bg2:      #111118;
+   --bg3:      #1a1a24;
+   --border:   #2a2a38;
+   --text:     #d4d4e0;
+   --muted:    #666680;
+   --green:    #00e676;
+   --red:      #ff4444;
+   --gold:     #ffd600;
+   --cyan:     #00e5ff;
+   --purple:   #bb86fc;
+   --orange:   #ff9800;
+   --radius:   8px;
+ }
+ * { box-sizing: border-box; margin: 0; padding: 0; }
+ body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 13px; min-height: 100vh; }
+
+ .header { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; }
+ .header h1 { font-size: 16px; color: var(--cyan); letter-spacing: 2px; }
+ .sync-badge { font-size: 11px; padding: 4px 12px; border-radius: 20px; background: var(--bg3); border: 1px solid var(--border); }
+ .sync-badge.active { background: rgba(0,230,118,.1); border-color: var(--green); color: var(--green); }
+ .sync-badge.paused { background: rgba(255,152,0,.1); border-color: var(--orange); color: var(--orange); }
+
+ .main { display: grid; grid-template-columns: 320px 1fr 380px; gap: 0; height: calc(100vh - 60px); }
+ .sidebar { background: var(--bg2); border-right: 1px solid var(--border); padding: 16px; overflow-y: auto; }
+ .content { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+ .log-panel { background: var(--bg2); border-left: 1px solid var(--border); padding: 16px; overflow-y: auto; display: flex; flex-direction: column; }
+
+ .card { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+ .card-title { font-size: 11px; color: var(--cyan); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; }
+
+ /* Prediction Box */
+ .prediction-box { background: var(--bg); border: 3px solid; border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 16px; }
+ .prediction-box.bull { border-color: var(--green); box-shadow: 0 0 40px rgba(0,230,118,.15); }
+ .prediction-box.bear { border-color: var(--red); box-shadow: 0 0 40px rgba(255,68,68,.15); }
+ .pred-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px; }
+ .pred-direction { font-size: 48px; font-weight: 900; margin-bottom: 8px; }
+ .pred-direction.bull { color: var(--green); text-shadow: 0 0 20px rgba(0,230,118,.4); }
+ .pred-direction.bear { color: var(--red); text-shadow: 0 0 20px rgba(255,68,68,.4); }
+ .pred-confidence { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+ .pred-confidence.bull { color: var(--green); }
+ .pred-confidence.bear { color: var(--red); }
+ .pred-reason { font-size: 11px; color: var(--muted); line-height: 1.4; }
+
+ /* Input Section */
+ .input-section { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 14px; }
+ .input-title { font-size: 10px; color: var(--cyan); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
+ .strength-selector { display: flex; gap: 4px; margin-bottom: 10px; }
+ .strength-btn { 
+   flex: 1; padding: 8px 2px; background: var(--bg2); border: 1px solid var(--border); 
+   border-radius: 6px; color: var(--text); font-size: 10px; cursor: pointer; transition: all .2s;
+   text-align: center; line-height: 1.2;
+ }
+ .strength-btn:hover { border-color: var(--cyan); }
+ .strength-btn.selected { background: var(--cyan); color: #000; border-color: var(--cyan); font-weight: 700; }
+ .color-selector { display: flex; gap: 6px; margin-bottom: 12px; }
+ .color-btn { 
+   flex: 1; padding: 12px; border: 2px solid var(--border); border-radius: 6px; 
+   font-size: 14px; font-weight: 700; cursor: pointer; transition: all .2s;
+ }
+ .color-btn.green { color: var(--green); }
+ .color-btn.green.selected { background: rgba(0,230,118,.15); border-color: var(--green); }
+ .color-btn.red { color: var(--red); }
+ .color-btn.red.selected { background: rgba(255,68,68,.15); border-color: var(--red); }
+ .btn-add { 
+   width: 100%; padding: 14px; background: var(--cyan); color: #000; border: none; 
+   border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; text-transform: uppercase;
+ }
+ .btn-add:disabled { opacity: .4; cursor: not-allowed; }
+
+ /* LOG PANEL */
+ .log-header { 
+   display: flex; justify-content: space-between; align-items: center; 
+   margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+ }
+ .log-title { font-size: 12px; color: var(--cyan); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; }
+ .log-stats { display: flex; gap: 12px; font-size: 11px; }
+ .log-stat { padding: 4px 10px; border-radius: 4px; background: var(--bg3); }
+ .log-stat.hits { color: var(--green); border: 1px solid rgba(0,230,118,.2); }
+ .log-stat.misses { color: var(--red); border: 1px solid rgba(255,68,68,.2); }
+ .log-stat.accuracy { color: var(--gold); border: 1px solid rgba(255,214,0,.2); }
+
+ .log-entries { display: flex; flex-direction: column; gap: 8px; flex: 1; overflow-y: auto; }
+ 
+ .log-entry { 
+   background: var(--bg3); border-radius: 8px; padding: 12px; 
+   border-left: 3px solid var(--border); font-size: 11px;
+ }
+ .log-entry.hit { border-left-color: var(--green); background: rgba(0,230,118,.05); }
+ .log-entry.miss { border-left-color: var(--red); background: rgba(255,68,68,.05); }
+ 
+ .log-entry-header { 
+   display: flex; justify-content: space-between; align-items: center; 
+   margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+ }
+ .log-entry-num { color: var(--muted); font-size: 10px; }
+ .log-entry-result { 
+   padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+ }
+ .log-entry-result.hit { background: rgba(0,230,118,.2); color: var(--green); }
+ .log-entry-result.miss { background: rgba(255,68,68,.2); color: var(--red); }
+ 
+ .log-prediction { display: flex; gap: 12px; margin-bottom: 8px; align-items: center; }
+ .log-pred-box { 
+   flex: 1; padding: 8px; border-radius: 6px; text-align: center; background: var(--bg);
+ }
+ .log-pred-box.predicted { border: 1px solid var(--border); }
+ .log-pred-box.actual { border: 1px solid var(--border); }
+ .log-pred-box.correct { border-color: var(--green); background: rgba(0,230,118,.08); }
+ .log-pred-box.wrong { border-color: var(--red); background: rgba(255,68,68,.08); }
+ .log-pred-label { font-size: 9px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+ .log-pred-value { font-size: 14px; font-weight: 700; }
+ 
+ .log-analysis { 
+   background: var(--bg); border-radius: 6px; padding: 10px; margin-top: 8px;
+   border: 1px solid var(--border);
+ }
+ .log-analysis-title { 
+   font-size: 10px; color: var(--orange); margin-bottom: 6px; display: flex; align-items: center; gap: 6px;
+ }
+ .log-analysis-text { color: var(--text); line-height: 1.5; font-size: 11px; }
+ .log-analysis-text strong { color: var(--cyan); }
+ 
+ .log-factors { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+ .log-factor { 
+   padding: 4px 8px; border-radius: 4px; background: var(--bg2); font-size: 10px;
+   border: 1px solid var(--border);
+ }
+ .log-factor.bull { color: var(--green); border-color: rgba(0,230,118,.3); }
+ .log-factor.bear { color: var(--red); border-color: rgba(255,68,68,.3); }
+
+ .log-empty { 
+   text-align: center; padding: 40px 20px; color: var(--muted); font-size: 12px;
+ }
+
+ /* History */
+ .history-flow { display: flex; flex-wrap: wrap; gap: 4px; max-height: 120px; overflow-y: auto; }
+ .candle-pill { 
+   padding: 4px 8px; border-radius: 4px; font-family: 'Courier New', monospace; 
+   font-size: 11px; font-weight: 700; border: 1px solid transparent;
+ }
+ .candle-pill.g { background: rgba(0,230,118,.1); color: var(--green); border-color: rgba(0,230,118,.3); }
+ .candle-pill.r { background: rgba(255,68,68,.1); color: var(--red); border-color: rgba(255,68,68,.3); }
+ .candle-pill.predicted { animation: pulse 2s infinite; border-style: dashed; }
+
+ @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .6; } }
+
+ /* MA Grid */
+ .ma-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 12px; }
+ .ma-item { 
+   background: var(--bg); border: 1px solid var(--border); border-radius: 6px; 
+   padding: 10px; text-align: center; position: relative; overflow: hidden;
+ }
+ .ma-item::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--muted); }
+ .ma-item.bull::before { background: var(--green); }
+ .ma-item.bear::before { background: var(--red); }
+ .ma-name { font-size: 9px; color: var(--muted); margin-bottom: 2px; }
+ .ma-value { font-size: 18px; font-weight: 700; font-family: monospace; }
+ .ma-value.bull { color: var(--green); }
+ .ma-value.bear { color: var(--red); }
+
+.empty-state { text-align: center; padding: 40px 20px; color: var(--muted); }
+.empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+
+.btn-clear { 
+  width: 100%; padding: 10px; background: transparent; border: 1px solid var(--red); 
+  color: var(--red); border-radius: 6px; font-size: 11px; cursor: pointer; margin-top: 10px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+ <h1>🔮 PROYECTOR + LOG</h1>
+ <div class="sync-badge active" id="syncStatus">🟢 Sincronizado</div>
+</div>
+
+<div class="main">
+ <!-- SIDEBAR: MAs y Stats -->
+ <div class="sidebar">
+   <div class="card">
+     <div class="card-title">📊 Medias Móviles</div>
+     <div class="ma-grid">
+       <div class="ma-item">
+         <div class="ma-name">MA3</div>
+         <div class="ma-value" id="ma3">--</div>
+       </div>
+       <div class="ma-item">
+         <div class="ma-name">MA5</div>
+         <div class="ma-value" id="ma5">--</div>
+       </div>
+       <div class="ma-item">
+         <div class="ma-name">MA10</div>
+         <div class="ma-value" id="ma10">--</div>
+       </div>
+       <div class="ma-item">
+         <div class="ma-name">MA20</div>
+         <div class="ma-value" id="ma20">--</div>
+       </div>
+     </div>
+   </div>
+
+   <div class="card">
+     <div class="card-title">📈 Estadísticas</div>
+     <div style="font-size: 24px; font-weight: 900; color: var(--cyan); margin-bottom: 4px;" id="totalCandles">0</div>
+     <div style="font-size: 11px; color: var(--muted); margin-bottom: 12px;">velas registradas</div>
+     <div style="font-size: 11px; color: var(--muted);">Última actualización:</div>
+     <div style="font-size: 12px; color: var(--text);" id="lastUpdate">--</div>
+   </div>
+
+   <div class="card">
+     <div class="card-title">⚙️ Control</div>
+     <button onclick="toggleSync()" id="btnToggle" style="width: 100%; padding: 10px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; cursor: pointer; margin-bottom: 8px; font-size: 11px;">
+       ⏸️ Pausar Sync
+     </button>
+     <button onclick="manualRefresh()" style="width: 100%; padding: 10px; background: var(--cyan); color: #000; border: none; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 11px; margin-bottom: 8px;">
+       🔄 Actualizar
+     </button>
+     <button onclick="clearLog()" class="btn-clear">🗑️ Limpiar Log</button>
+   </div>
+ </div>
+
+ <!-- CONTENT: Predicción e Input -->
+ <div class="content">
+   <div id="emptyState" class="empty-state">
+     <div class="icon">📡</div>
+     <p>Esperando datos del index.html...</p>
+   </div>
+
+   <div id="mainContent" style="display: none;">
+     <!-- Current Prediction -->
+     <div class="prediction-box" id="predBox">
+       <div class="pred-label">Predicción Actual</div>
+       <div class="pred-direction" id="predDirection">--</div>
+       <div class="pred-confidence" id="predConfidence">--</div>
+       <div class="pred-reason" id="predReason">--</div>
+     </div>
+
+     <!-- Insert New Candle -->
+     <div class="card">
+       <div class="card-title">🎯 Registrar Siguiente Vela</div>
+       <div class="input-section">
+         <div class="input-title">Fuerza:</div>
+         <div class="strength-selector">
+           <button class="strength-btn" data-strength="1" onclick="selectStrength(1)">F1</button>
+           <button class="strength-btn" data-strength="1.5" onclick="selectStrength(1.5)">F1.5</button>
+           <button class="strength-btn" data-strength="2" onclick="selectStrength(2)">F2</button>
+           <button class="strength-btn" data-strength="2.5" onclick="selectStrength(2.5)">F2.5</button>
+           <button class="strength-btn" data-strength="3" onclick="selectStrength(3)">F3</button>
+           <button class="strength-btn" data-strength="4" onclick="selectStrength(4)">F4</button>
+         </div>
+
+         <div class="input-title">Color:</div>
+         <div class="color-selector">
+           <button class="color-btn green" onclick="selectColor('G')">🟢 VERDE</button>
+           <button class="color-btn red" onclick="selectColor('R')">🔴 ROJA</button>
+         </div>
+
+         <button class="btn-add" id="btnAdd" onclick="addCandle()" disabled>
+           ➕ REGISTRAR Y VERIFICAR
+         </button>
+       </div>
+     </div>
+
+     <!-- Recent History -->
+     <div class="card">
+       <div class="card-title">🕐 Historial (últimas 20)</div>
+       <div class="history-flow" id="historyFlow"></div>
+     </div>
+   </div>
+ </div>
+
+ <!-- LOG PANEL: Retroalimentación -->
+ <div class="log-panel">
+   <div class="log-header">
+     <div class="log-title">📋 Log de Verificación</div>
+     <div class="log-stats">
+       <div class="log-stat hits" id="statHits">✓ 0</div>
+       <div class="log-stat misses" id="statMisses">✗ 0</div>
+       <div class="log-stat accuracy" id="statAccuracy">0%</div>
+     </div>
+   </div>
+   <div class="log-entries" id="logEntries">
+     <div class="log-empty">Las predicciones y sus resultados aparecerán aquí...</div>
+   </div>
+ </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// PROYECTOR CMD — Motor real con PATTERN_LIBRARY + Swing
+// Siempre emite VERDE o ROJA, nunca ESPERAR
+// ═══════════════════════════════════════════════════════════════
+
+let candles = [];
+let autoSync = true;
+let selectedStrength = null;
+let selectedColor = null;
+let predictionLog = [];
+let currentPrediction = null;
+
+// ─── Cargar PATTERN_LIBRARY desde patterns.js ─────────────────
+// Se usa window.PATTERN_LIBRARY si está disponible (mismo servidor)
+function getPatternLib() {
+  return (typeof PATTERN_LIBRARY !== 'undefined') ? PATTERN_LIBRARY : null;
+}
+
+// ─── MA calculation (% verde sobre N velas) ───────────────────
+function calcMAPct(period) {
+  if (candles.length < period) return null;
+  const sl = candles.slice(-period);
+  return (sl.filter(c => c.color === 'G').length / period) * 100;
+}
+
+function getCandleStr(idx) {
+  if (idx < 0 || idx >= candles.length) return 2;
+  return candles[idx].strength || 2;
+}
+
+function updateMAs() {
+  [3, 5, 10, 20].forEach(p => {
+    const val = calcMAPct(p);
+    const el  = document.getElementById('ma' + p);
+    if (!el) return;
+    if (val === null) {
+      el.textContent = '--'; el.className = 'ma-value';
+      el.closest('.ma-item').className = 'ma-item';
+    } else {
+      el.textContent = val.toFixed(1) + '%';
+      const trend = val >= 52 ? 'bull' : val <= 48 ? 'bear' : '';
+      el.className  = 'ma-value ' + trend;
+      el.closest('.ma-item').className = 'ma-item ' + trend;
+    }
+  });
+}
+
+// ─── Swing analysis (last 10 candles) ────────────────────────
+function analyzeSwing() {
+  const win = Math.min(10, candles.length);
+  if (win < 3) return { dir: 'neutral', ratio: 1, bullPct: 50, bearPct: 50 };
+  const sl = candles.slice(-win);
+  let bullF = 0, bearF = 0, bullMax = 0, bearMax = 0;
+  let curDir = null, curStr = 0;
+  sl.forEach((c, i) => {
+    const idx = candles.length - win + i;
+    const s   = getCandleStr(idx);
+    if (c.color === 'G') bullF += s; else bearF += s;
+    if (!curDir) { curDir = c.color; curStr = s; }
+    else if (c.color === curDir) { curStr += s; }
+    else {
+      if (curDir === 'G' && curStr > bullMax) bullMax = curStr;
+      if (curDir === 'R' && curStr > bearMax) bearMax = curStr;
+      curDir = c.color; curStr = s;
+    }
+  });
+  if (curDir === 'G' && curStr > bullMax) bullMax = curStr;
+  if (curDir === 'R' && curStr > bearMax) bearMax = curStr;
+  const total = bullF + bearF || 1;
+  const ratio = (bullMax > 0 && bearMax > 0) ? Math.max(bullMax, bearMax) / Math.min(bullMax, bearMax) : 1;
+  return {
+    dir: bullF >= bearF ? 'G' : 'R',
+    ratio,
+    bullPct: Math.round(bullF / total * 100),
+    bearPct: Math.round(bearF / total * 100),
+    bullMax, bearMax
+  };
+}
+
+// ─── Pattern detection using PATTERN_LIBRARY ─────────────────
+function detectBestPattern() {
+  const lib = getPatternLib();
+  if (!lib || candles.length < 2) return null;
+  const hist = candles.map(c => c.color);
+  const idx  = hist.length - 1;
+  const candidates = [];
+  // Use getCandleStrength shim
+  const origGCS = window.getCandleStrength;
+  window.getCandleStrength = (i) => (candles[i] ? candles[i].strength : 2);
+  Object.entries(lib).forEach(([key, pat]) => {
+    if (candles.length < (pat.minVelas || 2)) return;
+    try {
+      const det = pat.detect(hist, idx);
+      if (!det) return;
+      const conf = det.strength || 0.6;
+      const proj = pat.project ? pat.project(conf, det) : null;
+      if (!proj) return;
+      candidates.push({
+        key, name: pat.name, priority: pat.priority || 0,
+        confidence: conf, proj,
+        score: (pat.priority || 0) * 2 + conf
+      });
+    } catch(e) {}
+  });
+  if (origGCS !== undefined) window.getCandleStrength = origGCS;
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0];
+}
+
+// ─── Core prediction — always returns G or R ─────────────────
+function generatePrediction() {
+  if (candles.length < 2) {
+    currentPrediction = null;
+    showPrediction({ direction: 'G', confidence: 55, reason: 'Sin datos suficientes' });
+    return;
+  }
+
+  const ma3   = calcMAPct(3)  || 50;
+  const ma5   = calcMAPct(5)  || 50;
+  const ma10  = calcMAPct(10) || 50;
+  const swing = analyzeSwing();
+  const pat   = detectBestPattern();
+
+  // ── Score: positive = alcista (G), negative = bajista (R) ──
+  // MA score: deviation from 50 (neutral)
+  const maScore = ((ma3 - 50) * 0.40 + (ma5 - 50) * 0.25 + (ma10 - 50) * 0.20) / 100;
+
+  // Swing score
+  const swingScore = (swing.bullPct - swing.bearPct) / 100 * (swing.ratio >= 1.5 ? 0.35 : 0.20);
+
+  // Pattern score
+  let patScore = 0, patReason = '';
+  if (pat) {
+    const gConf = pat.proj.ifG ? pat.proj.ifG.conf : 0;
+    const rConf = pat.proj.ifR ? pat.proj.ifR.conf : 0;
+    const gSig  = pat.proj.ifG ? pat.proj.ifG.sig : '';
+    const rSig  = pat.proj.ifR ? pat.proj.ifR.sig : '';
+    // Convert pattern signal to score
+    if (gSig === 'COMPRA' || rSig === 'VENTA') {
+      patScore = ((gConf - rConf)) * 0.30;
+    } else if (rSig === 'COMPRA' || gSig === 'VENTA') {
+      patScore = ((rConf - gConf)) * -0.30;
+    }
+    patReason = pat.name + ' ' + Math.round(pat.confidence * 100) + '%';
+  }
+
+  // Momentum: last 3 candles weighted
+  const last3 = candles.slice(-3);
+  let momScore = 0;
+  last3.forEach((c, i) => {
+    const w = (i + 1) / 6;
+    momScore += (c.color === 'G' ? c.strength : -c.strength) * w;
+  });
+  momScore = momScore / 10 * 0.15;
+
+  const totalScore = maScore + swingScore + patScore + momScore;
+
+  // Direction — ALWAYS G or R (no ESPERAR)
+  const direction = totalScore >= 0 ? 'G' : 'R';
+
+  // Confidence: how decisive is the score
+  const absScore = Math.abs(totalScore);
+  let confidence;
+  if (absScore > 0.35) confidence = 85;
+  else if (absScore > 0.25) confidence = 78;
+  else if (absScore > 0.15) confidence = 70;
+  else if (absScore > 0.08) confidence = 63;
+  else confidence = 56; // very close — still commit
+
+  // Reason
+  const factors = [];
+  if (Math.abs(ma3 - 50) > 8) factors.push('MA3 ' + (ma3 > 50 ? '▲' : '▼') + ma3.toFixed(0) + '%');
+  if (swing.ratio >= 1.4) factors.push('Swing ' + (swing.dir === 'G' ? '▲' : '▼') + swing.ratio.toFixed(1) + 'x');
+  if (patReason) factors.push(patReason);
+  const reason = factors.length ? factors.join(' · ') : 'Análisis de estructura';
+
+  currentPrediction = {
+    direction, confidence, reason,
+    ma3, ma5, ma10, swing, pat,
+    score: totalScore,
+    candleIndex: candles.length,
+    timestamp: Date.now()
+  };
+
+  showPrediction({ direction, confidence, reason });
+  publishPrediction(direction, confidence, reason);
+}
+
+// ─── Show prediction in UI ────────────────────────────────────
+function showPrediction(pred) {
+  const isG   = pred.direction === 'G';
+  const col   = isG ? 'var(--green)' : 'var(--red)';
+  const label = isG ? 'VERDE 🟢' : 'ROJA 🔴';
+  const box   = document.getElementById('predBox');
+  const dir   = document.getElementById('predDirection');
+  const conf  = document.getElementById('predConfidence');
+  const reas  = document.getElementById('predReason');
+  if (box)  { box.className  = 'prediction-box ' + (isG ? 'bull' : 'bear'); }
+  if (dir)  { dir.className  = 'pred-direction '  + (isG ? 'bull' : 'bear'); dir.textContent  = label; }
+  if (conf) { conf.className = 'pred-confidence ' + (isG ? 'bull' : 'bear'); conf.textContent = 'Confianza: ' + pred.confidence + '%'; }
+  if (reas) reas.textContent = pred.reason;
+}
+
+// ─── Publish to index.html ────────────────────────────────────
+function publishPrediction(dir, confidence, reason) {
+  const hits   = predictionLog.filter(e => e.result === 'hit').length;
+  const total  = predictionLog.length;
+  const acc    = total > 0 ? Math.round(hits / total * 100) : null;
+  const payload = JSON.stringify({ direction: dir, confidence, reason, hits, total, accuracy: acc });
+  try { localStorage.setItem('cmd-bt-prediction', payload); } catch(e) {}
+  try {
+    const bc = new BroadcastChannel('cmd-bt-channel');
+    bc.postMessage({ type: 'prediction' });
+  } catch(e) {}
+}
+
+// ─── Verify prediction vs real candle ────────────────────────
+function verifyPrediction(actualCandle) {
+  if (!currentPrediction) return;
+  const predicted = currentPrediction.direction;
+  const actual    = actualCandle.color;
+  const isHit     = predicted === actual;
+
+  const entry = {
+    id: predictionLog.length + 1,
+    prediction: currentPrediction,
+    actual: actualCandle,
+    result: isHit ? 'hit' : 'miss',
+    analysis: buildAnalysis(currentPrediction, actualCandle, isHit)
+  };
+  predictionLog.unshift(entry);
+  updateLogDisplay();
+  updateStats();
+}
+
+function buildAnalysis(pred, actual, isHit) {
+  if (isHit) return { summary: 'Predicción correcta', details: pred.reason, suggestion: null };
+  const predLabel   = pred.direction === 'G' ? 'VERDE' : 'ROJA';
+  const actualLabel = actual.color   === 'G' ? 'VERDE' : 'ROJA';
+  const details = [];
+  const swing = pred.swing;
+  // Diagnose: was swing opposing?
+  if (swing && swing.dir !== pred.direction && swing.ratio >= 1.5) {
+    details.push('El swing (' + (swing.dir==='G'?'alcista':'bajista') + ' ' + swing.ratio.toFixed(1) + 'x) se opuso a la predicción — darle más peso al swing');
+  } else if (pred.pat && pred.pat.name) {
+    details.push('Patrón "' + pred.pat.name + '" no confirmado — posible contexto más amplio requerido');
+  } else {
+    details.push('MA10 ' + pred.ma10.toFixed(0) + '% apuntaba ' + (pred.direction==='G'?'alcista':'bajista') + ' pero el mercado revirtió');
+  }
+  return {
+    summary: 'Predije ' + predLabel + ', salió ' + actualLabel + ' F' + actual.strength,
+    details: details.join('. '),
+    suggestion: swing && swing.ratio >= 1.5 ? 'Aumentar peso de swing en señales divergentes' : 'Considerar contexto de velas 4-6 antes'
+  };
+}
+
+// ─── Display log ─────────────────────────────────────────────
+function updateLogDisplay() {
+  const container = document.getElementById('logEntries');
+  if (!predictionLog.length) {
+    container.innerHTML = '<div class="log-empty">Las predicciones y sus resultados aparecerán aquí...</div>';
+    return;
+  }
+  container.innerHTML = predictionLog.map(entry => {
+    const isG      = entry.prediction.direction === 'G';
+    const actIsG   = entry.actual.color === 'G';
+    const predCol  = isG  ? 'var(--green)' : 'var(--red)';
+    const actCol   = actIsG ? 'var(--green)' : 'var(--red)';
+    return `<div class="log-entry ${entry.result}">
+      <div class="log-entry-header">
+        <span class="log-entry-num">#${entry.id} · Vela #${entry.prediction.candleIndex + 1}</span>
+        <span class="log-entry-result ${entry.result}">${entry.result === 'hit' ? '✓ ACIERTO' : '✗ FALLÓ'}</span>
+      </div>
+      <div class="log-prediction">
+        <div class="log-pred-box predicted">
+          <div class="log-pred-label">Predije</div>
+          <div class="log-pred-value" style="color:${predCol}">${isG ? '🟢 VERDE' : '🔴 ROJA'}</div>
+          <div style="font-size:10px;color:var(--muted)">${entry.prediction.confidence}%</div>
+        </div>
+        <div style="color:var(--muted)">→</div>
+        <div class="log-pred-box actual ${entry.result === 'hit' ? 'correct' : 'wrong'}">
+          <div class="log-pred-label">Resultado</div>
+          <div class="log-pred-value" style="color:${actCol}">${actIsG ? '🟢 VERDE' : '🔴 ROJA'} F${entry.actual.strength}</div>
+        </div>
+      </div>
+      <div class="log-factors">
+        ${(entry.prediction.reason||'').split(' · ').map(f => `<span class="log-factor ${isG?'bull':'bear'}">${f}</span>`).join('')}
+      </div>
+      ${entry.result === 'miss' ? `<div class="log-analysis">
+        <div class="log-analysis-title">⚠️ Error</div>
+        <div class="log-analysis-text">${entry.analysis.details}</div>
+        ${entry.analysis.suggestion ? `<div style="margin-top:6px;color:var(--gold)"><strong>💡</strong> ${entry.analysis.suggestion}</div>` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function updateStats() {
+  const hits  = predictionLog.filter(e => e.result === 'hit').length;
+  const total = predictionLog.length;
+  const acc   = total > 0 ? Math.round(hits / total * 100) : 0;
+  document.getElementById('statHits').textContent     = '✓ ' + hits;
+  document.getElementById('statMisses').textContent   = '✗ ' + (total - hits);
+  document.getElementById('statAccuracy').textContent = acc + '%';
+}
+
+// ─── Sync from index.html ─────────────────────────────────────
+function loadFromIndex() {
+  if (!autoSync) return;
+  const sequence = localStorage.getItem('cmd-backtest-sequence');
+  if (!sequence) {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('mainContent').style.display = 'none';
+    return;
+  }
+  parseSequence(sequence);
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+  document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+  document.getElementById('totalCandles').textContent = candles.length;
+  updateMAs();
+  generatePrediction();
+  updateHistory();
+}
+
+function parseSequence(seq) {
+  const tokens = seq.trim().toUpperCase().split(/\s+/).filter(Boolean);
+  const newCandles = [];
+  for (const t of tokens) {
+    const m = t.match(/^([GR])(\d+\.?\d*)$/);
+    if (m) newCandles.push({ color: m[1], strength: parseFloat(m[2]) });
+  }
+  if (newCandles.length > candles.length && currentPrediction && candles.length > 0) {
+    verifyPrediction(newCandles[newCandles.length - 1]);
+  }
+  candles = newCandles;
+}
+
+function toggleSync() {
+  autoSync = !autoSync;
+  const btn   = document.getElementById('btnToggle');
+  const badge = document.getElementById('syncStatus');
+  if (autoSync) {
+    btn.innerHTML = '⏸️ Pausar Sync';
+    badge.className = 'sync-badge active'; badge.textContent = '🟢 Sincronizado';
+    loadFromIndex();
+  } else {
+    btn.innerHTML = '▶️ Reanudar Sync';
+    badge.className = 'sync-badge paused'; badge.textContent = '⏸️ Sync Pausado';
+  }
+}
+function manualRefresh() { loadFromIndex(); }
+function clearLog() { predictionLog = []; updateLogDisplay(); updateStats(); }
+
+window.addEventListener('storage', e => {
+  if (e.key === 'cmd-backtest-sequence' && autoSync) loadFromIndex();
+});
+if (typeof BroadcastChannel !== 'undefined') {
+  const bc = new BroadcastChannel('cmd-detector-vp');
+  bc.onmessage = e => { if (e.data?.type === 'candle-added' && autoSync) loadFromIndex(); };
+}
+
+// ─── Manual input ─────────────────────────────────────────────
+function selectStrength(s) {
+  selectedStrength = s;
+  document.querySelectorAll('.strength-btn').forEach(btn => btn.classList.toggle('selected', parseFloat(btn.dataset.strength) === s));
+  updateAddButton();
+}
+function selectColor(col) {
+  selectedColor = col;
+  document.querySelectorAll('.color-btn').forEach(btn => {
+    btn.classList.toggle('selected', (col === 'G' && btn.classList.contains('green')) || (col === 'R' && !btn.classList.contains('green')));
+  });
+  updateAddButton();
+}
+function updateAddButton() {
+  const btn = document.getElementById('btnAdd');
+  btn.disabled = !(selectedStrength && selectedColor);
+  if (!btn.disabled) {
+    btn.textContent = '➕ REGISTRAR ' + (selectedColor === 'G' ? 'VERDE' : 'ROJA') + ' F' + selectedStrength;
+    btn.style.background = selectedColor === 'G' ? 'var(--green)' : 'var(--red)';
+    btn.style.color = '#000';
+  }
+}
+function addCandle() {
+  if (!selectedStrength || !selectedColor) return;
+  if (currentPrediction && candles.length > 0) verifyPrediction({ color: selectedColor, strength: selectedStrength });
+  candles.push({ color: selectedColor, strength: selectedStrength });
+  const seq = candles.map(c => c.color + c.strength).join(' ');
+  try { localStorage.setItem('cmd-backtest-sequence', seq); localStorage.setItem('cmd-backtest-timestamp', Date.now().toString()); } catch(e) {}
+  try { const bc = new BroadcastChannel('cmd-detector-vp'); bc.postMessage({ type: 'candle-added', sequence: seq, count: candles.length }); } catch(e) {}
+  selectedStrength = null; selectedColor = null;
+  document.querySelectorAll('.strength-btn, .color-btn').forEach(b => b.classList.remove('selected'));
+  updateAddButton();
+  document.getElementById('btnAdd').textContent = '➕ REGISTRAR Y VERIFICAR';
+  document.getElementById('btnAdd').style.background = '';
+  updateMAs(); generatePrediction(); updateHistory();
+}
+function updateHistory() {
+  const flow = document.getElementById('historyFlow');
+  const recent = candles.slice(-20);
+  flow.innerHTML = recent.map((c, i) => `<span class="candle-pill ${c.color.toLowerCase()}">${c.color}${c.strength}</span>`).join('');
+}
+
+// ─── Init ─────────────────────────────────────────────────────
+// Load patterns.js script if not already loaded
+(function loadPatterns() {
+  if (typeof PATTERN_LIBRARY === 'undefined') {
+    const s = document.createElement('script');
+    s.src = 'patterns.js';
+    s.onload = () => { console.log('✓ patterns.js cargado en backtesting'); loadFromIndex(); };
+    s.onerror = () => { console.warn('patterns.js no disponible, usando motor simplificado'); loadFromIndex(); };
+    document.head.appendChild(s);
+  } else {
+    loadFromIndex();
+  }
+})();
+setInterval(() => { if (autoSync) loadFromIndex(); }, 2000);
+</script>
+
+
+</body>
+</html>
