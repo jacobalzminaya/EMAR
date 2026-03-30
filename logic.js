@@ -3167,6 +3167,8 @@ function reset() {
   history = []; manualStrengths = {}; manualTrapIndex = null; pendingTrapIndex = null; originalTrendMA = null;
   cmdState = { phase: 'none', probability: 0, details: {} };
   reversalWatch = null;
+  // Clear bt sync keys so stale backtesting data doesn't re-inject after reset
+  try { localStorage.removeItem('cmd-bt-manual'); localStorage.removeItem('cmd-bt-manual-ts'); } catch(e) {}
   // FIX 1: Limpiar estado del cruce al reiniciar
   lastCrossDetectedAtLength = -1;
   lastCrossSnapshot = null;
