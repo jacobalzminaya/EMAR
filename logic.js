@@ -1884,9 +1884,9 @@ function analyzePattern(lastTwo, originalTwo = null, extremeCondition = null) {
   const winPat = lastTwo.join(''); // secuencia pura G/R del slice pasado
   
   // Log de competencia (para debugging, opcional)
-  console.log('🏆 Patrón ganador:', winner.name, '| P'+winner.priority, '| Confianza:', (winner.confidence*100).toFixed(1)+'%');
+  // // console.log('🏆 Patrón ganador:', winner.name, '| P'+winner.priority, '| Confianza:', (winner.confidence*100).toFixed(1)+'%');
   if (realCandidates.length > 1) {
-    console.log('   Competidores:', realCandidates.slice(1,3).map(c => `${c.name}(P${c.priority},${(c.confidence*100).toFixed(0)}%)`).join(', '));
+    // console.log('   Competidores:', realCandidates.slice(1,3).map(c => `${c.name}(P${c.priority},${(c.confidence*100).toFixed(0)}%)`).join(', '));
   }
   
   // Retornar en formato compatible con tu sistema actual
