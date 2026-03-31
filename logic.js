@@ -814,12 +814,19 @@ console.log('📐 Sistema Fibonacci cargado:', FIBONACCI_CONFIG.RETRACEMENT_LEVE
 
 // ===== CONFIGURACIÓN =====
 const MA_CONFIG = {
+  // Triple MA system para señal de siguiente vela:
+  //   MA9  = señal rápida (más sensible, primera en cruzar)
+  //   MA21 = confirmación intermedia
+  //   MA50 = tendencia de fondo (filtro)
+  // MA10 = trend principal del sistema (no cambia — es la base de CMD, extremos, etc.)
   crosses: [
-    { fast: 2, slow: 10, name: 'MA2/MA10', type: 'agresivo' },
-    { fast: 6, slow: 20, name: 'MA6/MA20', type: 'estandar' },
-    { fast: 10, slow: 20, name: 'MA10/MA20', type: 'confirmado' }
+    { fast: 9,  slow: 21, name: 'MA9/MA21',  type: 'rapido'     }, // señal rápida
+    { fast: 21, slow: 50, name: 'MA21/MA50', type: 'estandar'   }, // confirmación
+    { fast: 50, slow: 200,name: 'MA50/MA200',type: 'tendencia'  }  // filtro largo plazo
   ],
-  trend: { period: 10, name: 'MA10' }
+  trend:    { period: 10,  name: 'MA10'  }, // base CMD/extremos (sin cambio)
+  momentum: { period: 5,   name: 'MA5'   }, // momentum corto nuevo
+  short:    { period: 3,   name: 'MA3'   }  // señal muy corta
 };
 
 const EXTREME_THRESHOLDS = {
@@ -1384,7 +1391,7 @@ function _detectCandleTrap() {
   if (ratio < 0.5) { prob += 0.10; reasons.push(`Reversión débil vs tendencia previa (ratio ${ratio.toFixed(1)}x)`); }
 
   prob = Math.max(0, Math.min(prob, 0.97));
-  if (prob < 0.35) return null;
+  if (prob < 0.50) return null; // raised from 0.35 — reduces false positives
 
   const isBearTrap = current === 'G';
   const patStart   = Math.max(0, idx - Math.min(consecOpp, 5));
@@ -1446,6 +1453,25 @@ function calcShortMA() {
     if (data.length < 3) return null;
   }
   return (data.slice(-3).filter(h => h === 'G').length / 3) * 100;
+}
+
+// MA5 momentum — nuevo, entre MA3 y MA10
+function calcMA5() {
+  return calcMA(5, false);
+}
+
+// Triple alignment: MA9 > MA21 > MA50 (or inverse)
+// Returns: 'bull' | 'bear' | 'neutral' | null (insufficient data)
+function getTripleAlignment() {
+  const ma9  = calcMA(9,  false);
+  const ma21 = calcMA(21, false);
+  const ma50 = calcMA(50, false);
+  if (ma9 === null || ma21 === null || ma50 === null) return null;
+  if (ma9 > ma21 && ma21 > ma50) return { dir: 'bull', strength: 'strong', label: 'MA9>MA21>MA50 ▲▲▲' };
+  if (ma9 < ma21 && ma21 < ma50) return { dir: 'bear', strength: 'strong', label: 'MA9<MA21<MA50 ▼▼▼' };
+  if (ma9 > ma21 && ma21 < ma50) return { dir: 'bull', strength: 'weak',   label: 'MA9>MA21 (MA50 en contra)' };
+  if (ma9 < ma21 && ma21 > ma50) return { dir: 'bear', strength: 'weak',   label: 'MA9<MA21 (MA50 en contra)' };
+  return { dir: 'neutral', strength: 'none', label: 'MAs sin alineación' };
 }
 
 // ===== DETECCIÓN DE EXTREMO =====
@@ -2379,6 +2405,10 @@ function update() {
   var _sinDatos      = history.length < 3;
   var _datosLimitados = history.length >= 3 && history.length < 10;
 
+  // ── Triple alignment (MA9/MA21/MA50) ──────────────────────────────────
+  const _tripleAlign = getTripleAlignment();
+  const _ma5         = calcMA5();
+
   // PRIORIDAD 0: EXTREMO
   if (extremeCondition && (extremeCondition.type === 'extreme_bullish' || extremeCondition.type === 'extreme_bearish')) {
     showExtreme = true;
@@ -2732,9 +2762,11 @@ function update() {
           }
         } else {
           finalSignal = 'sell'; signalClass = 'signal-sell'; signalText = '✅ VENDER';
+          const _alignNote = _tripleAlign && _tripleAlign.dir === 'bear' && _tripleAlign.strength === 'strong'
+            ? ` · ${_tripleAlign.label}` : '';
           logicText = `✅ Death Cross ${activeCross.pair} — MA10: ${trendMA !== null ? trendMA.toFixed(0) : '?'}%` +
             (proj && proj.patternName ? ` · Patrón: ${proj.patternName} ${Math.round((proj.confidence||0)*100)}%` : '') +
-            ` · Verde ${_dcGConf}% vs Roja ${_dcRConf}%`;
+            ` · Verde ${_dcGConf}% vs Roja ${_dcRConf}%${_alignNote}`;
         }
       } else if (activeCross.crossType === 'golden') {
         const tc = detectCandleTrap();
@@ -2823,13 +2855,18 @@ function update() {
             _reversalWatchCooldownIdx = _p5WatchIdx;
           }
         } else {
-          finalSignal = 'buy'; signalClass = confPctG >= 70 ? 'signal-buy' : 'signal-buy-weak';
-          signalText = confPctG >= 70 ? '⬆️ COMPRAR' : '⬆️ COMPRAR DÉBIL';
+          // Boost by triple alignment
+          const _p5AlignBull = _tripleAlign && _tripleAlign.dir === 'bull';
+          const _p5ConfAdj   = _p5AlignBull ? Math.min(confPctG + 8, 95) : confPctG;
+          const _p5Threshold = _p5AlignBull ? 65 : 70;
+          finalSignal = 'buy'; signalClass = _p5ConfAdj >= _p5Threshold ? 'signal-buy' : 'signal-buy-weak';
+          signalText = _p5ConfAdj >= _p5Threshold ? '⬆️ COMPRAR' : '⬆️ COMPRAR DÉBIL';
           const _fibNote5g = getFibonacciSignalModifier();
-          logicText = `⬆️ ${proj.patternName || 'Patrón'} · ${confPctG}% confianza alcista` +
+          const _alignTag5g = _p5AlignBull && _tripleAlign.strength === 'strong' ? ` · ${_tripleAlign.label}` : '';
+          logicText = `⬆️ ${proj.patternName || 'Patrón'} · ${_p5ConfAdj}% confianza alcista` +
             (_fibNote5g && _fibNote5g.reason ? ` · 📐 Fib: ${_fibNote5g.reason}` : '') +
             (proj.allCandidates && proj.allCandidates.length > 1 ? ` · Refuerzan: ${proj.allCandidates.slice(1,3).map(p=>p.name+'('+Math.round(p.confidence*100)+'%)').join(', ')}` : '') +
-            ` · MA10: ${trendMA !== null ? trendMA.toFixed(0)+'%' : 'N/A'}`;
+            ` · MA10: ${trendMA !== null ? trendMA.toFixed(0)+'%' : 'N/A'}${_alignTag5g}`;
         }
       } else if (recentTrend.trend === 'bearish' && proj.ifR.sig === 'VENTA') {
         const confPctR = Math.round(proj.ifR.conf * 100);
@@ -2850,13 +2887,17 @@ function update() {
             _reversalWatchCooldownIdx = _p5aWatchIdx;
           }
         } else {
-          finalSignal = 'sell'; signalClass = confPctR >= 70 ? 'signal-sell' : 'signal-sell-weak';
-          signalText = confPctR >= 70 ? '⬇️ VENDER' : '⬇️ VENDER DÉBIL';
+          const _p5AlignBear = _tripleAlign && _tripleAlign.dir === 'bear';
+          const _p5ConfAdjR  = _p5AlignBear ? Math.min(confPctR + 8, 95) : confPctR;
+          const _p5ThreshR   = _p5AlignBear ? 65 : 70;
+          finalSignal = 'sell'; signalClass = _p5ConfAdjR >= _p5ThreshR ? 'signal-sell' : 'signal-sell-weak';
+          signalText = _p5ConfAdjR >= _p5ThreshR ? '⬇️ VENDER' : '⬇️ VENDER DÉBIL';
           const _fibNote5r = getFibonacciSignalModifier();
-          logicText = `⬇️ ${proj.patternName || 'Patrón'} · ${confPctR}% confianza bajista` +
+          const _alignTag5r = _p5AlignBear && _tripleAlign.strength === 'strong' ? ` · ${_tripleAlign.label}` : '';
+          logicText = `⬇️ ${proj.patternName || 'Patrón'} · ${_p5ConfAdjR}% confianza bajista` +
             (_fibNote5r && _fibNote5r.reason ? ` · 📐 Fib: ${_fibNote5r.reason}` : '') +
             (proj.allCandidates && proj.allCandidates.length > 1 ? ` · Refuerzan: ${proj.allCandidates.slice(1,3).map(p=>p.name+'('+Math.round(p.confidence*100)+'%)').join(', ')}` : '') +
-            ` · MA10: ${trendMA !== null ? trendMA.toFixed(0)+'%' : 'N/A'}`;
+            ` · MA10: ${trendMA !== null ? trendMA.toFixed(0)+'%' : 'N/A'}${_alignTag5r}`;
         }
       } else {
         logicText = `🤔 Patrón en conflicto con tendencia. Esperando.`;
