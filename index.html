@@ -1409,38 +1409,37 @@ hook();
     var curLen = typeof history!=='undefined' ? history.length : 0;
     if (curLen < 2) { _btCurrent=null; return; }
 
-    // SOLO procesar si la longitud del historial cambió (vela nueva registrada)
+    // Solo procesar si cambió el historial (vela nueva)
     if (curLen === _btPrevLen) {
-      // No hay vela nueva — solo actualizar la predicción mostrada sin registrar
       var sigOnly = _btReadSignal();
       if (sigOnly) _btShowPred(sigOnly);
       return;
     }
 
-    // Hay vela nueva: verificar predicción anterior si existía
+    // Hay vela nueva: verificar predicción anterior
     if (_btCurrent && curLen > _btPrevLen) {
-      var lastColor = history[curLen-1];
-      var isHit = _btCurrent.direction === lastColor;
-      // Only log predictions that were confident (not uncertain/esperar)
-      if (!_btCurrent.uncertain) {
-        _btLog.unshift({
-          id:     _btLog.length+1,
-          pred:   _btCurrent,
-          actual: { color:lastColor, strength: typeof getCandleStrength==='function'?getCandleStrength(curLen-1)||2:2 },
-          result: isHit ? 'hit' : 'miss'
-        });
-      }
+      var lastColor  = history[curLen-1];
+      var lastStr    = typeof getCandleStrength==='function' ? getCandleStrength(curLen-1)||2 : 2;
+      var isHit      = _btCurrent.direction === lastColor;
+
+      // Registrar TODAS las predicciones (ciertas e inciertas)
+      _btLog.unshift({
+        id:       _btLog.length + 1,
+        pred:     _btCurrent,
+        actual:   { color: lastColor, strength: lastStr },
+        result:   isHit ? 'hit' : 'miss'
+      });
       _btRenderLog();
     }
 
-    // Hacer nueva predicción para la SIGUIENTE vela
-    var sig = _btReadSignal();
+    // Nueva predicción para la siguiente vela
+    var sig    = _btReadSignal();
     _btCurrent = sig || null;
     _btPrevLen = curLen;
     if (sig) _btShowPred(sig);
   }
 
-  // ── Render log compacto ──────────────────────────────────────
+  // ── Render log con análisis detallado ───────────────────────
   function _btRenderLog() {
     var cont = document.getElementById('bt-log-entries');
     if (!cont) return;
@@ -1450,17 +1449,65 @@ hook();
       return;
     }
     cont.innerHTML = _btLog.map(function(e){
-      var iG  = e.pred.direction==='G', aG = e.actual.color==='G';
-      var pc  = iG ? '#00aa44' : '#aa2222';
-      var ac  = aG ? '#00aa44' : '#aa2222';
-      var hit = e.result==='hit';
-      return '<div style="display:flex;align-items:center;gap:5px;padding:3px 6px;border-bottom:1px solid #0a0a0a;font-size:.5em">' +
-        '<span style="color:#333;min-width:20px">#'+e.id+'</span>' +
-        '<span style="font-weight:700;color:'+pc+'">'+( iG?'🟢':'🔴')+' '+e.pred.confidence+'%</span>' +
-        '<span style="color:#222">→</span>' +
-        '<span style="font-weight:700;color:'+ac+'">'+( aG?'🟢':'🔴')+' F'+e.actual.strength+'</span>' +
-        '<span style="font-weight:900;color:'+(hit?'#006622':'#661111')+'">'+( hit?'✓':'✗')+'</span>' +
-        '<span style="color:#1a1a1a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.pred.reason.slice(0,50)+'</span>' +
+      var iG   = e.pred.direction === 'G';
+      var aG   = e.actual.color  === 'G';
+      var hit  = e.result === 'hit';
+      var unc  = e.pred.uncertain;
+      var pc   = iG  ? (unc ? '#005522' : '#00cc55') : (unc ? '#551111' : '#cc2222');
+      var ac   = aG  ? '#00cc55' : '#cc2222';
+      var rc   = hit ? '#003311' : '#330011';
+
+      // ── Análisis de fallo ──────────────────────────────────
+      var failAnalysis = '';
+      if (!hit) {
+        var reasons = [];
+        var r = e.pred.reason || '';
+        var sig = e.pred.signal || '';
+        var conf = e.pred.confidence || 0;
+
+        // ¿Señal contraria era fuerte?
+        if (conf < 70) reasons.push('Confianza baja ('+conf+'%) — señal débil desde el inicio');
+        if (unc)       reasons.push('Predicción incierta (⚠️) — proyecciones muy parejas');
+
+        // ¿Qué decía la lógica?
+        if (/ESPERAR|CONFLICTO|conflicto/i.test(sig))    reasons.push('Señal era ESPERAR/CONFLICTO — no había dirección clara');
+        if (/TRAMPA|TRAP/i.test(r) || /TRAP/i.test(sig)) reasons.push('Sistema detectó trampa pero el mercado no la confirmó');
+        if (/EXTREMO|SOBRECOMPRA|SOBREVENTA/i.test(r))   reasons.push('Señal de extremo: el mercado se mantuvo en esa zona más tiempo del esperado');
+        if (/MANIPULACIÓN/i.test(r))                     reasons.push('Fase manipulación activa — señal bloqueada incorrectamente');
+        if (/Death Cross|Golden Cross/i.test(r))         reasons.push('Cruce MA en zona neutra — cruce débil sin tendencia definida');
+        if (/insuficientes|Solo \d/i.test(r))            reasons.push('Datos insuficientes — predicción sin base estadística');
+        if (/Fibonacci|161\.8|138\.2/i.test(r))          reasons.push('Nivel Fibonacci de resistencia/soporte actuó como barrera');
+        if (/Reversión/i.test(sig) && !iG && aG)         reasons.push('Reversión bajista predicha pero el mercado rebotó alcista');
+        if (/Reversión/i.test(sig) && iG && !aG)         reasons.push('Reversión alcista predicha pero el mercado continuó bajista');
+
+        // Fuerza de la vela real
+        if (e.actual.strength === 1 || e.actual.strength === 1.5) {
+          reasons.push('Vela real fue débil (F'+e.actual.strength+') — posible doji/ruido, no una señal clara');
+        } else if (e.actual.strength === 4) {
+          reasons.push('Vela real fue F4 Engulfing — movimiento inesperadamente fuerte');
+        }
+
+        if (!reasons.length) reasons.push('El contexto de mercado invalidó la señal — revisar secuencia completa');
+
+        failAnalysis = '<div style="margin-top:4px;padding:4px 6px;background:#1a0808;border-left:2px solid #551111;border-radius:3px">' +
+          '<div style="font-size:.9em;color:#882222;font-weight:700;margin-bottom:2px">⚠️ Por qué falló:</div>' +
+          reasons.map(function(r){ return '<div style="color:#664444;margin-bottom:1px">• '+r+'</div>'; }).join('') +
+          '<div style="color:#443333;margin-top:3px;font-style:italic">Señal: '+e.pred.signal.slice(0,60)+'</div>' +
+          '</div>';
+      }
+
+      return '<div style="padding:5px 6px;border-bottom:1px solid #0d0d0d;background:'+(hit?'#050f05':'#0f0505')+'">' +
+        // Header: id + pred + resultado + actual
+        '<div style="display:flex;align-items:center;gap:4px;font-size:.52em">' +
+          '<span style="color:#2a2a2a;min-width:22px;font-weight:700">#'+e.id+'</span>' +
+          (unc ? '<span style="color:#444" title="Señal incierta">⚠️</span>' : '') +
+          '<span style="font-weight:900;color:'+pc+'">'+(iG?'🟢':'🔴')+' '+e.pred.confidence+'%</span>' +
+          '<span style="color:#1e1e1e">→</span>' +
+          '<span style="font-weight:900;color:'+ac+'">'+(aG?'🟢':'🔴')+' F'+e.actual.strength+'</span>' +
+          '<span style="font-weight:900;font-size:1.1em;color:'+(hit?'#00aa33':'#aa1111')+'">'+(hit?' ✓':' ✗')+'</span>' +
+          '<span style="color:#1e1e1e;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:4px">'+e.pred.reason.slice(0,60)+'</span>' +
+        '</div>' +
+        failAnalysis +
       '</div>';
     }).join('');
   }
