@@ -524,9 +524,9 @@ function hookLogicUpdate() {
   _btOrigUpdate = update;
   window.update = function() {
     try { _btOrigUpdate.apply(this, arguments); } catch(e) { console.error('[bt/update]', e); }
-    // Always capture signal after update — _insideAdd just determines if
-    // we're in the middle of adding (used elsewhere), not gate for capture
-    captureSignal();
+    // Only capture when we triggered the update (adding a candle)
+    // Prevents saturation from index-sync updates running captureSignal
+    if (_insideAdd) captureSignal();
   };
   console.log('✓ backtesting: logic.js update() hookeado');
   _initFromStorage();
@@ -539,11 +539,11 @@ function _initFromStorage() {
     _suppressSyncWrite = true;
     _applySequence(seq, 'init');
     _suppressSyncWrite = false;
-    // If history was already in sync (no new candles added), still need to
-    // capture the current signal — force one update() call
-    if (typeof update === 'function') {
-      try { update(); } catch(e) {}
-    }
+    // captureSignal will fire via the hooked update() inside quickAddCandle
+    // For already-synced case, do one deferred capture
+    setTimeout(function() {
+      if (typeof history !== 'undefined' && history.length > 0) captureSignal();
+    }, 200);
   }
   _refreshUI();
 }
@@ -569,10 +569,8 @@ function _applySequence(seq, src) {
   var parsed = _parseSeq(seq);
   var histLen = (typeof history !== 'undefined') ? history.length : candles.length;
   if (parsed.length <= histLen) {
-    // Already in sync — just update candles array and capture current signal
+    // Already in sync — just sync candles array for UI
     if (parsed.length > candles.length) candles = parsed.slice();
-    // Trigger update so captureSignal runs and shows current prediction
-    if (typeof update === 'function') try { update(); } catch(e) {}
     return;
   }
   _lastProcessedSequence = seq;
@@ -631,6 +629,8 @@ function doAddCandle(color, str) {
 
   _writeSeq();
   _refreshUI();
+  // Explicit capture after manual add (in case hook missed it)
+  captureSignal();
 }
 
 // ── Capture signal from logic.js DOM after update() ────────────
