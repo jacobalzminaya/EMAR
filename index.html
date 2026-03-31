@@ -1315,7 +1315,7 @@ hook();
     } catch(e) {}
   }
   // Poll every 2s + listen to storage events
-  setInterval(updateBtPred, 2000);
+  // Removed 2s poll - storage events + BroadcastChannel are sufficient
   window.addEventListener('storage', function(e){ if(e.key==='cmd-bt-prediction') updateBtPred(); });
   if (typeof BroadcastChannel !== 'undefined') {
     var bc = new BroadcastChannel('cmd-bt-channel');
