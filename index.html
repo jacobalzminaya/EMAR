@@ -1449,7 +1449,7 @@ hook();
       cont.innerHTML = '<div style="font-size:.52em;color:#252525;padding:8px;text-align:center">Registra velas para ver predicciones</div>';
       return;
     }
-    cont.innerHTML = _btLog.slice(0,30).map(function(e){
+    cont.innerHTML = _btLog.map(function(e){
       var iG  = e.pred.direction==='G', aG = e.actual.color==='G';
       var pc  = iG ? '#00aa44' : '#aa2222';
       var ac  = aG ? '#00aa44' : '#aa2222';
