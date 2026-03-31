@@ -1319,20 +1319,47 @@ hook();
     var cl  = el.cloneNode(true);
     cl.querySelectorAll('div,span').forEach(function(d){ d.remove(); });
     var txt = cl.textContent.trim();
-
-    var dir;
-    if (/signal-buy|signal-accumulation|signal-strong-reversal/.test(cls))  dir = 'G';
-    else if (/signal-sell|signal-distribution/.test(cls))                   dir = 'R';
-    else {
-      var gc = parseFloat((document.getElementById('proj-g-conf')||{}).textContent)||0;
-      var rc = parseFloat((document.getElementById('proj-r-conf')||{}).textContent)||0;
-      dir = gc >= rc ? 'G' : 'R';
-    }
-    var gc2 = parseFloat((document.getElementById('proj-g-conf')||{}).textContent)||50;
-    var rc2 = parseFloat((document.getElementById('proj-r-conf')||{}).textContent)||50;
-    var conf   = Math.max(50, Math.round(dir==='G' ? gc2 : rc2));
     var reason = ((document.getElementById('logic-text')||{}).textContent||'').slice(0,90);
-    return { direction:dir, confidence:conf, reason:reason, signal:txt };
+
+    // Skip predictions when data is insufficient
+    if (/insuficientes|Solo \d+ de 10|Registra al menos/i.test(reason)) return null;
+
+    // Read actual projection signals and confidences
+    var gSig  = (document.getElementById('proj-g-sig')||{}).textContent||'';
+    var rSig  = (document.getElementById('proj-r-sig')||{}).textContent||'';
+    var gConf = parseFloat((document.getElementById('proj-g-conf')||{}).textContent)||0;
+    var rConf = parseFloat((document.getElementById('proj-r-conf')||{}).textContent)||0;
+
+    var dir, conf;
+
+    // Priority 1: clear directional signal from main-signal class
+    if (/signal-buy|signal-accumulation|signal-strong-reversal/.test(cls)) {
+      dir = 'G'; conf = Math.max(gConf, rConf > gConf ? rConf : gConf);
+    } else if (/signal-sell|signal-distribution/.test(cls)) {
+      dir = 'R'; conf = Math.max(gConf, rConf);
+    } else {
+      // ESPERAR or CONFLICT — use projection branches
+      var gIsBuy  = /COMPRA/i.test(gSig);
+      var rIsSell = /VENTA/i.test(rSig);
+
+      if (gIsBuy && rIsSell) {
+        // Both directional — pick the dominant one
+        if (gConf >= rConf + 10) { dir = 'G'; conf = gConf; }
+        else if (rConf >= gConf + 10) { dir = 'R'; conf = rConf; }
+        else return null; // too close to call — skip
+      } else if (gIsBuy && !rIsSell) {
+        dir = 'G'; conf = gConf;
+      } else if (rIsSell && !gIsBuy) {
+        dir = 'R'; conf = rConf;
+      } else {
+        return null; // both ESPERAR — skip, no actionable prediction
+      }
+    }
+
+    // Minimum confidence threshold — below 60% is noise
+    if (!conf || conf < 60) return null;
+
+    return { direction: dir, confidence: Math.round(conf), reason: reason, signal: txt };
   }
 
   // ── Actualizar barra de predicción ──────────────────────────
