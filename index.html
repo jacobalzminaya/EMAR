@@ -1314,52 +1314,55 @@ hook();
   // ── Leer señal de logic.js DOM ──────────────────────────────
   function _btReadSignal() {
     var el = document.getElementById('main-signal');
-    if (!el) return null;
+    if (!el) return { direction:'G', confidence:50, reason:'Sin datos', signal:'', uncertain:true };
     var cls = (el.className || '');
     var cl  = el.cloneNode(true);
     cl.querySelectorAll('div,span').forEach(function(d){ d.remove(); });
     var txt = cl.textContent.trim();
     var reason = ((document.getElementById('logic-text')||{}).textContent||'').slice(0,90);
 
-    // Skip predictions when data is insufficient
-    if (/insuficientes|Solo \d+ de 10|Registra al menos/i.test(reason)) return null;
-
-    // Read actual projection signals and confidences
+    // Read projection signals and confidences
     var gSig  = (document.getElementById('proj-g-sig')||{}).textContent||'';
     var rSig  = (document.getElementById('proj-r-sig')||{}).textContent||'';
     var gConf = parseFloat((document.getElementById('proj-g-conf')||{}).textContent)||0;
     var rConf = parseFloat((document.getElementById('proj-r-conf')||{}).textContent)||0;
 
-    var dir, conf;
+    var dir, conf, uncertain = false;
 
-    // Priority 1: clear directional signal from main-signal class
+    // Priority 1: clear directional signal from logic.js class
     if (/signal-buy|signal-accumulation|signal-strong-reversal/.test(cls)) {
-      dir = 'G'; conf = Math.max(gConf, rConf > gConf ? rConf : gConf);
+      dir = 'G'; conf = gConf || 65;
     } else if (/signal-sell|signal-distribution/.test(cls)) {
-      dir = 'R'; conf = Math.max(gConf, rConf);
+      dir = 'R'; conf = rConf || 65;
     } else {
-      // ESPERAR or CONFLICT — use projection branches
+      // ESPERAR/CONFLICT: use projection branches
       var gIsBuy  = /COMPRA/i.test(gSig);
       var rIsSell = /VENTA/i.test(rSig);
 
       if (gIsBuy && rIsSell) {
-        // Both directional — pick the dominant one
-        if (gConf >= rConf + 10) { dir = 'G'; conf = gConf; }
-        else if (rConf >= gConf + 10) { dir = 'R'; conf = rConf; }
-        else return null; // too close to call — skip
-      } else if (gIsBuy && !rIsSell) {
-        dir = 'G'; conf = gConf;
-      } else if (rIsSell && !gIsBuy) {
-        dir = 'R'; conf = rConf;
+        if (gConf > rConf) { dir='G'; conf=gConf; }
+        else               { dir='R'; conf=rConf; }
+        if (Math.abs(gConf-rConf) < 12) uncertain = true;
+      } else if (gIsBuy) {
+        dir='G'; conf=gConf; uncertain=true;
+      } else if (rIsSell) {
+        dir='R'; conf=rConf; uncertain=true;
       } else {
-        return null; // both ESPERAR — skip, no actionable prediction
+        // Both ESPERAR — pick by raw conf value, mark as uncertain
+        dir = gConf >= rConf ? 'G' : 'R';
+        conf = Math.max(gConf, rConf) || 50;
+        uncertain = true;
       }
     }
 
-    // Minimum confidence threshold — below 60% is noise
-    if (!conf || conf < 60) return null;
+    // Datos insuficientes: still show direction but mark uncertain
+    if (/insuficientes|Solo \d+ de 10|Registra al menos/i.test(reason)) {
+      uncertain = true;
+      conf = Math.min(conf||50, 55);
+    }
 
-    return { direction: dir, confidence: Math.round(conf), reason: reason, signal: txt };
+    conf = Math.round(conf) || 50;
+    return { direction: dir, confidence: conf, reason: reason, signal: txt, uncertain: uncertain };
   }
 
   // ── Actualizar barra de predicción ──────────────────────────
@@ -1367,7 +1370,9 @@ hook();
     if (!pred) return;
     var isG = pred.direction === 'G';
     var col = isG ? '#00ff88' : '#ff4444';
-    var lbl = isG ? '🟢 VERDE' : '🔴 ROJA';
+    // Uncertain predictions: dimmer color + warning icon
+    if (pred.uncertain) col = isG ? '#006633' : '#661111';
+    var lbl = (pred.uncertain ? '⚠️ ' : '') + (isG ? '🟢 VERDE' : '🔴 ROJA');
     var el = document.getElementById('bt-pred-color');
     var cf = document.getElementById('bt-pred-conf');
     var fi = document.getElementById('bt-pred-fill');
@@ -1377,7 +1382,7 @@ hook();
     if (cf) { cf.textContent = pred.confidence+'%'; cf.style.color = col; }
     if (fi) { fi.style.width = pred.confidence+'%'; fi.style.background = col; }
     if (re) re.textContent = pred.reason || '';
-    if (bx) bx.style.background = isG ? 'rgba(0,255,136,.04)' : 'rgba(255,68,68,.04)';
+    if (bx) bx.style.background = isG ? 'rgba(0,255,136,.03)' : 'rgba(255,68,68,.03)';
     _btUpdateStats();
   }
 
@@ -1404,27 +1409,35 @@ hook();
     var curLen = typeof history!=='undefined' ? history.length : 0;
     if (curLen < 2) { _btCurrent=null; return; }
 
-    // Si hay vela nueva desde que predijimos → verificar
+    // SOLO procesar si la longitud del historial cambió (vela nueva registrada)
+    if (curLen === _btPrevLen) {
+      // No hay vela nueva — solo actualizar la predicción mostrada sin registrar
+      var sigOnly = _btReadSignal();
+      if (sigOnly) _btShowPred(sigOnly);
+      return;
+    }
+
+    // Hay vela nueva: verificar predicción anterior si existía
     if (_btCurrent && curLen > _btPrevLen) {
-      // La última vela es el resultado real
       var lastColor = history[curLen-1];
       var isHit = _btCurrent.direction === lastColor;
-      _btLog.unshift({
-        id:     _btLog.length+1,
-        pred:   _btCurrent,
-        actual: { color:lastColor, strength: typeof getCandleStrength==='function'?getCandleStrength(curLen-1)||2:2 },
-        result: isHit ? 'hit' : 'miss'
-      });
+      // Only log predictions that were confident (not uncertain/esperar)
+      if (!_btCurrent.uncertain) {
+        _btLog.unshift({
+          id:     _btLog.length+1,
+          pred:   _btCurrent,
+          actual: { color:lastColor, strength: typeof getCandleStrength==='function'?getCandleStrength(curLen-1)||2:2 },
+          result: isHit ? 'hit' : 'miss'
+        });
+      }
       _btRenderLog();
     }
 
-    // Hacer nueva predicción para la SIGUIENTE vela (aún no registrada)
+    // Hacer nueva predicción para la SIGUIENTE vela
     var sig = _btReadSignal();
-    if (sig) {
-      _btCurrent  = sig;
-      _btPrevLen  = curLen;
-      _btShowPred(sig);
-    }
+    _btCurrent = sig || null;
+    _btPrevLen = curLen;
+    if (sig) _btShowPred(sig);
   }
 
   // ── Render log compacto ──────────────────────────────────────
