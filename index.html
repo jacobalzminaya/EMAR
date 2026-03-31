@@ -152,6 +152,7 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
 /* ── Log section ── */
 .log-bar{display:flex;align-items:center;gap:6px;padding:5px 9px;border-bottom:1px solid #0e0e0e;cursor:pointer;transition:background .15s;flex-shrink:0;user-select:none}
 .log-bar:hover{background:#0b0b0b}
+#bt-log-bar:hover{background:#0b0b0b}
 .log-lbl{font-size:.56em;color:#2a2a2a;text-transform:uppercase;letter-spacing:.06em;flex:1}
 .log-arr{font-size:.62em;color:#1e1e1e;transition:transform .2s}
 .log-arr.open{transform:rotate(180deg)}
@@ -585,16 +586,30 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
       <div class="hist-row" id="hrow"></div>
     </div>
 
-    <!-- Backtesting prediction box (synced from backtesting.html logic) -->
-    <div id="bt-pred-box" style="margin:0;padding:6px 10px;border-bottom:1px solid #0e0e0e;flex-shrink:0;display:flex;align-items:center;gap:8px;background:#070707;">
-      <div style="font-size:.52em;color:#252525;font-weight:700;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;">Próxima vela</div>
-      <div id="bt-pred-color" style="font-size:1.4em;font-weight:900;color:#444;line-height:1;">–</div>
-      <div id="bt-pred-conf" style="font-size:.65em;font-weight:700;color:#444;">–</div>
+    <!-- ── BACKTESTING integrado en index ── -->
+    <!-- Barra de predicción próxima vela -->
+    <div id="bt-pred-box" style="margin:0;padding:5px 10px;border-bottom:1px solid #0e0e0e;flex-shrink:0;display:flex;align-items:center;gap:8px;background:#070707;">
+      <div style="font-size:.48em;color:#252525;font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Próxima</div>
+      <div id="bt-pred-color" style="font-size:1.3em;font-weight:900;color:#444;line-height:1;">–</div>
+      <div id="bt-pred-conf"  style="font-size:.62em;font-weight:700;color:#444;">–</div>
       <div style="flex:1;height:3px;background:#111;border-radius:2px;overflow:hidden;">
         <div id="bt-pred-fill" style="height:100%;width:0%;border-radius:2px;transition:width .4s;"></div>
       </div>
-      <div id="bt-pred-reason" style="font-size:.52em;color:#333;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">–</div>
-      <div id="bt-acc-badge" style="font-size:.52em;padding:2px 6px;border-radius:8px;background:#111;border:1px solid #1e1e1e;color:#444;white-space:nowrap;">–</div>
+      <div id="bt-pred-reason" style="font-size:.48em;color:#333;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">–</div>
+      <div id="bt-acc-badge"  style="font-size:.48em;padding:2px 6px;border-radius:8px;background:#111;border:1px solid #1e1e1e;color:#444;white-space:nowrap;">–</div>
+    </div>
+    <!-- Log de verificación (colapsable) -->
+    <div id="bt-log-bar" onclick="toggleBtLog()" style="display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #0e0e0e;cursor:pointer;background:#060606;flex-shrink:0;transition:background .15s;">
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-size:.52em;color:#2a2a2a;font-weight:700;text-transform:uppercase;letter-spacing:.05em;">📊 Backtesting</span>
+        <span id="bt-stats-inline" style="font-size:.48em;color:#1e1e1e;">–</span>
+      </div>
+      <span id="bt-log-arr" style="font-size:.55em;color:#2a2a2a;">▼</span>
+    </div>
+    <div id="bt-log-drawer" style="display:none;flex-shrink:0;max-height:200px;overflow-y:auto;border-bottom:1px solid #0e0e0e;background:#050505;">
+      <div id="bt-log-entries" style="padding:4px 6px;">
+        <div style="font-size:.52em;color:#252525;padding:8px;text-align:center;">Registra velas para ver el log de predicciones</div>
+      </div>
     </div>
 
     <!-- Log toggle -->
@@ -1284,51 +1299,159 @@ function hook(){
 }
 hook();
 
-// ─── Backtesting prediction receiver ───────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// BACKTESTING INTEGRADO — motor en el propio index.html
+// Predice la próxima vela usando logic.js (señal real)
+// Verifica automáticamente cuando se registra la siguiente vela
+// No necesita backtesting.html separado
+// ═══════════════════════════════════════════════════════════════
 (function(){
-  function updateBtPred() {
-    var raw = localStorage.getItem('cmd-bt-prediction');
-    if (!raw) return;
-    try {
-      var p = JSON.parse(raw);
-      var isG   = p.direction === 'G';
-      var col   = isG ? '#00ff88' : '#ff4444';
-      var label = isG ? '🟢 VERDE' : '🔴 ROJA';
-      var el    = document.getElementById('bt-pred-color');
-      var cf    = document.getElementById('bt-pred-conf');
-      var fi    = document.getElementById('bt-pred-fill');
-      var re    = document.getElementById('bt-pred-reason');
-      var ac    = document.getElementById('bt-acc-badge');
-      var bx    = document.getElementById('bt-pred-box');
-      if (el) { el.textContent = label; el.style.color = col; }
-      if (cf) { cf.textContent = (p.confidence||0)+'%'; cf.style.color = col; }
-      if (fi) { fi.style.width = (p.confidence||0)+'%'; fi.style.background = col; }
-      if (re) re.textContent = p.reason || '';
-      if (ac) {
-        var acc = p.accuracy != null ? p.accuracy+'%' : '–';
-        var hits = p.hits != null ? p.hits+'✓' : '';
-        ac.textContent = hits ? hits+' '+acc : acc;
-        ac.style.color = p.accuracy >= 70 ? '#00ff88' : p.accuracy >= 50 ? '#ffd700' : '#ff4444';
-        ac.style.borderColor = ac.style.color + '44';
-      }
-      if (bx) bx.style.background = isG ? 'rgba(0,255,136,.04)' : 'rgba(255,68,68,.04)';
-    } catch(e) {}
-  }
-  // Poll every 2s + listen to storage events
-  // Removed 2s poll - storage events + BroadcastChannel are sufficient
-  window.addEventListener('storage', function(e){ if(e.key==='cmd-bt-prediction') updateBtPred(); });
-  if (typeof BroadcastChannel !== 'undefined') {
-    var bc = new BroadcastChannel('cmd-bt-channel');
-    bc.onmessage = function(e){ if(e.data && e.data.type==='prediction') updateBtPred(); };
-  }
-  updateBtPred();
 
-  // ── Receive candles FROM backtesting → register in index ──
-  // Only registers candles added AFTER this session started (no stale data)
-  // Uses session timestamp to filter old backtesting entries
-  // ── BT → Index sync handled by logic.js setupEditListener ──
-  // logic.js listens to cmd-bt-seq + BroadcastChannel bt-seq-update
-  // Nothing needed here — avoids double-handling and loops
+  var _btLog      = [];       // historial de predicciones vs resultados
+  var _btCurrent  = null;     // predicción activa (pendiente de verificar)
+  var _btPrevLen  = 0;        // cuántas velas había cuando se hizo la predicción
+
+  // ── Leer señal de logic.js DOM ──────────────────────────────
+  function _btReadSignal() {
+    var el = document.getElementById('main-signal');
+    if (!el) return null;
+    var cls = (el.className || '');
+    var cl  = el.cloneNode(true);
+    cl.querySelectorAll('div,span').forEach(function(d){ d.remove(); });
+    var txt = cl.textContent.trim();
+
+    var dir;
+    if (/signal-buy|signal-accumulation|signal-strong-reversal/.test(cls))  dir = 'G';
+    else if (/signal-sell|signal-distribution/.test(cls))                   dir = 'R';
+    else {
+      var gc = parseFloat((document.getElementById('proj-g-conf')||{}).textContent)||0;
+      var rc = parseFloat((document.getElementById('proj-r-conf')||{}).textContent)||0;
+      dir = gc >= rc ? 'G' : 'R';
+    }
+    var gc2 = parseFloat((document.getElementById('proj-g-conf')||{}).textContent)||50;
+    var rc2 = parseFloat((document.getElementById('proj-r-conf')||{}).textContent)||50;
+    var conf   = Math.max(50, Math.round(dir==='G' ? gc2 : rc2));
+    var reason = ((document.getElementById('logic-text')||{}).textContent||'').slice(0,90);
+    return { direction:dir, confidence:conf, reason:reason, signal:txt };
+  }
+
+  // ── Actualizar barra de predicción ──────────────────────────
+  function _btShowPred(pred) {
+    if (!pred) return;
+    var isG = pred.direction === 'G';
+    var col = isG ? '#00ff88' : '#ff4444';
+    var lbl = isG ? '🟢 VERDE' : '🔴 ROJA';
+    var el = document.getElementById('bt-pred-color');
+    var cf = document.getElementById('bt-pred-conf');
+    var fi = document.getElementById('bt-pred-fill');
+    var re = document.getElementById('bt-pred-reason');
+    var bx = document.getElementById('bt-pred-box');
+    if (el) { el.textContent = lbl; el.style.color = col; }
+    if (cf) { cf.textContent = pred.confidence+'%'; cf.style.color = col; }
+    if (fi) { fi.style.width = pred.confidence+'%'; fi.style.background = col; }
+    if (re) re.textContent = pred.reason || '';
+    if (bx) bx.style.background = isG ? 'rgba(0,255,136,.04)' : 'rgba(255,68,68,.04)';
+    _btUpdateStats();
+  }
+
+  // ── Actualizar badge de accuracy ────────────────────────────
+  function _btUpdateStats() {
+    var hits  = _btLog.filter(function(e){ return e.result==='hit'; }).length;
+    var total = _btLog.length;
+    var acc   = total>0 ? Math.round(hits/total*100) : null;
+    var ac    = document.getElementById('bt-acc-badge');
+    var si    = document.getElementById('bt-stats-inline');
+    if (ac) {
+      ac.textContent   = total>0 ? hits+'✓ '+(acc)+'%' : '–';
+      ac.style.color   = acc===null?'#444': acc>=70?'#00ff88': acc>=50?'#ffd700':'#ff4444';
+      ac.style.borderColor = ac.style.color+'44';
+    }
+    if (si) {
+      si.textContent = total>0 ? hits+' aciertos / '+total+' — '+acc+'%' : '–';
+      si.style.color = acc===null?'#1e1e1e': acc>=70?'#00aa44': acc>=50?'#886600':'#882222';
+    }
+  }
+
+  // ── Verificar predicción anterior y hacer nueva ─────────────
+  function _btOnUpdate() {
+    var curLen = typeof history!=='undefined' ? history.length : 0;
+    if (curLen < 2) { _btCurrent=null; return; }
+
+    // Si hay vela nueva desde que predijimos → verificar
+    if (_btCurrent && curLen > _btPrevLen) {
+      // La última vela es el resultado real
+      var lastColor = history[curLen-1];
+      var isHit = _btCurrent.direction === lastColor;
+      _btLog.unshift({
+        id:     _btLog.length+1,
+        pred:   _btCurrent,
+        actual: { color:lastColor, strength: typeof getCandleStrength==='function'?getCandleStrength(curLen-1)||2:2 },
+        result: isHit ? 'hit' : 'miss'
+      });
+      _btRenderLog();
+    }
+
+    // Hacer nueva predicción para la SIGUIENTE vela (aún no registrada)
+    var sig = _btReadSignal();
+    if (sig) {
+      _btCurrent  = sig;
+      _btPrevLen  = curLen;
+      _btShowPred(sig);
+    }
+  }
+
+  // ── Render log compacto ──────────────────────────────────────
+  function _btRenderLog() {
+    var cont = document.getElementById('bt-log-entries');
+    if (!cont) return;
+    _btUpdateStats();
+    if (!_btLog.length) {
+      cont.innerHTML = '<div style="font-size:.52em;color:#252525;padding:8px;text-align:center">Registra velas para ver predicciones</div>';
+      return;
+    }
+    cont.innerHTML = _btLog.slice(0,30).map(function(e){
+      var iG  = e.pred.direction==='G', aG = e.actual.color==='G';
+      var pc  = iG ? '#00aa44' : '#aa2222';
+      var ac  = aG ? '#00aa44' : '#aa2222';
+      var hit = e.result==='hit';
+      return '<div style="display:flex;align-items:center;gap:5px;padding:3px 6px;border-bottom:1px solid #0a0a0a;font-size:.5em">' +
+        '<span style="color:#333;min-width:20px">#'+e.id+'</span>' +
+        '<span style="font-weight:700;color:'+pc+'">'+( iG?'🟢':'🔴')+' '+e.pred.confidence+'%</span>' +
+        '<span style="color:#222">→</span>' +
+        '<span style="font-weight:700;color:'+ac+'">'+( aG?'🟢':'🔴')+' F'+e.actual.strength+'</span>' +
+        '<span style="font-weight:900;color:'+(hit?'#006622':'#661111')+'">'+( hit?'✓':'✗')+'</span>' +
+        '<span style="color:#1a1a1a;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+e.pred.reason.slice(0,50)+'</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ── Toggle log drawer ────────────────────────────────────────
+  window.toggleBtLog = function() {
+    var d   = document.getElementById('bt-log-drawer');
+    var arr = document.getElementById('bt-log-arr');
+    if (!d) return;
+    var open = d.style.display === 'none';
+    d.style.display = open ? 'block' : 'none';
+    if (arr) arr.textContent = open ? '▲' : '▼';
+    if (open) _btRenderLog();
+  };
+
+  // ── Hook logic.js update() ───────────────────────────────────
+  // Wait for update() to be available then wrap it
+  function _btHook() {
+    if (typeof update !== 'function') { setTimeout(_btHook, 100); return; }
+    var _orig = update;
+    window.update = function() {
+      _orig.apply(this, arguments);
+      // Use requestAnimationFrame so DOM is settled before we read it
+      requestAnimationFrame(_btOnUpdate);
+    };
+    // Initial read
+    requestAnimationFrame(_btOnUpdate);
+    console.log('✓ Backtesting integrado en index.html');
+  }
+  _btHook();
+
 })();
 
 window.toggleLog=function(){
