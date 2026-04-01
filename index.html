@@ -54,6 +54,22 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
 .wbr.g.sel{background:#00dd66;border-color:#00ff88;box-shadow:0 0 10px rgba(0,255,136,.55)}
 .wbr.r.sel{background:#cc2a2a;border-color:#ff3333;box-shadow:0 0 10px rgba(255,68,68,.55)}
 
+/* ── VS Panel: Sistema vs IA ── */
+#ia-btn:hover{ background:#111133!important; border-color:#2244cc!important; color:#5566ff!important; }
+#ia-btn.loading{ background:#0a0a22!important; border-color:#1133aa!important; color:#2244cc!important; cursor:wait!important; }
+#ia-btn.active{ background:#001144!important; border-color:#0044ff!important; color:#4488ff!important; }
+/* IA result colors */
+#vs-ia.ia-bull{ border-left:2px solid #00ff8822; background:rgba(0,255,136,.02); }
+#vs-ia.ia-bear{ border-left:2px solid #ff444422; background:rgba(255,68,68,.02); }
+/* Agree/Disagree indicator */
+#vs-agree{
+  font-size:.4em;font-weight:700;text-align:center;
+  padding:2px 0;border-top:1px solid #0e0e0e;
+  letter-spacing:.05em;
+}
+/* IA accuracy tracking */
+#ia-acc-badge{ transition:all .3s; }
+
 /* ── CONFLUENCIA states on WiFi bars ── */
 @keyframes wifi-pulse-g{
   0%,100%{box-shadow:0 0 6px rgba(0,255,136,.5)}
@@ -857,34 +873,70 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
       <div class="entrada-checks" id="entrada-checks"></div>
     </div>
 
-    <!-- ── BACKTESTING integrado en index ── -->
-    <!-- Barra de predicción próxima vela -->
-    <div id="bt-pred-box" style="margin:0;padding:5px 10px;border-bottom:1px solid #0e0e0e;flex-shrink:0;background:#070707;">
-      <!-- Row 1: main prediction -->
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div style="font-size:.48em;color:#252525;font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Próxima</div>
-        <div id="bt-pred-color" style="font-size:1.3em;font-weight:900;color:#444;line-height:1;">–</div>
-        <div id="bt-pred-conf"  style="font-size:.62em;font-weight:700;color:#444;">–</div>
-        <div style="flex:1;height:3px;background:#111;border-radius:2px;overflow:hidden;">
-          <div id="bt-pred-fill" style="height:100%;width:0%;border-radius:2px;transition:width .4s;"></div>
-        </div>
-        <div id="bt-pred-reason" style="font-size:.48em;color:#333;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">–</div>
-        <div id="bt-acc-badge"  style="font-size:.48em;padding:2px 6px;border-radius:8px;background:#111;border:1px solid #1e1e1e;color:#444;white-space:nowrap;">–</div>
+    <!-- ── PANEL COMPARACION: Sistema vs IA ── -->
+    <div id="vs-panel" style="margin:0;border-bottom:1px solid #0e0e0e;flex-shrink:0;background:#060606;">
+
+      <!-- Header: titulo + boton IA -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #0e0e0e;">
+        <div style="font-size:.46em;color:#2a2a2a;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Próxima vela · Comparación</div>
+        <button id="ia-btn" onclick="iaAnalizar()"
+          style="font-size:.44em;padding:2px 8px;background:#0a0a18;border:1px solid #1a1a44;border-radius:4px;color:#3344aa;cursor:pointer;font-weight:700;transition:all .2s;white-space:nowrap;">
+          🧠 Activar IA
+        </button>
       </div>
-      <!-- Row 2: 5-candle momentum indicator -->
-      <div id="mom5-row" style="display:none;margin-top:4px;display:flex;align-items:center;gap:4px;">
-        <div style="font-size:.42em;color:#444;white-space:nowrap;font-weight:700;">MOM5</div>
-        <!-- 5 mini candle dots -->
-        <div style="display:flex;gap:2px;" id="mom5-dots"></div>
-        <!-- Momentum direction label -->
-        <div id="mom5-label" style="font-size:.42em;font-weight:700;color:#555;margin-left:2px;">–</div>
-        <!-- Momentum weight bar -->
-        <div style="flex:1;height:2px;background:#111;border-radius:1px;overflow:hidden;position:relative;">
-          <div id="mom5-g-fill" style="position:absolute;left:0;top:0;height:100%;width:0%;background:#00aa44;border-radius:1px;transition:width .4s;"></div>
-          <div id="mom5-r-fill" style="position:absolute;right:0;top:0;height:100%;width:0%;background:#cc2222;border-radius:1px;transition:width .4s;"></div>
+
+      <!-- Side by side: Sistema | IA -->
+      <div style="display:grid;grid-template-columns:1fr 1px 1fr;min-height:52px;">
+
+        <!-- LEFT: Sistema CMD -->
+        <div id="vs-sistema" style="padding:6px 10px;">
+          <div style="font-size:.4em;color:#222;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">⚙️ Sistema CMD</div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div id="bt-pred-color" style="font-size:1.25em;font-weight:900;color:#444;line-height:1;">–</div>
+            <div id="bt-pred-conf"  style="font-size:.6em;font-weight:700;color:#444;">–</div>
+            <div style="flex:1;height:2px;background:#111;border-radius:1px;overflow:hidden;">
+              <div id="bt-pred-fill" style="height:100%;width:0%;border-radius:1px;transition:width .4s;"></div>
+            </div>
+            <div id="bt-acc-badge" style="font-size:.44em;padding:1px 5px;border-radius:6px;background:#111;border:1px solid #1e1e1e;color:#444;white-space:nowrap;">–</div>
+          </div>
+          <div id="bt-pred-reason" style="font-size:.44em;color:#2a2a2a;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">–</div>
+          <!-- MOM5 row -->
+          <div id="mom5-row" style="display:none;margin-top:3px;display:flex;align-items:center;gap:3px;">
+            <div style="font-size:.38em;color:#333;font-weight:700;">MOM5</div>
+            <div style="display:flex;gap:2px;" id="mom5-dots"></div>
+            <div id="mom5-label" style="font-size:.38em;font-weight:700;color:#555;margin-left:2px;">–</div>
+            <div style="flex:1;height:2px;background:#111;border-radius:1px;overflow:hidden;position:relative;">
+              <div id="mom5-g-fill" style="position:absolute;left:0;top:0;height:100%;width:0%;background:#00aa44;border-radius:1px;transition:width .4s;"></div>
+              <div id="mom5-r-fill" style="position:absolute;right:0;top:0;height:100%;width:0%;background:#cc2222;border-radius:1px;transition:width .4s;"></div>
+            </div>
+            <div id="mom5-align" style="font-size:.38em;padding:1px 4px;border-radius:3px;background:#111;color:#555;white-space:nowrap;border:1px solid #333;">–</div>
+          </div>
         </div>
-        <!-- Signal alignment badge -->
-        <div id="mom5-align" style="font-size:.42em;padding:1px 5px;border-radius:4px;background:#111;color:#555;white-space:nowrap;border:1px solid #333;">–</div>
+
+        <!-- Divider -->
+        <div style="background:#111;"></div>
+
+        <!-- RIGHT: IA Claude -->
+        <div id="vs-ia" style="padding:6px 10px;">
+          <div style="font-size:.4em;color:#222;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">🧠 Claude IA</div>
+          <!-- Estado inicial -->
+          <div id="ia-estado" style="font-size:.44em;color:#1e1e1e;line-height:1.4;">
+            Presiona 🧠 para activar
+          </div>
+          <!-- Resultado IA (oculto hasta que responde) -->
+          <div id="ia-result" style="display:none;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div id="ia-color" style="font-size:1.25em;font-weight:900;color:#444;line-height:1;">–</div>
+              <div id="ia-conf"  style="font-size:.6em;font-weight:700;color:#444;">–</div>
+              <div style="flex:1;height:2px;background:#111;border-radius:1px;overflow:hidden;">
+                <div id="ia-fill" style="height:100%;width:0%;border-radius:1px;transition:width .4s;"></div>
+              </div>
+              <div id="ia-acc-badge" style="font-size:.44em;padding:1px 5px;border-radius:6px;background:#111;border:1px solid #1e1e1e;color:#444;white-space:nowrap;">–</div>
+            </div>
+            <div id="ia-reason" style="font-size:.44em;color:#2a2a2a;margin-top:2px;line-height:1.3;">–</div>
+          </div>
+        </div>
+
       </div>
     </div>
     <!-- ── CONFLUENCIA: señal exagerada cuando multiples factores se alinean ── -->
@@ -2647,6 +2699,290 @@ hook();
     _lastAlertKey = '';
   }
 
+  // =====================================================
+  // IA ENGINE — Claude API analiza la siguiente vela
+  // Compara con el sistema CMD en tiempo real
+  // Trackea accuracy de IA vs Sistema por separado
+  // =====================================================
+
+  var _iaEnabled    = false;   // IA activa o no
+  var _iaLog        = [];      // historial predicciones IA
+  var _iaCurrentPred= null;    // prediccion IA actual
+  var _iaPrevLen    = 0;       // velas cuando se hizo la prediccion
+  var _iaLoading    = false;   // esperando respuesta API
+
+  // ── Activar/desactivar IA ──────────────────────────
+  window.iaAnalizar = function() {
+    if (_iaLoading) return;
+    if (!_iaEnabled) {
+      _iaEnabled = true;
+      var btn = document.getElementById('ia-btn');
+      if (btn) { btn.textContent = '🧠 IA Activa'; btn.className = btn.className + ' active'; }
+      _iaPredict();
+    } else {
+      // Hacer una nueva prediccion manual
+      _iaPredict();
+    }
+  };
+
+  // ── Construir prompt con contexto completo ──────────
+  function _iaBuildPrompt() {
+    var histLen = typeof history !== 'undefined' ? history.length : 0;
+    if (histLen < 5) return null;
+
+    // Secuencia completa
+    var seqParts = [];
+    for (var i = 0; i < histLen; i++) {
+      var s = typeof getCandleStrength==='function' ? getCandleStrength(i)||2 : 2;
+      seqParts.push(history[i] + s);
+    }
+    var seq = seqParts.join(' ');
+
+    // Ultimas 10 velas para contexto inmediato
+    var last10 = seqParts.slice(-10).join(' ');
+
+    // Estado del sistema
+    var lt   = (document.getElementById('logic-text') ||{}).textContent||'';
+    var ma10 = (document.getElementById('ma10v')       ||{}).textContent||'?';
+    var pM   = (document.getElementById('manipulation-prob') ||{}).textContent||'0%';
+    var pD   = (document.getElementById('distribution-prob') ||{}).textContent||'0%';
+    var pA   = (document.getElementById('accumulation-prob') ||{}).textContent||'0%';
+    var pC   = (document.getElementById('consolidation-prob')||{}).textContent||'0%';
+    var sysDir   = (document.getElementById('bt-pred-color')||{}).textContent||'–';
+    var sysConf  = (document.getElementById('bt-pred-conf') ||{}).textContent||'–';
+
+    // Accuracy del sistema hasta ahora
+    var realLog  = _btLog.filter(function(e){return e.cat==='real';});
+    var realHits = realLog.filter(function(e){return e.result==='hit';}).length;
+    var sysAcc   = realLog.length>0 ? Math.round(realHits/realLog.length*100)+'%' : 'sin datos';
+
+    // Accuracy de la IA hasta ahora
+    var iaHits  = _iaLog.filter(function(e){return e.result==='hit';}).length;
+    var iaAcc   = _iaLog.length>0 ? Math.round(iaHits/_iaLog.length*100)+'%' : 'sin datos';
+
+    return 'Eres un analista experto en price action y Smart Money Concepts (SMC/ICT).
+' +
+      'Analiza esta secuencia de velas de trading binario y predice la SIGUIENTE vela.
+
+' +
+      'FORMATO DE VELAS: [color][fuerza] donde G=verde/alcista, R=roja/bajista, fuerza 1-4
+' +
+      'F1=doji debil, F1.5=pequeña, F2=normal, F2.5=grande, F3=fuerte, F4=engulfing
+
+' +
+      'SECUENCIA COMPLETA (' + histLen + ' velas):
+' + seq + '
+
+' +
+      'ULTIMAS 10 VELAS (contexto inmediato):
+' + last10 + '
+
+' +
+      'ESTADO DEL SISTEMA CMD:
+' +
+      '- MA10: ' + ma10 + ' (>55%=alcista, <45%=bajista)
+' +
+      '- Consolidacion: ' + pC + '
+' +
+      '- Manipulacion (Judas Swing): ' + pM + '
+' +
+      '- Distribucion: ' + pD + '
+' +
+      '- Acumulacion: ' + pA + '
+' +
+      '- Sistema predice: ' + sysDir + ' con ' + sysConf + ' confianza
+' +
+      '- Accuracy sistema hoy: ' + sysAcc + ' (' + realLog.length + ' senales reales)
+' +
+      '- Accuracy IA hasta ahora: ' + iaAcc + ' (' + _iaLog.length + ' predicciones)
+
+' +
+      'INSTRUCCIONES:
+' +
+      '1. Analiza el patron de las ultimas 5-10 velas
+' +
+      '2. Identifica si hay tendencia, rango o manipulacion
+' +
+      '3. Considera el ciclo AMD (Acumulacion-Manipulacion-Distribucion)
+' +
+      '4. Responde EXACTAMENTE en este formato JSON (sin texto adicional):
+
+' +
+      '{"dir":"G","conf":75,"reason":"Razon concisa en español maximo 60 caracteres","action":"COMPRAR"}
+
+' +
+      'dir: G=verde o R=roja
+' +
+      'conf: 50-95 (tu nivel de certeza real, no infles)
+' +
+      'reason: explicacion breve del porque
+' +
+      'action: COMPRAR, VENDER, o ESPERAR';
+  }
+
+  // ── Llamar a Claude API ─────────────────────────────
+  function _iaPredict() {
+    if (_iaLoading) return;
+    var histLen = typeof history !== 'undefined' ? history.length : 0;
+    if (histLen < 5) {
+      _iaSetEstado('Necesitas al menos 5 velas', false);
+      return;
+    }
+
+    var prompt = _iaBuildPrompt();
+    if (!prompt) return;
+
+    _iaLoading = true;
+    var btn = document.getElementById('ia-btn');
+    if (btn) { btn.textContent = '🧠 Analizando...'; btn.classList.add('loading'); }
+    _iaSetEstado('Analizando ' + histLen + ' velas...', true);
+
+    fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 150,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      _iaLoading = false;
+      if (btn) { btn.textContent = '🧠 Actualizar IA'; btn.classList.remove('loading'); }
+
+      var text = '';
+      if (data.content && data.content[0]) text = data.content[0].text || '';
+
+      // Parse JSON response
+      try {
+        var clean = text.replace(/```json|```/g,'').trim();
+        var resp  = JSON.parse(clean);
+        _iaShowResult(resp.dir, resp.conf, resp.reason, resp.action);
+        _iaPrevLen = histLen;
+      } catch(e) {
+        _iaSetEstado('Error al parsear respuesta IA', false);
+        console.error('IA parse error:', text);
+      }
+    })
+    .catch(function(e) {
+      _iaLoading = false;
+      if (btn) { btn.textContent = '🧠 Reintentar'; btn.classList.remove('loading'); }
+      _iaSetEstado('Error de conexion — reintenta', false);
+    });
+  }
+
+  // ── Mostrar resultado IA ────────────────────────────
+  function _iaShowResult(dir, conf, reason, action) {
+    var isG   = dir === 'G';
+    var col   = isG ? '#00ff88' : '#ff4444';
+    var colDm = isG ? '#004422' : '#440011';
+    var lbl   = isG ? '🟢 VERDE' : '🔴 ROJA';
+
+    _iaCurrentPred = { direction: dir, confidence: conf, reason: reason, action: action, candleIndex: (typeof history!=='undefined'?history.length:0) };
+
+    // Show result panel
+    var estado = document.getElementById('ia-estado');
+    var result = document.getElementById('ia-result');
+    var vsIa   = document.getElementById('vs-ia');
+    if (estado) estado.style.display = 'none';
+    if (result) result.style.display = 'block';
+    if (vsIa)  vsIa.className = isG ? 'ia-bull' : 'ia-bear';
+
+    var ic = document.getElementById('ia-color');
+    var cf = document.getElementById('ia-conf');
+    var fi = document.getElementById('ia-fill');
+    var re = document.getElementById('ia-reason');
+    if (ic) { ic.textContent = lbl; ic.style.color = col; }
+    if (cf) { cf.textContent = conf + '%'; cf.style.color = col; }
+    if (fi) { fi.style.width = conf + '%'; fi.style.background = col; }
+    if (re) { re.textContent = reason; re.style.color = '#555'; }
+
+    // Update IA accuracy badge
+    _iaUpdateAccBadge();
+
+    // Agree/disagree indicator
+    _iaUpdateAgreement();
+
+    // Auto-refresh when new candle arrives
+    _iaPrevLen = typeof history !== 'undefined' ? history.length : 0;
+  }
+
+  // ── Estado de carga / error ─────────────────────────
+  function _iaSetEstado(msg, loading) {
+    var estado = document.getElementById('ia-estado');
+    var result = document.getElementById('ia-result');
+    if (estado) { estado.style.display = 'block'; estado.textContent = msg;
+                  estado.style.color = loading ? '#2244cc' : '#553300'; }
+    if (result) result.style.display = 'none';
+  }
+
+  // ── Verify IA prediction when new candle arrives ─────
+  function _iaVerifyAndRefresh() {
+    var histLen = typeof history !== 'undefined' ? history.length : 0;
+    if (!_iaCurrentPred || histLen <= _iaPrevLen || !_iaEnabled) return;
+
+    // Verify last prediction
+    var lastColor = history[histLen - 1];
+    var isHit = _iaCurrentPred.direction === lastColor;
+    _iaLog.unshift({
+      id:     _iaLog.length + 1,
+      pred:   _iaCurrentPred,
+      actual: { color: lastColor, strength: typeof getCandleStrength==='function'?getCandleStrength(histLen-1)||2:2 },
+      result: isHit ? 'hit' : 'miss'
+    });
+    _iaCurrentPred = null;
+    _iaUpdateAccBadge();
+
+    // Auto-predict next
+    setTimeout(_iaPredict, 300);
+  }
+
+  // ── IA Accuracy badge ───────────────────────────────
+  function _iaUpdateAccBadge() {
+    var badge = document.getElementById('ia-acc-badge');
+    if (!badge || !_iaLog.length) return;
+    var hits = _iaLog.filter(function(e){return e.result==='hit';}).length;
+    var acc  = Math.round(hits/_iaLog.length*100);
+    badge.textContent = hits + 'v/' + _iaLog.length + ' ' + acc + '%';
+    badge.style.color = acc>=70?'#00ff88':acc>=50?'#ffd700':'#ff4444';
+    badge.style.borderColor = badge.style.color + '44';
+  }
+
+  // ── Agreement indicator ─────────────────────────────
+  function _iaUpdateAgreement() {
+    // Check if IA and Sistema agree on direction
+    var sysColor = (document.getElementById('bt-pred-color')||{}).textContent||'';
+    var iaColor  = _iaCurrentPred ? _iaCurrentPred.direction : null;
+    if (!iaColor) return;
+
+    var sysIsG = sysColor.indexOf('VERDE') >= 0;
+    var iaIsG  = iaColor === 'G';
+    var agree  = sysIsG === iaIsG;
+
+    // Show agreement in header
+    var hdr = document.getElementById('vs-agree');
+    if (!hdr) {
+      // Create it
+      var vsPanel = document.getElementById('vs-panel');
+      if (vsPanel) {
+        var agreeDiv = document.createElement('div');
+        agreeDiv.id = 'vs-agree';
+        vsPanel.appendChild(agreeDiv);
+      }
+    }
+    hdr = document.getElementById('vs-agree');
+    if (hdr) {
+      hdr.textContent = agree
+        ? '✓ ACUERDO — Ambos predicen ' + (iaIsG?'VERDE':'ROJA')
+        : '⚡ DESACUERDO — Sistema: '+(sysIsG?'VERDE':'ROJA')+' · IA: '+(iaIsG?'VERDE':'ROJA');
+      hdr.style.color       = agree ? '#00aa44' : '#ff8800';
+      hdr.style.background  = agree ? 'rgba(0,170,68,.06)' : 'rgba(255,136,0,.06)';
+      hdr.style.borderColor = agree ? '#00aa4422' : '#ff880022';
+      hdr.style.display = 'block';
+    }
+  }
+
   // -- Hook logic.js update() -----------------------------------
   // Wait for update() to be available then wrap it
   function _btHook() {
@@ -2658,6 +2994,7 @@ hook();
         _btOnUpdate();
         _renderConfluencia();
         _checkEntrada();
+        _iaVerifyAndRefresh();
       });
     };
     // Initial read
