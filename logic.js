@@ -3225,37 +3225,117 @@ function updateProjections(trendMA, prevTrendMA, activeCross, recentTrend, curre
   }
   if (s === 1.5) { document.getElementById('proj-g-conflict').textContent='⚠️ Doji sesgado: Esperar claridad'; document.getElementById('proj-r-conflict').textContent='⚠️ Doji sesgado: Esperar claridad'; }
 
+  // ── MOMENTUM AJUSTE: últimas 5 velas ponderadas por fuerza ──────────────
+  // Si la señal va CON el momentum reciente → boost confianza
+  // Si va CONTRA el momentum reciente → reducir confianza
+  // Hace que el % sea real y dinámico, no un valor fijo
+  (function() {
+    if (history.length < 5) return;
+    var last5 = history.slice(-5);
+    // Weight by strength
+    var gWeight = 0, rWeight = 0;
+    for (var i = 0; i < 5; i++) {
+      var idx = history.length - 5 + i;
+      var str = getCandleStrength(idx) || 2;
+      if (last5[i] === 'G') gWeight += str;
+      else                   rWeight += str;
+    }
+    var totalW = gWeight + rWeight;
+    if (totalW === 0) return;
+    var gMomPct = gWeight / totalW; // 0..1, > 0.5 = bullish momentum
+    var rMomPct = rWeight / totalW;
+    var momDiff = Math.abs(gMomPct - rMomPct); // 0..1, how strong the momentum is
+
+    // Store for DOM use
+    window._mom5G = Math.round(gMomPct * 100); // % de peso verde en ultimas 5
+    window._mom5R = Math.round(rMomPct * 100); // % de peso rojo en ultimas 5
+    window._mom5Diff = Math.round(momDiff * 100); // diferencia
+    window._mom5Dir  = gMomPct > rMomPct ? 'G' : 'R'; // tendencia momentum
+  })();
+
   document.getElementById('proj-g-seq').textContent = proj.ifG.pat;
-  let gSig=proj.ifG.sig, gClass=proj.ifG.sig==='COMPRA'?'proj-signal-buy':'proj-signal-hold', gBox='proj-box proj-green', gConf=Math.round(proj.ifG.conf*100)+'%';
+  let gSig=proj.ifG.sig, gClass=proj.ifG.sig==='COMPRA'?'proj-signal-buy':'proj-signal-hold', gBox='proj-box proj-green';
+
+  // Base confidence from pattern
+  let _gConfNum = Math.round(proj.ifG.conf*100);
+  // Apply momentum adjustment if we have enough data
+  if (history.length >= 5 && window._mom5Dir !== undefined) {
+    var _momAdj = 0;
+    if (proj.ifG.sig === 'COMPRA') {
+      // Verde signal: boost if momentum is bullish, reduce if bearish
+      if (window._mom5Dir === 'G') {
+        _momAdj = Math.round(window._mom5Diff * 0.15); // up to +15pp if 100% momentum
+      } else {
+        _momAdj = -Math.round(window._mom5Diff * 0.12); // up to -12pp against momentum
+      }
+    }
+    _gConfNum = Math.max(30, Math.min(95, _gConfNum + _momAdj));
+  }
+  let gConf = _gConfNum + '%';
+
   if (extremeCondition?.type==='extreme_bullish') { gSig='ESPERAR'; gClass='proj-signal-extreme'; gBox='proj-box proj-green proj-extreme'; gConf='0% - EXTREMO'; }
-  else if (cmdState.phase==='distribution') { gSig='NO COMPRAR'; gClass='proj-signal-hold'; gBox='proj-box proj-green proj-conflict'; gConf='Distribución activa'; }
+  else if (cmdState.phase==='distribution') { gSig='NO COMPRAR'; gClass='proj-signal-hold'; gBox='proj-box proj-green proj-conflict'; gConf='Distribucion activa'; }
   else if (recentTrend.warning==='momentum_change' && recentTrend.weightedScore<0) { gSig='ESPERAR'; gClass='proj-signal-hold'; gBox='proj-box proj-green proj-conflict'; gConf='Conflicto momentum'; }
   document.getElementById('proj-g-sig').textContent=gSig; document.getElementById('proj-g-sig').className='proj-signal '+gClass;
-  document.getElementById('proj-g-conf').textContent=gConf; document.getElementById('proj-g-reason').textContent=currentCandle.isReversal&&currentCandle.current==='G'&&currentCandle.strength>=3?'🔄 Reversión fuerza 3':'';
+  document.getElementById('proj-g-conf').textContent=gConf;
+  var _gReasonTxt = currentCandle.isReversal&&currentCandle.current==='G'&&currentCandle.strength>=3?'🔄 Reversión fuerza 3':'';
+  if (history.length>=5 && window._mom5Dir!==undefined && proj.ifG.sig==='COMPRA' && window._mom5Diff>=10) {
+    var _gMomNote = window._mom5Dir==='G'
+      ? ' +' + window._mom5Diff + '% mom.verde'
+      : ' -' + window._mom5Diff + '% mom.rojo';
+    _gReasonTxt = (_gReasonTxt?_gReasonTxt+' · ':'')+_gMomNote;
+  }
+  document.getElementById('proj-g-reason').textContent=_gReasonTxt;
   document.getElementById('proj-g-reversal').textContent=currentCandle.isReversal&&currentCandle.current==='G'&&currentCandle.strength>=3?'Prioridad máxima':'';
   document.getElementById('proj-g-cmd').textContent=cmdState.phase==='distribution'?'🏦 DISTRIBUCIÓN: Smart money vendiendo':cmdState.phase==='accumulation'?'📥 ACUMULACIÓN: Posible entrada':'';
   document.getElementById('proj-g-box').className=gBox;
 
   document.getElementById('proj-r-seq').textContent = proj.ifR.pat;
-  let rSig=proj.ifR.sig, rClass=proj.ifR.sig==='VENTA'?'proj-signal-sell':'proj-signal-hold', rBox='proj-box proj-red', rConf=Math.round(proj.ifR.conf*100)+'%';
+  let rSig=proj.ifR.sig, rClass=proj.ifR.sig==='VENTA'?'proj-signal-sell':'proj-signal-hold', rBox='proj-box proj-red';
+
+  // Base confidence from pattern
+  let _rConfNum = Math.round(proj.ifR.conf*100);
+  // Apply momentum adjustment
+  if (history.length >= 5 && window._mom5Dir !== undefined) {
+    var _momAdjR = 0;
+    if (proj.ifR.sig === 'VENTA') {
+      // Roja signal: boost if momentum is bearish, reduce if bullish
+      if (window._mom5Dir === 'R') {
+        _momAdjR = Math.round(window._mom5Diff * 0.15); // up to +15pp boost
+      } else {
+        _momAdjR = -Math.round(window._mom5Diff * 0.12); // up to -12pp penalty
+      }
+    }
+    _rConfNum = Math.max(30, Math.min(95, _rConfNum + _momAdjR));
+  }
+  let rConf = _rConfNum + '%';
+
   if (extremeCondition?.type==='extreme_bearish') { rSig='ESPERAR'; rClass='proj-signal-extreme'; rBox='proj-box proj-red proj-extreme'; rConf='0% - EXTREMO'; }
-  else if (cmdState.phase==='accumulation') { rSig='NO VENDER'; rClass='proj-signal-hold'; rBox='proj-box proj-red proj-conflict'; rConf='Acumulación activa'; }
+  else if (cmdState.phase==='accumulation') { rSig='NO VENDER'; rClass='proj-signal-hold'; rBox='proj-box proj-red proj-conflict'; rConf='Acumulacion activa'; }
   else if (recentTrend.warning==='momentum_change' && recentTrend.weightedScore>0) { rSig='ESPERAR'; rClass='proj-signal-hold'; rBox='proj-box proj-red proj-conflict'; rConf='Conflicto momentum'; }
   document.getElementById('proj-r-sig').textContent=rSig; document.getElementById('proj-r-sig').className='proj-signal '+rClass;
-  document.getElementById('proj-r-conf').textContent=rConf; document.getElementById('proj-r-reason').textContent=currentCandle.isReversal&&currentCandle.current==='R'&&currentCandle.strength>=3?'🔄 Reversión fuerza 3':'';
+  document.getElementById('proj-r-conf').textContent=rConf;
+  var _rReasonTxt = currentCandle.isReversal&&currentCandle.current==='R'&&currentCandle.strength>=3?'🔄 Reversión fuerza 3':'';
+  if (history.length>=5 && window._mom5Dir!==undefined && proj.ifR.sig==='VENTA' && window._mom5Diff>=10) {
+    var _rMomNote = window._mom5Dir==='R'
+      ? ' +' + window._mom5Diff + '% mom.rojo'
+      : ' -' + window._mom5Diff + '% mom.verde';
+    _rReasonTxt = (_rReasonTxt?_rReasonTxt+' · ':'')+_rMomNote;
+  }
+  document.getElementById('proj-r-reason').textContent=_rReasonTxt;
   document.getElementById('proj-r-reversal').textContent=currentCandle.isReversal&&currentCandle.current==='R'&&currentCandle.strength>=3?'Prioridad máxima':'';
   document.getElementById('proj-r-cmd').textContent=cmdState.phase==='accumulation'?'📥 ACUMULACIÓN: Smart money comprando':cmdState.phase==='distribution'?'🏦 DISTRIBUCIÓN: Posible salida':'';
   document.getElementById('proj-r-box').className=rBox;
 
   // ── Resaltar el contenedor con mayor confianza ──────────────────────────
-  var _gConfNum = proj.ifG.conf;
-  var _rConfNum = proj.ifR.conf;
+  var _gConfNumHL = proj.ifG.conf;
+  var _rConfNumHL = proj.ifR.conf;
   var _gEl = document.getElementById('proj-g-box');
   var _rEl = document.getElementById('proj-r-box');
   // Solo aplicar dominancia si hay señales activas (no conflicto ni extremo)
   var _gActive = gSig === 'COMPRA';
   var _rActive = rSig === 'VENTA';
-  var _diff = Math.abs(_gConfNum - _rConfNum);
+  var _diff = Math.abs(_gConfNumHL - _rConfNumHL);
 
   if (_gEl && _rEl) {
     // Quitar clases previas de dominancia
@@ -3264,7 +3344,7 @@ function updateProjections(trendMA, prevTrendMA, activeCross, recentTrend, curre
 
     if (_gActive && _rActive && _diff >= 0.05) {
       // Ambos tienen señal activa — resaltar el ganador
-      if (_gConfNum > _rConfNum) {
+      if (_gConfNumHL > _rConfNumHL) {
         _gEl.classList.add('proj-dominant-green');
         _rEl.classList.add('proj-subdued');
       } else {
