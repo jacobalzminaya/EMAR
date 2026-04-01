@@ -426,42 +426,41 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
   position:relative;overflow:hidden;
 }
 #entrada-alert.compra{
-  background:linear-gradient(135deg,#001a08 0%,#003012 60%,#001a08 100%);
-  border-bottom:2px solid #00ff8855;
+  background:linear-gradient(135deg,#003318 0%,#004d22 50%,#003318 100%);
+  border-bottom:2px solid #00ff8899;
+  box-shadow:0 2px 20px rgba(0,255,136,.15);
 }
 #entrada-alert.venta{
-  background:linear-gradient(135deg,#1a0000 0%,#300008 60%,#1a0000 100%);
-  border-bottom:2px solid #ff444455;
+  background:linear-gradient(135deg,#330008 0%,#4d0010 50%,#330008 100%);
+  border-bottom:2px solid #ff444499;
+  box-shadow:0 2px 20px rgba(255,68,68,.15);
 }
 /* Top sweep line */
 #entrada-alert::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
 }
-#entrada-alert.compra::before{background:linear-gradient(90deg,transparent,#00ff88,transparent);animation:entrada-sweep 1.5s ease-in-out infinite;}
-#entrada-alert.venta::before{background:linear-gradient(90deg,transparent,#ff4444,transparent);animation:entrada-sweep 1.5s ease-in-out infinite;}
+#entrada-alert.compra::before{background:linear-gradient(90deg,transparent,#00ff88,transparent);animation:entrada-sweep 1.2s ease-in-out infinite;}
+#entrada-alert.venta::before{background:linear-gradient(90deg,transparent,#ff4444,transparent);animation:entrada-sweep 1.2s ease-in-out infinite;}
 @keyframes entrada-sweep{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-
 /* Main content */
 .entrada-main{display:flex;align-items:center;gap:10px;}
-@keyframes entrada-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
-.entrada-icon{font-size:1.6em;animation:entrada-icon-pulse 1s ease-in-out infinite;flex-shrink:0;}
+@keyframes entrada-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+.entrada-icon{font-size:1.8em;animation:entrada-icon-pulse .9s ease-in-out infinite;flex-shrink:0;}
 .entrada-body{flex:1;}
-.entrada-action{font-size:.9em;font-weight:900;letter-spacing:.1em;line-height:1;}
-#entrada-alert.compra .entrada-action{color:#00ff88;text-shadow:0 0 12px rgba(0,255,136,.5);}
-#entrada-alert.venta  .entrada-action{color:#ff4444;text-shadow:0 0 12px rgba(255,68,68,.5);}
-.entrada-reason{font-size:.48em;color:#444;margin-top:3px;line-height:1.3;}
-.entrada-score{
-  font-size:.52em;font-weight:700;padding:4px 8px;border-radius:6px;
-  text-align:center;flex-shrink:0;
-}
-#entrada-alert.compra .entrada-score{color:#00aa44;background:#001a0a;border:1px solid #00441133;}
-#entrada-alert.venta  .entrada-score{color:#aa1111;background:#1a0000;border:1px solid #44000033;}
+.entrada-action{font-size:1.05em;font-weight:900;letter-spacing:.12em;line-height:1;}
+#entrada-alert.compra .entrada-action{color:#00ff88;text-shadow:0 0 20px rgba(0,255,136,.9),0 0 40px rgba(0,255,136,.4);}
+#entrada-alert.venta  .entrada-action{color:#ff4444;text-shadow:0 0 20px rgba(255,68,68,.9),0 0 40px rgba(255,68,68,.4);}
+.entrada-reason{font-size:.5em;color:#88aa88;margin-top:4px;line-height:1.3;}
+#entrada-alert.venta .entrada-reason{color:#aa8888;}
+.entrada-score{font-size:.55em;font-weight:900;padding:5px 10px;border-radius:6px;text-align:center;flex-shrink:0;}
+#entrada-alert.compra .entrada-score{color:#00ff88;background:#004422;border:1px solid #00ff8855;text-shadow:0 0 8px rgba(0,255,136,.5);}
+#entrada-alert.venta  .entrada-score{color:#ff4444;background:#440011;border:1px solid #ff444455;text-shadow:0 0 8px rgba(255,68,68,.5);}
 /* Criteria checklist */
-.entrada-checks{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;}
-.entrada-chk{font-size:.42em;padding:2px 6px;border-radius:4px;font-weight:700;}
-.entrada-chk.ok.compra{background:#001a08;color:#005522;border:1px solid #00331155;}
-.entrada-chk.ok.venta {background:#1a0000;color:#551111;border:1px solid #33000055;}
-.entrada-chk.no{background:#0a0a0a;color:#222;border:1px solid #11111155;}
+.entrada-checks{margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;}
+.entrada-chk{font-size:.44em;padding:2px 7px;border-radius:4px;font-weight:700;}
+.entrada-chk.ok.compra{background:#005533;color:#00ff88;border:1px solid #00ff8844;}
+.entrada-chk.ok.venta {background:#550011;color:#ff4444;border:1px solid #ff444444;}
+.entrada-chk.no{background:#111;color:#333;border:1px solid #222;}
 .cmd-f{height:100%;border-radius:2px;transition:width .4s}
 .cmd-pct{font-size:.5em;color:#1e1e1e;min-width:20px;text-align:right}
 
