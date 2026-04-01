@@ -1380,12 +1380,23 @@ hook();
       conf = Math.min(conf||50, 55);
     }
 
-    // Trampas: siempre inciertas (pueden no confirmarse)
+    // Trampas: siempre inciertas
     if (/BULL TRAP|BEAR TRAP|TRAMPA/i.test(reason) || /TRAP/i.test(txt)) {
       uncertain = true;
     }
 
-    // Extremo + no es señal directa: cap confidence
+    // ESPERAR CONFIRMACION (sobreventa/sobrecompra con racha activa) = uncertain
+    if (/ESPERAR CONFIRMACION|CONFIRMACION/i.test(txt)) {
+      uncertain = true;
+      conf = Math.min(conf||50, 55);
+    }
+
+    // Manipulacion bloquea: uncertain porque el mercado ya decidio su direccion
+    if (/MANIPULACION|bloquea senal/i.test(reason)) {
+      uncertain = true;
+    }
+
+    // Extremo + no señal directa: cap confidence
     if (/EXTREMO|SOBRECOMPRA|SOBREVENTA/i.test(reason) && uncertain) {
       conf = Math.min(conf, 65);
     }
