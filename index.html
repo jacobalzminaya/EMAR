@@ -1820,8 +1820,7 @@ hook();
     lines.push('');
     lines.push('=== FIN REPORTE ===');
 
-    pre.textContent = lines.join('
-');
+    pre.textContent = lines.join('\n');
   };
 
   window.btCopyReport = function() {
