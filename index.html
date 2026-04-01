@@ -153,6 +153,50 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
 .log-bar{display:flex;align-items:center;gap:6px;padding:5px 9px;border-bottom:1px solid #0e0e0e;cursor:pointer;transition:background .15s;flex-shrink:0;user-select:none}
 .log-bar:hover{background:#0b0b0b}
 #bt-log-bar:hover{background:#0b0b0b}
+
+/* ── CONFLUENCIA SIGNAL ── */
+#confluencia-box{
+  display:none;flex-shrink:0;
+  margin:0;padding:0;
+  border-bottom:1px solid #0e0e0e;
+  position:relative;overflow:hidden;
+}
+#confluencia-box.show{ display:block; }
+#confluencia-box.bull{
+  background:linear-gradient(135deg,#001a08 0%,#002510 50%,#001a08 100%);
+  border-bottom:1px solid #00ff8833;
+}
+#confluencia-box.bear{
+  background:linear-gradient(135deg,#1a0000 0%,#250008 50%,#1a0000 100%);
+  border-bottom:1px solid #ff444433;
+}
+/* Animated glow border on top */
+#confluencia-box::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  animation:conf-sweep 1.8s ease-in-out infinite;
+}
+#confluencia-box.bull::before{
+  background:linear-gradient(90deg,transparent 0%,#00ff88 50%,transparent 100%);
+}
+#confluencia-box.bear::before{
+  background:linear-gradient(90deg,transparent 0%,#ff4444 50%,transparent 100%);
+}
+@keyframes conf-sweep{
+  0%{transform:translateX(-100%)} 100%{transform:translateX(100%)}
+}
+/* Pulse animation for main icon */
+@keyframes conf-pulse{
+  0%,100%{transform:scale(1);opacity:1}
+  50%{transform:scale(1.12);opacity:.85}
+}
+.conf-icon{ animation:conf-pulse 1.2s ease-in-out infinite; display:inline-block; }
+/* Score bar segments */
+.conf-seg{
+  height:6px;border-radius:2px;transition:all .4s;
+  background:#111;border:1px solid #1a1a1a;
+}
+.conf-seg.active.bull{ background:#00ff88;border-color:#00ff88;box-shadow:0 0 6px #00ff8866; }
+.conf-seg.active.bear{ background:#ff4444;border-color:#ff4444;box-shadow:0 0 6px #ff444466; }
 .log-lbl{font-size:.56em;color:#2a2a2a;text-transform:uppercase;letter-spacing:.06em;flex:1}
 .log-arr{font-size:.62em;color:#1e1e1e;transition:transform .2s}
 .log-arr.open{transform:rotate(180deg)}
@@ -598,6 +642,34 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
       <div id="bt-pred-reason" style="font-size:.48em;color:#333;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">–</div>
       <div id="bt-acc-badge"  style="font-size:.48em;padding:2px 6px;border-radius:8px;background:#111;border:1px solid #1e1e1e;color:#444;white-space:nowrap;">–</div>
     </div>
+    <!-- ── CONFLUENCIA: señal exagerada cuando multiples factores se alinean ── -->
+    <div id="confluencia-box">
+      <div style="padding:10px 12px;display:flex;align-items:center;gap:10px;">
+        <!-- Icon + label -->
+        <div style="text-align:center;flex-shrink:0;">
+          <div class="conf-icon" id="conf-icon" style="font-size:1.8em;line-height:1;">🟢</div>
+          <div id="conf-label" style="font-size:.42em;font-weight:900;letter-spacing:.08em;color:#00ff88;margin-top:2px;">CONFLUENCIA</div>
+        </div>
+        <!-- Main signal -->
+        <div style="flex:1;">
+          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:4px;">
+            <div id="conf-dir" style="font-size:1.3em;font-weight:900;color:#00ff88;">VERDE</div>
+            <div id="conf-score-txt" style="font-size:.65em;font-weight:700;color:#00aa44;">Score 4/5</div>
+          </div>
+          <!-- Score segments -->
+          <div style="display:flex;gap:3px;margin-bottom:4px;" id="conf-segs">
+            <div class="conf-seg" id="cseg-0" title="Racha extrema"></div>
+            <div class="conf-seg" id="cseg-1" title="CMD fase"></div>
+            <div class="conf-seg" id="cseg-2" title="MA alineadas"></div>
+            <div class="conf-seg" id="cseg-3" title="Patron solido"></div>
+            <div class="conf-seg" id="cseg-4" title="Fibonacci"></div>
+          </div>
+          <!-- Factor list -->
+          <div id="conf-factors" style="font-size:.44em;color:#006622;line-height:1.4;"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Log de verificación (colapsable) -->
     <div id="bt-log-bar" onclick="toggleBtLog()" style="display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #0e0e0e;cursor:pointer;background:#060606;flex-shrink:0;transition:background .15s;">
       <div style="display:flex;align-items:center;gap:6px;">
@@ -1890,6 +1962,114 @@ hook();
     if (open) _btRenderLog();
   };
 
+  // =====================================================
+  // CONFLUENCIA ENGINE - señal visual exagerada
+  // Solo aparece cuando 3+ factores se alinean
+  // Factores: Racha, CMD, Triple MA, Señal directa, Fib
+  // =====================================================
+
+  function _calcConfluencia() {
+    var factors = [];
+    var dir = null;
+    var score = 0;
+    var lt  = (document.getElementById('logic-text')  ||{}).textContent||'';
+    var cls = (document.getElementById('main-signal') ||{}).className ||'';
+
+    // Factor 0: Racha extrema >=3
+    var histLen = typeof history !== 'undefined' ? history.length : 0;
+    if (histLen >= 3) {
+      var lastColor = history[histLen-1];
+      var streak = 0;
+      for (var i = histLen-1; i >= 0 && history[i] === lastColor; i--) streak++;
+      if (streak >= 3) {
+        var revDir = lastColor === 'R' ? 'bull' : 'bear';
+        factors.push({ seg:0, dir:revDir, label:'Racha '+streak+(lastColor==='R'?' rojas':' verdes')+' - reversion esperada' });
+        score++; dir = dir || revDir;
+      }
+    }
+
+    // Factor 1: CMD fase fuerte >=70%
+    var distribProb = parseFloat((document.getElementById('distribution-prob') ||{}).textContent)||0;
+    var accumProb   = parseFloat((document.getElementById('accumulation-prob') ||{}).textContent)||0;
+    var manipProb   = parseFloat((document.getElementById('manipulation-prob') ||{}).textContent)||0;
+    if (distribProb >= 70) { factors.push({seg:1,dir:'bear',label:'Distribucion '+distribProb+'%'}); score++; dir=dir||'bear'; }
+    if (accumProb  >= 70) { factors.push({seg:1,dir:'bull',label:'Acumulacion '+accumProb+'%'});   score++; dir=dir||'bull'; }
+    if (manipProb  >= 85 && !distribProb && !accumProb) { factors.push({seg:1,dir:null,label:'Manipulacion '+manipProb+'%'}); }
+
+    // Factor 2: Triple MA alignment
+    if (typeof getTripleAlignment === 'function') {
+      var ta = getTripleAlignment();
+      if (ta && ta.strength === 'strong') {
+        var taDir = ta.dir === 'bull' ? 'bull' : 'bear';
+        factors.push({seg:2, dir:taDir, label:ta.label});
+        score++; dir = dir || taDir;
+      }
+    }
+
+    // Factor 3: Signal directa fuerte
+    var isBuy  = /signal-buy|signal-accumulation|signal-strong-reversal/.test(cls);
+    var isSell = /signal-sell|signal-distribution/.test(cls);
+    var gcConf = parseFloat((document.getElementById('proj-g-conf')||{}).textContent)||0;
+    var rcConf = parseFloat((document.getElementById('proj-r-conf')||{}).textContent)||0;
+    if (isBuy  && gcConf >= 70) { factors.push({seg:3,dir:'bull',label:'Senal COMPRA '+gcConf+'%'}); score++; dir=dir||'bull'; }
+    if (isSell && rcConf >= 70) { factors.push({seg:3,dir:'bear',label:'Senal VENTA '+rcConf+'%'});  score++; dir=dir||'bear'; }
+
+    // Factor 4: Fibonacci 61.8%
+    var fibList = (document.getElementById('fib-confluence-list')||{}).textContent||'';
+    if (/61[.]8|Golden/.test(fibList) || /61[.]8/.test(lt)) {
+      var fibDir = /alcist|GREEN|sube/i.test(lt) ? 'bull' : 'bear';
+      factors.push({seg:4, dir:fibDir, label:'Fibonacci 61.8% activo'});
+      score++; dir = dir || fibDir;
+    }
+
+    // Consensus: mixed signals reduce score
+    var bullC = factors.filter(function(f){return f.dir==='bull';}).length;
+    var bearC = factors.filter(function(f){return f.dir==='bear';}).length;
+    if (bullC > 0 && bearC > 0) score = Math.max(0, score - Math.min(bullC,bearC));
+    dir = bullC > bearC ? 'bull' : bearC > bullC ? 'bear' : dir;
+
+    return {score:score, dir:dir, factors:factors};
+  }
+
+  function _renderConfluencia() {
+    var box = document.getElementById('confluencia-box');
+    if (!box) return;
+    var cf = _calcConfluencia();
+    if (cf.score < 3 || !cf.dir) { box.style.display='none'; return; }
+
+    var isBull = cf.dir==='bull';
+    var col    = isBull ? '#00ff88' : '#ff4444';
+    var colDim = isBull ? '#005522' : '#550011';
+    var icon   = cf.score>=5 ? (isBull?'🚀':'💥') : cf.score>=4 ? (isBull?'🔥':'⚡') : (isBull?'🟢':'🔴');
+
+    box.style.display = 'block';
+    box.className = 'confluencia-box show ' + cf.dir;
+
+    var iconEl  = document.getElementById('conf-icon');
+    var lblEl   = document.getElementById('conf-label');
+    var dirEl   = document.getElementById('conf-dir');
+    var scoreEl = document.getElementById('conf-score-txt');
+    var factEl  = document.getElementById('conf-factors');
+
+    if (iconEl)  iconEl.textContent = icon;
+    if (lblEl)   { lblEl.textContent  = cf.score>=4?'CONFLUENCIA ALTA':'CONFLUENCIA'; lblEl.style.color=col; }
+    if (dirEl)   { dirEl.textContent  = isBull?'VERDE':'ROJA'; dirEl.style.color=col; }
+    if (scoreEl) { scoreEl.textContent='Score '+cf.score+'/5'; scoreEl.style.color=colDim; }
+
+    for (var s=0;s<5;s++) {
+      var seg = document.getElementById('cseg-'+s);
+      if (!seg) continue;
+      var active = cf.factors.some(function(f){return f.seg===s;});
+      seg.className = 'conf-seg'+(active?' active '+cf.dir:'');
+    }
+    if (factEl) {
+      factEl.style.color = colDim;
+      factEl.innerHTML = cf.factors.filter(function(f){return f.dir;}).map(function(f){
+        return '+ '+f.label;
+      }).join('<br>');
+    }
+  }
+
   // -- Hook logic.js update() -----------------------------------
   // Wait for update() to be available then wrap it
   function _btHook() {
@@ -1898,7 +2078,10 @@ hook();
     window.update = function() {
       _orig.apply(this, arguments);
       // Use requestAnimationFrame so DOM is settled before we read it
-      requestAnimationFrame(_btOnUpdate);
+      requestAnimationFrame(function(){
+        _btOnUpdate();
+        _renderConfluencia();
+      });
     };
     // Initial read
     requestAnimationFrame(_btOnUpdate);
