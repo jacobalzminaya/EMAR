@@ -879,10 +879,16 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
       <!-- Header: titulo + boton IA -->
       <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #0e0e0e;">
         <div style="font-size:.46em;color:#2a2a2a;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Próxima vela · Comparación</div>
-        <button id="ia-btn" onclick="iaAnalizar()"
-          style="font-size:.44em;padding:2px 8px;background:#0a0a18;border:1px solid #1a1a44;border-radius:4px;color:#3344aa;cursor:pointer;font-weight:700;transition:all .2s;white-space:nowrap;">
-          🧠 Activar IA
-        </button>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <input id="ia-proxy-input" placeholder="Worker URL..." 
+            style="font-size:.4em;padding:2px 5px;background:#080808;border:1px solid #1a1a33;border-radius:3px;color:#3344aa;width:120px;outline:none;"
+            onchange="window._iaProxyUrl=this.value"
+            title="Pega tu Cloudflare Worker URL aqui"/>
+          <button id="ia-btn" onclick="iaAnalizar()"
+            style="font-size:.44em;padding:2px 8px;background:#0a0a18;border:1px solid #1a1a44;border-radius:4px;color:#3344aa;cursor:pointer;font-weight:700;transition:all .2s;white-space:nowrap;">
+            🧠 Activar IA
+          </button>
+        </div>
       </div>
 
       <!-- Side by side: Sistema | IA -->
@@ -1245,7 +1251,7 @@ function setup(gid, side) {
     bar.addEventListener('mouseenter', function(e) {
       bars.forEach(function(b,i){ b.classList.toggle('hov', i<=idx); b.classList.remove('sel'); });
       var str = parseFloat(bar.getAttribute('data-str'));
-      if (lbl){ lbl.textContent=(side==='G'?'▲ ':'▼ ')+'F'+str+' '+( SL[String(str)]||''); lbl.style.color=side==='G'?'rgba(0,255,136,.75)':'rgba(255,68,68,.75)'; }
+      if (lbl){ lbl.textContent=(side==='G'?'^ ':'v ')+'F'+str+' '+( SL[String(str)]||''); lbl.style.color=side==='G'?'rgba(0,255,136,.75)':'rgba(255,68,68,.75)'; }
       // Fill panels on hover for live preview
       if(typeof fillPanels==='function') fillPanels(side, str);
     });
@@ -1261,14 +1267,14 @@ function setup(gid, side) {
       if (og) og.querySelectorAll('.wbr').forEach(function(b){ b.classList.remove('sel','hov'); });
       if (side==='G'){ sG=idx; sR=null; } else { sR=idx; sG=null; }
       bars.forEach(function(b,i){ b.classList.remove('hov'); b.classList.toggle('sel', i<=idx); });
-      if (lbl){ lbl.textContent=(side==='G'?'▲ ':'▼ ')+'F'+str+' '+(SL[String(str)]||''); lbl.style.color=side==='G'?'#00ff88':'#ff4444'; }
+      if (lbl){ lbl.textContent=(side==='G'?'^ ':'v ')+'F'+str+' '+(SL[String(str)]||''); lbl.style.color=side==='G'?'#00ff88':'#ff4444'; }
       // Register
       if (typeof quickAddCandle==='function') quickAddCandle(side,str);
       else if (typeof addCandle==='function') addCandle(side,str);
       // Feedback
       var col=side==='G'?'#00cc55':'#cc2222';
       var fbEl=document.getElementById('fb');
-      if (fbEl){ fbEl.style.color=col; fbEl.style.borderColor=col+'33'; fbEl.style.background=side==='G'?'rgba(0,140,50,.07)':'rgba(160,35,35,.07)'; fbEl.textContent=(side==='G'?'▲ VERDE':'▼ ROJA')+' . F'+str+' '+(SL[String(str)]||''); }
+      if (fbEl){ fbEl.style.color=col; fbEl.style.borderColor=col+'33'; fbEl.style.background=side==='G'?'rgba(0,140,50,.07)':'rgba(160,35,35,.07)'; fbEl.textContent=(side==='G'?'^ VERDE':'v ROJA')+' . F'+str+' '+(SL[String(str)]||''); }
       // Track last selection for panel refresh
       window._lastWifiSide = side; window._lastWifiStr = str;
       // Fill 3 panels after logic.js updates
@@ -1451,34 +1457,34 @@ function upCMD(){
   if(dom.p<40){
     // No dominant phase
     icon.textContent='⏸️'; box.className+=' phase-c';
-    txt.textContent='Sin fase dominante — esperar estructura';
+    txt.textContent='Sin fase dominante - esperar estructura';
     dir.textContent='';
   } else if(dom.id==='c'){
-    // CONSOLIDACION — esperar, no operar dentro del rango
+    // CONSOLIDACION - esperar, no operar dentro del rango
     icon.textContent='📦'; box.className+=' phase-c';
-    txt.textContent='Consolidacion '+pC.toFixed(0)+'% — ESPERAR. No operar dentro del rango. Las instituciones acumulan posicion.';
+    txt.textContent='Consolidacion '+pC.toFixed(0)+'% - ESPERAR. No operar dentro del rango. Las instituciones acumulan posicion.';
     dir.textContent='RANGO';
   } else if(dom.id==='m'){
-    // MANIPULACION — Judas Swing activo
+    // MANIPULACION - Judas Swing activo
     // The real move will be OPPOSITE to the current visible direction
     var manipDir = isSell?'COMPRA':'VENTA'; // opposite of current visible signal
     var manipCol = isSell?'#00ff88':'#ff4444';
     icon.textContent='⚡'; box.className+=' phase-m';
-    txt.textContent='JUDAS SWING '+pM.toFixed(0)+'% — Falso rompimiento. El movimiento real viene en direccion opuesta. Preparar entrada.';
+    txt.textContent='JUDAS SWING '+pM.toFixed(0)+'% - Falso rompimiento. El movimiento real viene en direccion opuesta. Preparar entrada.';
     dir.style.color=manipCol;
-    dir.textContent='→ '+manipDir;
+    dir.textContent='-> '+manipDir;
   } else if(dom.id==='d'){
-    // DISTRIBUCION — momentum real alcista
+    // DISTRIBUCION - momentum real alcista
     icon.textContent='🚀'; box.className+=' phase-d';
-    txt.textContent='Distribucion '+pD.toFixed(0)+'% — MOMENTUM REAL. Operar con la tendencia. Smart money ya posicionado.';
+    txt.textContent='Distribucion '+pD.toFixed(0)+'% - MOMENTUM REAL. Operar con la tendencia. Smart money ya posicionado.';
     dir.style.color='#ff8800';
-    dir.textContent=isSell?'→ VENDER':'→ ESPERAR CONF.';
+    dir.textContent=isSell?'-> VENDER':'-> ESPERAR CONF.';
   } else if(dom.id==='a'){
-    // ACUMULACION — momentum real bajista reversion
+    // ACUMULACION - momentum real bajista reversion
     icon.textContent='📥'; box.className+=' phase-a';
-    txt.textContent='Acumulacion '+pA.toFixed(0)+'% — Instituciones comprando. Posible reversion alcista proxima.';
+    txt.textContent='Acumulacion '+pA.toFixed(0)+'% - Instituciones comprando. Posible reversion alcista proxima.';
     dir.style.color='#00ff88';
-    dir.textContent=isBuy?'→ COMPRAR':'→ ESPERAR CONF.';
+    dir.textContent=isBuy?'-> COMPRAR':'-> ESPERAR CONF.';
   }
 }
 
@@ -1569,8 +1575,8 @@ function fillPanels(side, str) {
   var borderCol = isG ? 'rgba(0,255,136,.4)' : 'rgba(255,68,68,.4)';
 
   // =======================================
-  // PANEL 1: VELA ACTUAL (la que estás viendo formarse)
-  // Simula: si esta vela cierra como [side F[str]], ?qué senal da?
+  // PANEL 1: VELA ACTUAL (la que est-s viendo formarse)
+  // Simula: si esta vela cierra como [side F[str]], ?qu- senal da?
   // =======================================
   var panCur    = $('pan-cur');
   var candle    = $('pan-cur-candle');
@@ -1582,9 +1588,9 @@ function fillPanels(side, str) {
 
   if (panCur)  panCur.style.borderColor  = borderCol;
   if (candle)  { candle.style.background = col; candle.style.borderColor = col+'88'; }
-  if (sideLbl) { sideLbl.textContent = (isG?'▲ VERDE':'▼ ROJA')+' F'+str+' '+(SL2[String(str)]||''); sideLbl.style.color = col; }
+  if (sideLbl) { sideLbl.textContent = (isG?'^ VERDE':'v ROJA')+' F'+str+' '+(SL2[String(str)]||''); sideLbl.style.color = col; }
 
-  // Simular la historia con la vela actual hipotética
+  // Simular la historia con la vela actual hipot-tica
   var h = typeof history!=='undefined' ? history.slice() : [];
   var cr = typeof detectCrosses==='function' ? detectCrosses(false) : {};
   var simCur = h.concat([side]);
@@ -1616,8 +1622,8 @@ function fillPanels(side, str) {
   if (desc1) { desc1.textContent = (curDesc||'').slice(0,60); desc1.style.color = '#666'; }
 
   // =======================================
-  // PANEL 2: VELA SIGUIENTE (lo que viene DESPUÉS de que esta vela cierre)
-  // Simula: [hist + side] -> ?qué senal si después viene G? ?si viene R?
+  // PANEL 2: VELA SIGUIENTE (lo que viene DESPU-S de que esta vela cierre)
+  // Simula: [hist + side] -> ?qu- senal si despu-s viene G? ?si viene R?
   // Solo muestra la rama dominante (la de mayor confianza)
   // =======================================
   var panNxt  = $('pan-nxt');
@@ -1634,11 +1640,11 @@ function fillPanels(side, str) {
   if (projNxt) {
     var gN = projNxt.ifG.conf, rN = projNxt.ifR.conf;
     if (gN >= rN) {
-      nxtDomSig   = projNxt.ifG.sig;  nxtDomConf  = Math.round(gN*100); nxtDomColor = '▲ Verde';
-      nxtSubSig   = projNxt.ifR.sig;  nxtSubConf  = Math.round(rN*100); nxtSubColor = '▼ Roja';
+      nxtDomSig   = projNxt.ifG.sig;  nxtDomConf  = Math.round(gN*100); nxtDomColor = '^ Verde';
+      nxtSubSig   = projNxt.ifR.sig;  nxtSubConf  = Math.round(rN*100); nxtSubColor = 'v Roja';
     } else {
-      nxtDomSig   = projNxt.ifR.sig;  nxtDomConf  = Math.round(rN*100); nxtDomColor = '▼ Roja';
-      nxtSubSig   = projNxt.ifG.sig;  nxtSubConf  = Math.round(gN*100); nxtSubColor = '▲ Verde';
+      nxtDomSig   = projNxt.ifR.sig;  nxtDomConf  = Math.round(rN*100); nxtDomColor = 'v Roja';
+      nxtSubSig   = projNxt.ifG.sig;  nxtSubConf  = Math.round(gN*100); nxtSubColor = '^ Verde';
     }
   }
 
@@ -1657,14 +1663,14 @@ function fillPanels(side, str) {
     if (ndDomS) { ndDomS.textContent = nxtDomSig; ndDomS.style.color = domSc; }
     if (ndDomF) { ndDomF.style.width = nxtDomConf+'%'; ndDomF.style.background = domSc; }
     if (ndDomP) { ndDomP.textContent = nxtDomConf+'%'; ndDomP.style.color = domSc; }
-    if (ndGSig) { ndGSig.textContent = '▲ '+(nxtDomColor==='▲ Verde'?nxtDomSig+' '+nxtDomConf+'%':nxtSubSig+' '+nxtSubConf+'%'); ndGSig.style.color = nxtDomColor==='▲ Verde'?domSc:subSc; }
-    if (ndRSig) { ndRSig.textContent = '▼ '+(nxtDomColor==='▼ Roja' ?nxtDomSig+' '+nxtDomConf+'%':nxtSubSig+' '+nxtSubConf+'%'); ndRSig.style.color = nxtDomColor==='▼ Roja' ?domSc:subSc; }
+    if (ndGSig) { ndGSig.textContent = '^ '+(nxtDomColor==='^ Verde'?nxtDomSig+' '+nxtDomConf+'%':nxtSubSig+' '+nxtSubConf+'%'); ndGSig.style.color = nxtDomColor==='^ Verde'?domSc:subSc; }
+    if (ndRSig) { ndRSig.textContent = 'v '+(nxtDomColor==='v Roja' ?nxtDomSig+' '+nxtDomConf+'%':nxtSubSig+' '+nxtSubConf+'%'); ndRSig.style.color = nxtDomColor==='v Roja' ?domSc:subSc; }
   }
 
   // =======================================
   // PANEL 3: SWING - contexto real del mercado
-  // Muestra: dirección dominante, fuerza toros vs osos,
-  // impulso relativo, corrección activa, y senal de acción clara
+  // Muestra: direcci-n dominante, fuerza toros vs osos,
+  // impulso relativo, correcci-n activa, y senal de acci-n clara
   // =======================================
   var swgTitle = $('pan-swg-name');
   var swgBull  = $('pan-swg-bull');
@@ -1694,7 +1700,7 @@ function fillPanels(side, str) {
   var bearPct = 100-bullPct;
   var impulseRatio = (bullMax>0&&bearMax>0) ? Math.max(bullMax,bearMax)/Math.min(bullMax,bearMax) : 1;
   var dominantIsG  = bullMax >= bearMax;
-  var impulseDir   = dominantIsG ? '▲ Alcista' : '▼ Bajista';
+  var impulseDir   = dominantIsG ? '^ Alcista' : 'v Bajista';
 
   // Last consecutive candles (correction check)
   var lastColor = h10.length>0 ? h10[h10.length-1] : null;
@@ -1713,11 +1719,11 @@ function fillPanels(side, str) {
   var swingSignal, swingColor;
   if (impulseRatio >= 2.0 && !isCorrection) {
     if (!dominantIsG && isOversold && corrStarted) {
-      // Bajista fuerte pero en sobreventa con primera vela verde = corrección iniciada
+      // Bajista fuerte pero en sobreventa con primera vela verde = correcci-n iniciada
       swingSignal = '^️ CORRECCIÓN EN IMPULSO BAJISTA';
       swingColor  = '#ffd700';
     } else if (dominantIsG && isOverbought && corrStarted) {
-      // Alcista fuerte pero en sobrecompra con primera vela roja = corrección iniciada
+      // Alcista fuerte pero en sobrecompra con primera vela roja = correcci-n iniciada
       swingSignal = 'v️ CORRECCIÓN EN IMPULSO ALCISTA';
       swingColor  = '#ffd700';
     } else {
@@ -1767,11 +1773,11 @@ function fillPanels(side, str) {
   if(swgPctEl)  { swgPctEl.textContent  = swgConfPct+'%'; swgPctEl.style.color = swingColor; }
   if(swgNameEl) { swgNameEl.textContent = patInfo; swgNameEl.style.color = '#666'; }
   if(swgBull){
-    swgBull.textContent = '▲ '+bullPct+'% F'+bullMax.toFixed(1);
+    swgBull.textContent = '^ '+bullPct+'% F'+bullMax.toFixed(1);
     swgBull.style.color = bullPct>bearPct?'#00aa44':'#444';
   }
   if(swgBear){
-    swgBear.textContent = '▼ '+bearPct+'% F'+bearMax.toFixed(1);
+    swgBear.textContent = 'v '+bearPct+'% F'+bearMax.toFixed(1);
     swgBear.style.color = bearPct>bullPct?'#aa2222':'#444';
   }
   if(swgNote){
@@ -1796,15 +1802,15 @@ hook();
 
 // ===============================================================
 // BACKTESTING INTEGRADO - motor en el propio index.html
-// Predice la próxima vela usando logic.js (senal real)
-// Verifica automáticamente cuando se registra la siguiente vela
+// Predice la pr-xima vela usando logic.js (senal real)
+// Verifica autom-ticamente cuando se registra la siguiente vela
 // No necesita backtesting.html separado
 // ===============================================================
 (function(){
 
   var _btLog      = [];       // historial de predicciones vs resultados
-  var _btCurrent  = null;     // predicción activa (pendiente de verificar)
-  var _btPrevLen  = 0;        // cuántas velas había cuando se hizo la predicción
+  var _btCurrent  = null;     // predicci-n activa (pendiente de verificar)
+  var _btPrevLen  = 0;        // cu-ntas velas hab-a cuando se hizo la predicci-n
 
   // -- Leer senal de logic.js DOM ------------------------------
   function _btReadSignal() {
@@ -1873,7 +1879,7 @@ hook();
       uncertain = true;
     }
 
-    // Extremo + no señal directa: cap confidence
+    // Extremo + no se-al directa: cap confidence
     if (/EXTREMO|SOBRECOMPRA|SOBREVENTA/i.test(reason) && uncertain) {
       conf = Math.min(conf, 65);
     }
@@ -1882,14 +1888,14 @@ hook();
     return { direction: dir, confidence: conf, reason: reason, signal: txt, uncertain: uncertain };
   }
 
-  // -- Actualizar barra de predicción --------------------------
+  // -- Actualizar barra de predicci-n --------------------------
   function _btShowPred(pred) {
     if (!pred) return;
     var isG = pred.direction === 'G';
     var r   = pred.reason || '';
     var col = isG ? '#00ff88' : '#ff4444';
     var prefix = '';
-    // Confirmed pattern signals — bright with pattern badge
+    // Confirmed pattern signals - bright with pattern badge
     var isRacha = /RACHA [0-9]+ (VERDE|ROJA)/i.test(r);
     var isCont  = /CONTINUACION PURA|CONTINUACIÓN PURA/i.test(r);
     if (isRacha) { prefix = '🔁 '; col = isG ? '#00ff88' : '#ff4444'; }
@@ -1960,7 +1966,7 @@ hook();
                  ? '0 0 8px '+(momDir==='G'?'rgba(0,255,136,.5)':'rgba(255,68,68,.5)')
                  : 'none'; }
 
-    // Fill bars — bright colors
+    // Fill bars - bright colors
     if (gFil){ gFil.style.width=gPct+'%'; gFil.style.background=gPct>60?'#00cc44':'#007722'; }
     if (rFil){ rFil.style.width=rPct+'%'; rFil.style.background=rPct>60?'#dd2222':'#881111'; }
 
@@ -2012,7 +2018,7 @@ hook();
     }
   }
 
-  // -- Verificar predicción anterior y hacer nueva -------------
+  // -- Verificar predicci-n anterior y hacer nueva -------------
   // -- Categorize a prediction for logging ---------------------
   function _btCategory(pred) {
     if (!pred) return 'skip';
@@ -2030,14 +2036,14 @@ hook();
     var curLen = typeof history!=='undefined' ? history.length : 0;
     if (curLen < 2) { _btCurrent=null; return; }
 
-    // Solo procesar si cambió el historial (vela nueva)
+    // Solo procesar si cambi- el historial (vela nueva)
     if (curLen === _btPrevLen) {
       var sigOnly = _btReadSignal();
       if (sigOnly) _btShowPred(sigOnly);
       return;
     }
 
-    // Hay vela nueva: verificar predicción anterior
+    // Hay vela nueva: verificar predicci-n anterior
     if (_btCurrent && curLen > _btPrevLen) {
       var lastColor = history[curLen-1];
       var lastStr   = typeof getCandleStrength==='function' ? getCandleStrength(curLen-1)||2 : 2;
@@ -2054,14 +2060,14 @@ hook();
       _btRenderLog();
     }
 
-    // Nueva predicción para la siguiente vela
+    // Nueva predicci-n para la siguiente vela
     var sig    = _btReadSignal();
     _btCurrent = sig || null;
     _btPrevLen = curLen;
     if (sig) _btShowPred(sig);
   }
 
-  // -- Render log con análisis detallado -----------------------
+  // -- Render log con an-lisis detallado -----------------------
   function _catLabel(cat) {
     if (cat==='real')     return { badge:'',    bg:'#050505', dim:false };
     if (cat==='uncertain')return { badge:'⚠️ ', bg:'#080808', dim:true  };
@@ -2426,14 +2432,14 @@ hook();
     if (!d) return;
     var open = d.style.display === 'none';
     d.style.display = open ? 'block' : 'none';
-    if (arr) arr.textContent = open ? '▲' : '▼';
+    if (arr) arr.textContent = open ? '^' : 'v';
     if (open) _btRenderLog();
   };
 
   // =====================================================
-  // CONFLUENCIA ENGINE - señal visual exagerada
+  // CONFLUENCIA ENGINE - se-al visual exagerada
   // Solo aparece cuando 3+ factores se alinean
-  // Factores: Racha, CMD, Triple MA, Señal directa, Fib
+  // Factores: Racha, CMD, Triple MA, Se-al directa, Fib
   // =====================================================
 
   function _calcConfluencia() {
@@ -2537,7 +2543,7 @@ hook();
       }).join('<br>');
     }
 
-    // ── Update WiFi bars to reflect confluencia ──────────────
+    // -- Update WiFi bars to reflect confluencia --------------
     _applyWifiConf(cf.score, cf.dir);
   }
 
@@ -2565,12 +2571,12 @@ hook();
   // =====================================================
   // ALERTA REAL DE ENTRADA
   // Se activa SOLO cuando todos los criterios se alinean:
-  //   1. Señal directa (COMPRA/VENTA) de logic.js
+  //   1. Se-al directa (COMPRA/VENTA) de logic.js
   //   2. AMD fase correcta (Distribucion/Acumulacion >=65%
   //      O Manipulacion >=75% con direccion opuesta)
   //   3. Momentum 5 velas confirma la direccion
   //   4. Confluencia score >= 3
-  //   5. Ultima vela no es F4 engulfing contra la señal
+  //   5. Ultima vela no es F4 engulfing contra la se-al
   // =====================================================
 
   var _lastAlertKey = '';  // evita repetir la misma alerta
@@ -2582,13 +2588,13 @@ hook();
     var cls    = (document.getElementById('main-signal')||{}).className||'';
     var lt     = (document.getElementById('logic-text') ||{}).textContent||'';
 
-    // ── Criterio 1: señal directa de logic.js ───────────────
+    // -- Criterio 1: se-al directa de logic.js ---------------
     var isBuy  = /signal-buy|signal-accumulation|signal-strong-reversal/.test(cls);
     var isSell = /signal-sell|signal-distribution/.test(cls);
     if (!isBuy && !isSell) { _hideEntrada(); return; }
     var dir = isBuy ? 'compra' : 'venta';
 
-    // ── Criterio 2: AMD fase valida ──────────────────────────
+    // -- Criterio 2: AMD fase valida --------------------------
     var pC = parseFloat((document.getElementById('consolidation-prob')||{}).textContent)||0;
     var pM = parseFloat((document.getElementById('manipulation-prob') ||{}).textContent)||0;
     var pD = parseFloat((document.getElementById('distribution-prob') ||{}).textContent)||0;
@@ -2597,7 +2603,7 @@ hook();
     var amdOk = false, amdLabel = '';
     if (isBuy  && pA >= 65) { amdOk=true; amdLabel='Acumulacion '+pA.toFixed(0)+'%'; }
     if (isSell && pD >= 65) { amdOk=true; amdLabel='Distribucion '+pD.toFixed(0)+'%'; }
-    // Manipulacion >=75% = Judas Swing — señal es opuesta al falso movimiento
+    // Manipulacion >=75% = Judas Swing - se-al es opuesta al falso movimiento
     if (pM >= 75) {
       // In Judas Swing, buy signal means real move is up (false down), sell = real down
       amdOk = true;
@@ -2606,7 +2612,7 @@ hook();
     // Consolidacion alta = bloquea entrada siempre
     if (pC >= 70) { _hideEntrada(); return; }
 
-    // ── Criterio 3: Momentum 5 velas confirma ───────────────
+    // -- Criterio 3: Momentum 5 velas confirma ---------------
     var mom5Ok = false, mom5Label = '';
     if (typeof window._mom5Dir !== 'undefined' && window._mom5Diff !== undefined) {
       if (isBuy  && window._mom5Dir === 'G' && window._mom5Diff >= 15) { mom5Ok=true; mom5Label='Mom5 verde '+window._mom5G+'%'; }
@@ -2615,19 +2621,19 @@ hook();
       if (!mom5Ok && amdOk && window._mom5Diff < 15) { mom5Ok=true; mom5Label='Mom5 neutro'; }
     } else { mom5Ok = true; mom5Label = 'Sin datos mom'; } // not enough candles
 
-    // ── Criterio 4: Confluencia score >= 3 ──────────────────
+    // -- Criterio 4: Confluencia score >= 3 ------------------
     var cf = typeof _calcConfluencia === 'function' ? _calcConfluencia() : {score:0};
     var confOk = cf.score >= 3;
     var confLabel = 'Score '+cf.score+'/5';
 
-    // ── Criterio 5: Ultima vela no engulfing contrario ──────
+    // -- Criterio 5: Ultima vela no engulfing contrario ------
     var histLen = typeof history !== 'undefined' ? history.length : 0;
     var lastStr = histLen > 0 && typeof getCandleStrength==='function' ? getCandleStrength(histLen-1)||2 : 2;
     var lastCol = histLen > 0 ? history[histLen-1] : '';
     var noEngulf = !(lastStr >= 4 && ((isBuy && lastCol==='R') || (isSell && lastCol==='G')));
     var engulfLabel = noEngulf ? 'Sin engulfing' : 'F4 en contra';
 
-    // ── Calcular score de entrada (cuantos criterios OK) ─────
+    // -- Calcular score de entrada (cuantos criterios OK) -----
     var criteria = [
       { ok: true,      label: isBuy?'COMPRA':'VENTA',  name:'Senal' },
       { ok: amdOk,     label: amdLabel||'AMD sin fase', name:'AMD'   },
@@ -2637,10 +2643,10 @@ hook();
     ];
     var score = criteria.filter(function(cr){return cr.ok;}).length;
 
-    // ── Requiere minimo 4/5 criterios para mostrar alerta ────
+    // -- Requiere minimo 4/5 criterios para mostrar alerta ----
     if (score < 4) { _hideEntrada(); return; }
 
-    // ── Calcular confianza de la entrada ─────────────────────
+    // -- Calcular confianza de la entrada ---------------------
     var gcConf = parseFloat((document.getElementById('proj-g-conf')||{}).textContent)||0;
     var rcConf = parseFloat((document.getElementById('proj-r-conf')||{}).textContent)||0;
     var sigConf = isBuy ? gcConf : rcConf;
@@ -2648,7 +2654,7 @@ hook();
     var amdBoost = Math.max(pD, pA, pM >= 75 ? pM * 0.8 : 0);
     var entradaConf = Math.min(95, Math.round(sigConf * 0.7 + amdBoost * 0.3));
 
-    // ── Show alert ────────────────────────────────────────────
+    // -- Show alert --------------------------------------------
     _showEntrada(dir, score, entradaConf, criteria, isBuy ? amdLabel : amdLabel);
   }
 
@@ -2666,8 +2672,8 @@ hook();
     box.className = isBuy ? 'compra' : 'venta';
 
     if (icon) icon.textContent = score >= 5 ? (isBuy?'🚀':'💥') : (isBuy?'🔥':'⚡');
-    if (act)  act.textContent  = isBuy ? '▲ COMPRAR' : '▼ VENDER';
-    if (rsn)  rsn.textContent  = reason + (conf ? ' · Conf. entrada: '+conf+'%' : '');
+    if (act)  act.textContent  = isBuy ? '^ COMPRAR' : 'v VENDER';
+    if (rsn)  rsn.textContent  = reason + (conf ? ' . Conf. entrada: '+conf+'%' : '');
     if (scr)  scr.textContent  = score+'/5 criterios';
 
     if (chks) {
@@ -2677,7 +2683,7 @@ hook();
       }).join('');
     }
 
-    // ── Voice alert (only when signal changes) ────────────────
+    // -- Voice alert (only when signal changes) ----------------
     var alertKey = dir + '-' + score;
     if (alertKey !== _lastAlertKey) {
       _lastAlertKey = alertKey;
@@ -2700,7 +2706,7 @@ hook();
   }
 
   // =====================================================
-  // IA ENGINE — Claude API analiza la siguiente vela
+  // IA ENGINE - Claude API analiza la siguiente vela
   // Compara con el sistema CMD en tiempo real
   // Trackea accuracy de IA vs Sistema por separado
   // =====================================================
@@ -2711,7 +2717,7 @@ hook();
   var _iaPrevLen    = 0;       // velas cuando se hizo la prediccion
   var _iaLoading    = false;   // esperando respuesta API
 
-  // ── Activar/desactivar IA ──────────────────────────
+  // -- Activar/desactivar IA --------------------------
   window.iaAnalizar = function() {
     if (_iaLoading) return;
     if (!_iaEnabled) {
@@ -2725,7 +2731,7 @@ hook();
     }
   };
 
-  // ── Construir prompt con contexto completo ──────────
+  // -- Construir prompt con contexto completo ----------
   function _iaBuildPrompt() {
     var histLen = typeof history !== 'undefined' ? history.length : 0;
     if (histLen < 5) return null;
@@ -2748,8 +2754,8 @@ hook();
     var pD   = (document.getElementById('distribution-prob') ||{}).textContent||'0%';
     var pA   = (document.getElementById('accumulation-prob') ||{}).textContent||'0%';
     var pC   = (document.getElementById('consolidation-prob')||{}).textContent||'0%';
-    var sysDir   = (document.getElementById('bt-pred-color')||{}).textContent||'–';
-    var sysConf  = (document.getElementById('bt-pred-conf') ||{}).textContent||'–';
+    var sysDir   = (document.getElementById('bt-pred-color')||{}).textContent||'-';
+    var sysConf  = (document.getElementById('bt-pred-conf') ||{}).textContent||'-';
 
     // Accuracy del sistema hasta ahora
     var realLog  = _btLog.filter(function(e){return e.cat==='real';});
@@ -2799,7 +2805,7 @@ hook();
     return _lines.join('\n');
   }
 
-  // ── Llamar a Claude API ─────────────────────────────
+  // -- Llamar a Claude API -----------------------------
   function _iaPredict() {
     if (_iaLoading) return;
     var histLen = typeof history !== 'undefined' ? history.length : 0;
@@ -2816,7 +2822,12 @@ hook();
     if (btn) { btn.textContent = '🧠 Analizando...'; btn.classList.add('loading'); }
     _iaSetEstado('Analizando ' + histLen + ' velas...', true);
 
-    fetch('https://api.anthropic.com/v1/messages', {
+    // PROXY URL: reemplaza con tu Cloudflare Worker URL
+    // Pasos: workers.cloudflare.com -> crear worker -> pegar cloudflare-worker.js
+    // -> Settings > Variables -> ANTHROPIC_API_KEY = tu-key
+    var PROXY_URL = window._iaProxyUrl || 'https://TU-WORKER.TU-USUARIO.workers.dev';
+
+    fetch(PROXY_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -2847,11 +2858,11 @@ hook();
     .catch(function(e) {
       _iaLoading = false;
       if (btn) { btn.textContent = '🧠 Reintentar'; btn.classList.remove('loading'); }
-      _iaSetEstado('Error de conexion — reintenta', false);
+      _iaSetEstado('Error de conexion - reintenta', false);
     });
   }
 
-  // ── Mostrar resultado IA ────────────────────────────
+  // -- Mostrar resultado IA ----------------------------
   function _iaShowResult(dir, conf, reason, action) {
     var isG   = dir === 'G';
     var col   = isG ? '#00ff88' : '#ff4444';
@@ -2887,7 +2898,7 @@ hook();
     _iaPrevLen = typeof history !== 'undefined' ? history.length : 0;
   }
 
-  // ── Estado de carga / error ─────────────────────────
+  // -- Estado de carga / error -------------------------
   function _iaSetEstado(msg, loading) {
     var estado = document.getElementById('ia-estado');
     var result = document.getElementById('ia-result');
@@ -2896,7 +2907,7 @@ hook();
     if (result) result.style.display = 'none';
   }
 
-  // ── Verify IA prediction when new candle arrives ─────
+  // -- Verify IA prediction when new candle arrives -----
   function _iaVerifyAndRefresh() {
     var histLen = typeof history !== 'undefined' ? history.length : 0;
     if (!_iaCurrentPred || histLen <= _iaPrevLen || !_iaEnabled) return;
@@ -2917,7 +2928,7 @@ hook();
     setTimeout(_iaPredict, 300);
   }
 
-  // ── IA Accuracy badge ───────────────────────────────
+  // -- IA Accuracy badge -------------------------------
   function _iaUpdateAccBadge() {
     var badge = document.getElementById('ia-acc-badge');
     if (!badge || !_iaLog.length) return;
@@ -2928,7 +2939,7 @@ hook();
     badge.style.borderColor = badge.style.color + '44';
   }
 
-  // ── Agreement indicator ─────────────────────────────
+  // -- Agreement indicator -----------------------------
   function _iaUpdateAgreement() {
     // Check if IA and Sistema agree on direction
     var sysColor = (document.getElementById('bt-pred-color')||{}).textContent||'';
@@ -2953,8 +2964,8 @@ hook();
     hdr = document.getElementById('vs-agree');
     if (hdr) {
       hdr.textContent = agree
-        ? '✓ ACUERDO — Ambos predicen ' + (iaIsG?'VERDE':'ROJA')
-        : '⚡ DESACUERDO — Sistema: '+(sysIsG?'VERDE':'ROJA')+' · IA: '+(iaIsG?'VERDE':'ROJA');
+        ? '✓ ACUERDO - Ambos predicen ' + (iaIsG?'VERDE':'ROJA')
+        : '⚡ DESACUERDO - Sistema: '+(sysIsG?'VERDE':'ROJA')+' . IA: '+(iaIsG?'VERDE':'ROJA');
       hdr.style.color       = agree ? '#00aa44' : '#ff8800';
       hdr.style.background  = agree ? 'rgba(0,170,68,.06)' : 'rgba(255,136,0,.06)';
       hdr.style.borderColor = agree ? '#00aa4422' : '#ff880022';
