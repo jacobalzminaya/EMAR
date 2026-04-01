@@ -355,6 +355,113 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
 .cmd-r{display:flex;align-items:center;gap:4px}
 .cmd-name{font-size:.53em;color:#2e2e2e;min-width:46px}
 .cmd-bar{flex:1;height:3px;background:#0f0f0f;border-radius:2px;overflow:hidden}
+
+/* ── AMD Cycle Display ── */
+.amd-wrap{padding:6px 9px 8px;border-bottom:1px solid #0e0e0e;}
+.amd-title{font-size:.46em;color:#252525;text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:6px;}
+/* Flow line: A -> M -> D */
+.amd-flow{display:flex;align-items:center;gap:0;margin-bottom:7px;}
+.amd-node{
+  flex:1;text-align:center;padding:5px 3px;border-radius:5px;
+  border:1px solid #111;background:#080808;
+  transition:all .4s;cursor:default;position:relative;
+}
+.amd-node-lbl{font-size:.52em;font-weight:900;letter-spacing:.06em;color:#222;transition:color .4s;}
+.amd-node-sub{font-size:.38em;color:#1a1a1a;transition:color .4s;margin-top:1px;}
+.amd-node-pct{font-size:.48em;font-weight:700;color:#1e1e1e;transition:color .4s;}
+.amd-arrow{font-size:.7em;color:#1a1a1a;padding:0 2px;flex-shrink:0;transition:color .4s;}
+
+/* Active states */
+.amd-node.amd-active-c{border-color:#bb44ff44;background:rgba(187,68,255,.06);}
+.amd-node.amd-active-c .amd-node-lbl{color:#bb44ff;}
+.amd-node.amd-active-c .amd-node-sub{color:#884499;}
+.amd-node.amd-active-c .amd-node-pct{color:#9944cc;}
+
+.amd-node.amd-active-m{border-color:#ff444466;background:rgba(255,68,68,.08);}
+.amd-node.amd-active-m .amd-node-lbl{color:#ff4444;text-shadow:0 0 8px rgba(255,68,68,.4);}
+.amd-node.amd-active-m .amd-node-sub{color:#aa2222;}
+.amd-node.amd-active-m .amd-node-pct{color:#cc3333;}
+
+.amd-node.amd-active-d{border-color:#ff880066;background:rgba(255,136,0,.07);}
+.amd-node.amd-active-d .amd-node-lbl{color:#ff8800;}
+.amd-node.amd-active-d .amd-node-sub{color:#aa5500;}
+.amd-node.amd-active-d .amd-node-pct{color:#cc6600;}
+
+.amd-node.amd-active-a{border-color:#00ff8844;background:rgba(0,255,136,.06);}
+.amd-node.amd-active-a .amd-node-lbl{color:#00ff88;}
+.amd-node.amd-active-a .amd-node-sub{color:#006633;}
+.amd-node.amd-active-a .amd-node-pct{color:#00cc55;}
+
+/* Arrow pulse when manipulation is active */
+@keyframes amd-pulse{0%,100%{opacity:.3}50%{opacity:1}}
+.amd-arrow.active{animation:amd-pulse 1s ease-in-out infinite;}
+
+/* Action box */
+.amd-action{
+  padding:5px 7px;border-radius:5px;border:1px solid #111;background:#060606;
+  display:flex;align-items:center;gap:6px;transition:all .4s;
+}
+.amd-action-icon{font-size:.9em;flex-shrink:0;}
+.amd-action-text{font-size:.48em;font-weight:700;color:#252525;transition:color .4s;line-height:1.3;}
+.amd-action-dir{font-size:.55em;font-weight:900;color:#1e1e1e;transition:color .4s;flex-shrink:0;white-space:nowrap;}
+
+.amd-action.phase-c{border-color:#bb44ff22;background:rgba(187,68,255,.03);}
+.amd-action.phase-c .amd-action-text{color:#884499;}
+.amd-action.phase-c .amd-action-dir{color:#bb44ff;}
+.amd-action.phase-m{border-color:#ff444433;background:rgba(255,68,68,.05);}
+.amd-action.phase-m .amd-action-text{color:#aa2222;}
+.amd-action.phase-m .amd-action-dir{color:#ff4444;}
+.amd-action.phase-d{border-color:#ff880033;background:rgba(255,136,0,.04);}
+.amd-action.phase-d .amd-action-text{color:#885500;}
+.amd-action.phase-d .amd-action-dir{color:#ff8800;}
+.amd-action.phase-a{border-color:#00ff8833;background:rgba(0,255,136,.04);}
+.amd-action.phase-a .amd-action-text{color:#006633;}
+.amd-action.phase-a .amd-action-dir{color:#00ff88;}
+
+/* ── ALERTA REAL DE ENTRADA ── */
+#entrada-alert{
+  display:none;flex-shrink:0;
+  padding:10px 12px;margin:0;
+  border-bottom:1px solid #0e0e0e;
+  position:relative;overflow:hidden;
+}
+#entrada-alert.compra{
+  background:linear-gradient(135deg,#001a08 0%,#003012 60%,#001a08 100%);
+  border-bottom:2px solid #00ff8855;
+}
+#entrada-alert.venta{
+  background:linear-gradient(135deg,#1a0000 0%,#300008 60%,#1a0000 100%);
+  border-bottom:2px solid #ff444455;
+}
+/* Top sweep line */
+#entrada-alert::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+}
+#entrada-alert.compra::before{background:linear-gradient(90deg,transparent,#00ff88,transparent);animation:entrada-sweep 1.5s ease-in-out infinite;}
+#entrada-alert.venta::before{background:linear-gradient(90deg,transparent,#ff4444,transparent);animation:entrada-sweep 1.5s ease-in-out infinite;}
+@keyframes entrada-sweep{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+/* Main content */
+.entrada-main{display:flex;align-items:center;gap:10px;}
+@keyframes entrada-icon-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+.entrada-icon{font-size:1.6em;animation:entrada-icon-pulse 1s ease-in-out infinite;flex-shrink:0;}
+.entrada-body{flex:1;}
+.entrada-action{font-size:.9em;font-weight:900;letter-spacing:.1em;line-height:1;}
+#entrada-alert.compra .entrada-action{color:#00ff88;text-shadow:0 0 12px rgba(0,255,136,.5);}
+#entrada-alert.venta  .entrada-action{color:#ff4444;text-shadow:0 0 12px rgba(255,68,68,.5);}
+.entrada-reason{font-size:.48em;color:#444;margin-top:3px;line-height:1.3;}
+.entrada-score{
+  font-size:.52em;font-weight:700;padding:4px 8px;border-radius:6px;
+  text-align:center;flex-shrink:0;
+}
+#entrada-alert.compra .entrada-score{color:#00aa44;background:#001a0a;border:1px solid #00441133;}
+#entrada-alert.venta  .entrada-score{color:#aa1111;background:#1a0000;border:1px solid #44000033;}
+/* Criteria checklist */
+.entrada-checks{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;}
+.entrada-chk{font-size:.42em;padding:2px 6px;border-radius:4px;font-weight:700;}
+.entrada-chk.ok.compra{background:#001a08;color:#005522;border:1px solid #00331155;}
+.entrada-chk.ok.venta {background:#1a0000;color:#551111;border:1px solid #33000055;}
+.entrada-chk.no{background:#0a0a0a;color:#222;border:1px solid #11111155;}
 .cmd-f{height:100%;border-radius:2px;transition:width .4s}
 .cmd-pct{font-size:.5em;color:#1e1e1e;min-width:20px;text-align:right}
 
@@ -738,6 +845,19 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
       <div class="hist-row" id="hrow"></div>
     </div>
 
+    <!-- ── ALERTA REAL DE ENTRADA ── -->
+    <div id="entrada-alert">
+      <div class="entrada-main">
+        <div class="entrada-icon" id="entrada-icon">🚀</div>
+        <div class="entrada-body">
+          <div class="entrada-action" id="entrada-action">COMPRAR</div>
+          <div class="entrada-reason" id="entrada-reason">–</div>
+        </div>
+        <div class="entrada-score" id="entrada-score">Score 5/5</div>
+      </div>
+      <div class="entrada-checks" id="entrada-checks"></div>
+    </div>
+
     <!-- ── BACKTESTING integrado en index ── -->
     <!-- Barra de predicción próxima vela -->
     <div id="bt-pred-box" style="margin:0;padding:5px 10px;border-bottom:1px solid #0e0e0e;flex-shrink:0;background:#070707;">
@@ -890,12 +1010,49 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
       <div class="ma-track"><div class="ma-fill" id="ma10f" style="width:50%;background:#2a2a2a"></div><div class="ma-mid"></div></div>
     </div>
 
-    <div class="rc-div">Fases CMD</div>
-    <div class="cmd-mini">
-      <div class="cmd-r"><span class="cmd-name">Consol.</span><div class="cmd-bar"><div class="cmd-f" id="cmdc" style="width:0%;background:#bb44ff"></div></div><span class="cmd-pct" id="cpcnt">0%</span></div>
-      <div class="cmd-r"><span class="cmd-name">Manip.</span><div class="cmd-bar"><div class="cmd-f" id="cmdm" style="width:0%;background:#ff4444"></div></div><span class="cmd-pct" id="cpmnt">0%</span></div>
-      <div class="cmd-r"><span class="cmd-name">Distrib.</span><div class="cmd-bar"><div class="cmd-f" id="cmdd" style="width:0%;background:#ff8800"></div></div><span class="cmd-pct" id="cpdnt">0%</span></div>
-      <div class="cmd-r"><span class="cmd-name">Acumul.</span><div class="cmd-bar"><div class="cmd-f" id="cmda" style="width:0%;background:#00ff88"></div></div><span class="cmd-pct" id="cpant">0%</span></div>
+    <!-- AMD Cycle Display -->
+    <div class="amd-wrap">
+      <div class="amd-title">Ciclo AMD · Smart Money</div>
+
+      <!-- Flow: Consolidacion -> Manipulacion -> Distribucion/Acumulacion -->
+      <div class="amd-flow">
+        <div class="amd-node" id="amd-c">
+          <div class="amd-node-lbl">C</div>
+          <div class="amd-node-sub">Consol.</div>
+          <div class="amd-node-pct" id="cpcnt">0%</div>
+        </div>
+        <div class="amd-arrow" id="amd-arr1">→</div>
+        <div class="amd-node" id="amd-m">
+          <div class="amd-node-lbl">M</div>
+          <div class="amd-node-sub">Manip.</div>
+          <div class="amd-node-pct" id="cpmnt">0%</div>
+        </div>
+        <div class="amd-arrow" id="amd-arr2">→</div>
+        <div class="amd-node" id="amd-d">
+          <div class="amd-node-lbl">D</div>
+          <div class="amd-node-sub">Distrib.</div>
+          <div class="amd-node-pct" id="cpdnt">0%</div>
+        </div>
+        <div class="amd-arrow" id="amd-arr3">/</div>
+        <div class="amd-node" id="amd-a">
+          <div class="amd-node-lbl">A</div>
+          <div class="amd-node-sub">Acumul.</div>
+          <div class="amd-node-pct" id="cpant">0%</div>
+        </div>
+      </div>
+
+      <!-- Action box: what to do now -->
+      <div class="amd-action" id="amd-action">
+        <div class="amd-action-icon" id="amd-icon">⏸️</div>
+        <div class="amd-action-text" id="amd-text">Acumula velas para detectar la fase</div>
+        <div class="amd-action-dir" id="amd-dir"></div>
+      </div>
+
+      <!-- Hidden legacy inputs needed by upCMD() -->
+      <div style="display:none">
+        <div id="cmdc"></div><div id="cmdm"></div>
+        <div id="cmdd"></div><div id="cmda"></div>
+      </div>
     </div>
 
   </div><!-- /rc -->
@@ -1201,11 +1358,77 @@ function upMA10(){
 }
 
 function upCMD(){
-  [['c','consolidation','cpcnt'],['m','manipulation','cpmnt'],['d','distribution','cpdnt'],['a','accumulation','cpant']].forEach(function(t){
-    var p=parseFloat($(t[1]+'-prob')?.textContent)||0;
-    var f=$('cmd'+t[0]),pe=$(t[2]);
-    if(f)f.style.width=p+'%'; if(pe)pe.textContent=p.toFixed(0)+'%';
+  // Update percentage text for all 4 phases
+  var pC=parseFloat($('consolidation-prob')?.textContent)||0;
+  var pM=parseFloat($('manipulation-prob')?.textContent)||0;
+  var pD=parseFloat($('distribution-prob')?.textContent)||0;
+  var pA=parseFloat($('accumulation-prob')?.textContent)||0;
+  if($('cpcnt'))$('cpcnt').textContent=pC.toFixed(0)+'%';
+  if($('cpmnt'))$('cpmnt').textContent=pM.toFixed(0)+'%';
+  if($('cpdnt'))$('cpdnt').textContent=pD.toFixed(0)+'%';
+  if($('cpant'))$('cpant').textContent=pA.toFixed(0)+'%';
+
+  // Determine dominant phase
+  var phases = [{id:'c',p:pC},{id:'m',p:pM},{id:'d',p:pD},{id:'a',p:pA}];
+  var dom = phases.reduce(function(a,b){return b.p>a.p?b:a},{id:'',p:0});
+
+  // Update node active states
+  ['c','m','d','a'].forEach(function(ph){
+    var node=$('amd-'+ph);
+    if(!node)return;
+    node.className='amd-node'+(dom.id===ph&&dom.p>=50?' amd-active-'+ph:'');
   });
+
+  // Pulse arrows when manipulation is active
+  var arr1=$('amd-arr1'),arr2=$('amd-arr2');
+  if(arr1)arr1.className='amd-arrow'+(dom.id==='m'&&dom.p>=60?' active':'');
+  if(arr2)arr2.className='amd-arrow'+(dom.id==='m'&&dom.p>=60?' active':'');
+
+  // Action box
+  var icon=$('amd-icon'),txt=$('amd-text'),dir=$('amd-dir'),box=$('amd-action');
+  if(!icon||!txt||!dir||!box)return;
+
+  // Get current signal direction from main-signal
+  var cls=($('main-signal')||{}).className||'';
+  var isBuy =/signal-buy|signal-accumulation|signal-strong-reversal/.test(cls);
+  var isSell=/signal-sell|signal-distribution/.test(cls);
+  var sigDir = isBuy?'VERDE':'ROJA';
+  var sigCol = isBuy?'#00ff88':'#ff4444';
+
+  box.className='amd-action';
+
+  if(dom.p<40){
+    // No dominant phase
+    icon.textContent='⏸️'; box.className+=' phase-c';
+    txt.textContent='Sin fase dominante — esperar estructura';
+    dir.textContent='';
+  } else if(dom.id==='c'){
+    // CONSOLIDACION — esperar, no operar dentro del rango
+    icon.textContent='📦'; box.className+=' phase-c';
+    txt.textContent='Consolidacion '+pC.toFixed(0)+'% — ESPERAR. No operar dentro del rango. Las instituciones acumulan posicion.';
+    dir.textContent='RANGO';
+  } else if(dom.id==='m'){
+    // MANIPULACION — Judas Swing activo
+    // The real move will be OPPOSITE to the current visible direction
+    var manipDir = isSell?'COMPRA':'VENTA'; // opposite of current visible signal
+    var manipCol = isSell?'#00ff88':'#ff4444';
+    icon.textContent='⚡'; box.className+=' phase-m';
+    txt.textContent='JUDAS SWING '+pM.toFixed(0)+'% — Falso rompimiento. El movimiento real viene en direccion opuesta. Preparar entrada.';
+    dir.style.color=manipCol;
+    dir.textContent='→ '+manipDir;
+  } else if(dom.id==='d'){
+    // DISTRIBUCION — momentum real alcista
+    icon.textContent='🚀'; box.className+=' phase-d';
+    txt.textContent='Distribucion '+pD.toFixed(0)+'% — MOMENTUM REAL. Operar con la tendencia. Smart money ya posicionado.';
+    dir.style.color='#ff8800';
+    dir.textContent=isSell?'→ VENDER':'→ ESPERAR CONF.';
+  } else if(dom.id==='a'){
+    // ACUMULACION — momentum real bajista reversion
+    icon.textContent='📥'; box.className+=' phase-a';
+    txt.textContent='Acumulacion '+pA.toFixed(0)+'% — Instituciones comprando. Posible reversion alcista proxima.';
+    dir.style.color='#00ff88';
+    dir.textContent=isBuy?'→ COMPRAR':'→ ESPERAR CONF.';
+  }
 }
 
 function upPri(){
@@ -2280,6 +2503,143 @@ hook();
     if (outer) outer.classList.add('conf-'+score+'-'+dir);
   }
 
+  // =====================================================
+  // ALERTA REAL DE ENTRADA
+  // Se activa SOLO cuando todos los criterios se alinean:
+  //   1. Señal directa (COMPRA/VENTA) de logic.js
+  //   2. AMD fase correcta (Distribucion/Acumulacion >=65%
+  //      O Manipulacion >=75% con direccion opuesta)
+  //   3. Momentum 5 velas confirma la direccion
+  //   4. Confluencia score >= 3
+  //   5. Ultima vela no es F4 engulfing contra la señal
+  // =====================================================
+
+  var _lastAlertKey = '';  // evita repetir la misma alerta
+
+  function _checkEntrada() {
+    var box    = document.getElementById('entrada-alert');
+    if (!box) return;
+
+    var cls    = (document.getElementById('main-signal')||{}).className||'';
+    var lt     = (document.getElementById('logic-text') ||{}).textContent||'';
+
+    // ── Criterio 1: señal directa de logic.js ───────────────
+    var isBuy  = /signal-buy|signal-accumulation|signal-strong-reversal/.test(cls);
+    var isSell = /signal-sell|signal-distribution/.test(cls);
+    if (!isBuy && !isSell) { _hideEntrada(); return; }
+    var dir = isBuy ? 'compra' : 'venta';
+
+    // ── Criterio 2: AMD fase valida ──────────────────────────
+    var pC = parseFloat((document.getElementById('consolidation-prob')||{}).textContent)||0;
+    var pM = parseFloat((document.getElementById('manipulation-prob') ||{}).textContent)||0;
+    var pD = parseFloat((document.getElementById('distribution-prob') ||{}).textContent)||0;
+    var pA = parseFloat((document.getElementById('accumulation-prob') ||{}).textContent)||0;
+
+    var amdOk = false, amdLabel = '';
+    if (isBuy  && pA >= 65) { amdOk=true; amdLabel='Acumulacion '+pA.toFixed(0)+'%'; }
+    if (isSell && pD >= 65) { amdOk=true; amdLabel='Distribucion '+pD.toFixed(0)+'%'; }
+    // Manipulacion >=75% = Judas Swing — señal es opuesta al falso movimiento
+    if (pM >= 75) {
+      // In Judas Swing, buy signal means real move is up (false down), sell = real down
+      amdOk = true;
+      amdLabel = 'Judas Swing '+pM.toFixed(0)+'%';
+    }
+    // Consolidacion alta = bloquea entrada siempre
+    if (pC >= 70) { _hideEntrada(); return; }
+
+    // ── Criterio 3: Momentum 5 velas confirma ───────────────
+    var mom5Ok = false, mom5Label = '';
+    if (typeof window._mom5Dir !== 'undefined' && window._mom5Diff !== undefined) {
+      if (isBuy  && window._mom5Dir === 'G' && window._mom5Diff >= 15) { mom5Ok=true; mom5Label='Mom5 verde '+window._mom5G+'%'; }
+      if (isSell && window._mom5Dir === 'R' && window._mom5Diff >= 15) { mom5Ok=true; mom5Label='Mom5 rojo ' +window._mom5R+'%'; }
+      // Accept weaker momentum if AMD is strong
+      if (!mom5Ok && amdOk && window._mom5Diff < 15) { mom5Ok=true; mom5Label='Mom5 neutro'; }
+    } else { mom5Ok = true; mom5Label = 'Sin datos mom'; } // not enough candles
+
+    // ── Criterio 4: Confluencia score >= 3 ──────────────────
+    var cf = typeof _calcConfluencia === 'function' ? _calcConfluencia() : {score:0};
+    var confOk = cf.score >= 3;
+    var confLabel = 'Score '+cf.score+'/5';
+
+    // ── Criterio 5: Ultima vela no engulfing contrario ──────
+    var histLen = typeof history !== 'undefined' ? history.length : 0;
+    var lastStr = histLen > 0 && typeof getCandleStrength==='function' ? getCandleStrength(histLen-1)||2 : 2;
+    var lastCol = histLen > 0 ? history[histLen-1] : '';
+    var noEngulf = !(lastStr >= 4 && ((isBuy && lastCol==='R') || (isSell && lastCol==='G')));
+    var engulfLabel = noEngulf ? 'Sin engulfing' : 'F4 en contra';
+
+    // ── Calcular score de entrada (cuantos criterios OK) ─────
+    var criteria = [
+      { ok: true,      label: isBuy?'COMPRA':'VENTA',  name:'Senal' },
+      { ok: amdOk,     label: amdLabel||'AMD sin fase', name:'AMD'   },
+      { ok: mom5Ok,    label: mom5Label,                name:'Mom5'  },
+      { ok: confOk,    label: confLabel,                name:'Conf'  },
+      { ok: noEngulf,  label: engulfLabel,              name:'Vela'  }
+    ];
+    var score = criteria.filter(function(cr){return cr.ok;}).length;
+
+    // ── Requiere minimo 4/5 criterios para mostrar alerta ────
+    if (score < 4) { _hideEntrada(); return; }
+
+    // ── Calcular confianza de la entrada ─────────────────────
+    var gcConf = parseFloat((document.getElementById('proj-g-conf')||{}).textContent)||0;
+    var rcConf = parseFloat((document.getElementById('proj-r-conf')||{}).textContent)||0;
+    var sigConf = isBuy ? gcConf : rcConf;
+    // Adjust by AMD strength
+    var amdBoost = Math.max(pD, pA, pM >= 75 ? pM * 0.8 : 0);
+    var entradaConf = Math.min(95, Math.round(sigConf * 0.7 + amdBoost * 0.3));
+
+    // ── Show alert ────────────────────────────────────────────
+    _showEntrada(dir, score, entradaConf, criteria, isBuy ? amdLabel : amdLabel);
+  }
+
+  function _showEntrada(dir, score, conf, criteria, reason) {
+    var box   = document.getElementById('entrada-alert');
+    var icon  = document.getElementById('entrada-icon');
+    var act   = document.getElementById('entrada-action');
+    var rsn   = document.getElementById('entrada-reason');
+    var scr   = document.getElementById('entrada-score');
+    var chks  = document.getElementById('entrada-checks');
+    if (!box) return;
+
+    var isBuy = dir === 'compra';
+    box.style.display = 'block';
+    box.className = isBuy ? 'compra' : 'venta';
+
+    if (icon) icon.textContent = score >= 5 ? (isBuy?'🚀':'💥') : (isBuy?'🔥':'⚡');
+    if (act)  act.textContent  = isBuy ? '▲ COMPRAR' : '▼ VENDER';
+    if (rsn)  rsn.textContent  = reason + (conf ? ' · Conf. entrada: '+conf+'%' : '');
+    if (scr)  scr.textContent  = score+'/5 criterios';
+
+    if (chks) {
+      chks.innerHTML = criteria.map(function(cr){
+        return '<div class="entrada-chk '+(cr.ok?'ok '+dir:'no')+'">'+
+          (cr.ok?'✓ ':'✗ ')+cr.name+'</div>';
+      }).join('');
+    }
+
+    // ── Voice alert (only when signal changes) ────────────────
+    var alertKey = dir + '-' + score;
+    if (alertKey !== _lastAlertKey) {
+      _lastAlertKey = alertKey;
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        var msg = isBuy
+          ? 'Atencion. Entrada de compra confirmada. '+reason+'. Confianza '+conf+' por ciento.'
+          : 'Atencion. Entrada de venta confirmada. '+reason+'. Confianza '+conf+' por ciento.';
+        var utt = new SpeechSynthesisUtterance(msg);
+        utt.lang = 'es-US'; utt.rate = 0.85; utt.pitch = 1.05; utt.volume = 1.0;
+        window.speechSynthesis.speak(utt);
+      }
+    }
+  }
+
+  function _hideEntrada() {
+    var box = document.getElementById('entrada-alert');
+    if (box) box.style.display = 'none';
+    _lastAlertKey = '';
+  }
+
   // -- Hook logic.js update() -----------------------------------
   // Wait for update() to be available then wrap it
   function _btHook() {
@@ -2287,10 +2647,10 @@ hook();
     var _orig = update;
     window.update = function() {
       _orig.apply(this, arguments);
-      // Use requestAnimationFrame so DOM is settled before we read it
       requestAnimationFrame(function(){
         _btOnUpdate();
         _renderConfluencia();
+        _checkEntrada();
       });
     };
     // Initial read
