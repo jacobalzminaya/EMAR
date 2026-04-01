@@ -740,15 +740,33 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
 
     <!-- ── BACKTESTING integrado en index ── -->
     <!-- Barra de predicción próxima vela -->
-    <div id="bt-pred-box" style="margin:0;padding:5px 10px;border-bottom:1px solid #0e0e0e;flex-shrink:0;display:flex;align-items:center;gap:8px;background:#070707;">
-      <div style="font-size:.48em;color:#252525;font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Próxima</div>
-      <div id="bt-pred-color" style="font-size:1.3em;font-weight:900;color:#444;line-height:1;">–</div>
-      <div id="bt-pred-conf"  style="font-size:.62em;font-weight:700;color:#444;">–</div>
-      <div style="flex:1;height:3px;background:#111;border-radius:2px;overflow:hidden;">
-        <div id="bt-pred-fill" style="height:100%;width:0%;border-radius:2px;transition:width .4s;"></div>
+    <div id="bt-pred-box" style="margin:0;padding:5px 10px;border-bottom:1px solid #0e0e0e;flex-shrink:0;background:#070707;">
+      <!-- Row 1: main prediction -->
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="font-size:.48em;color:#252525;font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap;">Próxima</div>
+        <div id="bt-pred-color" style="font-size:1.3em;font-weight:900;color:#444;line-height:1;">–</div>
+        <div id="bt-pred-conf"  style="font-size:.62em;font-weight:700;color:#444;">–</div>
+        <div style="flex:1;height:3px;background:#111;border-radius:2px;overflow:hidden;">
+          <div id="bt-pred-fill" style="height:100%;width:0%;border-radius:2px;transition:width .4s;"></div>
+        </div>
+        <div id="bt-pred-reason" style="font-size:.48em;color:#333;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">–</div>
+        <div id="bt-acc-badge"  style="font-size:.48em;padding:2px 6px;border-radius:8px;background:#111;border:1px solid #1e1e1e;color:#444;white-space:nowrap;">–</div>
       </div>
-      <div id="bt-pred-reason" style="font-size:.48em;color:#333;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">–</div>
-      <div id="bt-acc-badge"  style="font-size:.48em;padding:2px 6px;border-radius:8px;background:#111;border:1px solid #1e1e1e;color:#444;white-space:nowrap;">–</div>
+      <!-- Row 2: 5-candle momentum indicator -->
+      <div id="mom5-row" style="display:none;margin-top:4px;display:flex;align-items:center;gap:4px;">
+        <div style="font-size:.42em;color:#1e1e1e;white-space:nowrap;font-weight:700;">MOM5</div>
+        <!-- 5 mini candle dots -->
+        <div style="display:flex;gap:2px;" id="mom5-dots"></div>
+        <!-- Momentum direction label -->
+        <div id="mom5-label" style="font-size:.42em;font-weight:700;color:#222;margin-left:2px;">–</div>
+        <!-- Momentum weight bar -->
+        <div style="flex:1;height:2px;background:#111;border-radius:1px;overflow:hidden;position:relative;">
+          <div id="mom5-g-fill" style="position:absolute;left:0;top:0;height:100%;width:0%;background:#003311;border-radius:1px;transition:width .4s;"></div>
+          <div id="mom5-r-fill" style="position:absolute;right:0;top:0;height:100%;width:0%;background:#330000;border-radius:1px;transition:width .4s;"></div>
+        </div>
+        <!-- Signal alignment badge -->
+        <div id="mom5-align" style="font-size:.42em;padding:1px 5px;border-radius:4px;background:#111;color:#222;white-space:nowrap;border:1px solid #1a1a1a;">–</div>
+      </div>
     </div>
     <!-- ── CONFLUENCIA: señal exagerada cuando multiples factores se alinean ── -->
     <div id="confluencia-box">
@@ -1615,6 +1633,66 @@ hook();
     if (re) re.textContent = pred.reason || '';
     if (bx) bx.style.background = isG ? 'rgba(0,255,136,.03)' : 'rgba(255,68,68,.03)';
     _btUpdateStats();
+    _renderMom5(isG);
+  }
+
+  // -- 5-candle momentum indicator ----------------------------
+  function _renderMom5(predIsGreen) {
+    var row  = document.getElementById('mom5-row');
+    var dots = document.getElementById('mom5-dots');
+    var lbl  = document.getElementById('mom5-label');
+    var gFil = document.getElementById('mom5-g-fill');
+    var rFil = document.getElementById('mom5-r-fill');
+    var aln  = document.getElementById('mom5-align');
+    if (!row || !dots) return;
+    var histLen = typeof history !== 'undefined' ? history.length : 0;
+    if (histLen < 5) { row.style.display='none'; return; }
+    row.style.display = 'flex';
+
+    // Last 5 candles with strength
+    var last5 = [];
+    for (var i = histLen-5; i < histLen; i++)
+      last5.push({ color:history[i], str:typeof getCandleStrength==='function'?getCandleStrength(i)||2:2 });
+
+    // Weighted momentum
+    var gW=0, rW=0;
+    last5.forEach(function(c){ if(c.color==='G') gW+=c.str; else rW+=c.str; });
+    var total = gW+rW;
+    var gPct  = total>0 ? Math.round(gW/total*100) : 50;
+    var rPct  = 100-gPct;
+    var momDir = gPct>rPct ? 'G' : 'R';
+    var diff   = Math.abs(gPct-rPct);
+
+    // 5 dots sized by candle strength
+    dots.innerHTML = last5.map(function(c){
+      var bg  = c.color==='G' ? '#004422' : '#440000';
+      var bdr = c.color==='G' ? '#006633' : '#660000';
+      var sz  = c.str>=3 ? 7 : c.str>=2 ? 5 : 4;
+      return '<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+bg+';border:1px solid '+bdr+';flex-shrink:0;align-self:center"></div>';
+    }).join('');
+
+    // Label
+    var momCol = momDir==='G' ? '#006622' : '#661111';
+    var momTxt = momDir==='G'
+      ? (gPct>=70?'VERDE FUERTE':'Verde '+gPct+'%')
+      : (rPct>=70?'ROJA FUERTE' :'Roja ' +rPct+'%');
+    if (lbl) { lbl.textContent=momTxt; lbl.style.color=momCol; }
+
+    // Fill bars
+    if (gFil){ gFil.style.width=gPct+'%'; gFil.style.background=gPct>60?'#005522':'#002211'; }
+    if (rFil){ rFil.style.width=rPct+'%'; rFil.style.background=rPct>60?'#550000':'#220000'; }
+
+    // Alignment badge
+    if (aln) {
+      var aligned = (predIsGreen ? 'G' : 'R') === momDir;
+      var adj     = diff>=20
+        ? (aligned ? '+'+Math.round(diff*0.15)+'pp conf' : '-'+Math.round(diff*0.12)+'pp conf')
+        : 'neutro';
+      aln.textContent   = aligned ? 'Con tendencia '+adj : 'Contra tendencia '+adj;
+      aln.style.color       = aligned ? '#005522' : '#552200';
+      aln.style.borderColor = aligned ? '#00552255' : '#55220055';
+      aln.style.background  = aligned ? '#001108' : '#110500';
+    }
   }
 
   // -- Actualizar stats: total + solo senales reales -----------
