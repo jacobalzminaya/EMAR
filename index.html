@@ -55,34 +55,93 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
 .wbr.r.sel{background:#cc2a2a;border-color:#ff3333;box-shadow:0 0 10px rgba(255,68,68,.55)}
 
 /* ── CONFLUENCIA states on WiFi bars ── */
-/* Score 3: dimmed side pulses gently */
-.wifi-conf-3 .wbr.g{opacity:.25;transition:opacity .4s}
-.wifi-conf-3 .wbr.r{opacity:.25;transition:opacity .4s}
-.wifi-conf-3.conf-bull .wbr.g{opacity:1!important;background:rgba(0,200,80,.25);border-color:rgba(0,255,136,.4)}
-.wifi-conf-3.conf-bear .wbr.r{opacity:1!important;background:rgba(200,45,45,.25);border-color:rgba(255,68,68,.4)}
+@keyframes wifi-pulse-g{
+  0%,100%{box-shadow:0 0 6px rgba(0,255,136,.5)}
+  50%{box-shadow:0 0 18px rgba(0,255,136,.95),0 0 35px rgba(0,255,136,.4)}
+}
+@keyframes wifi-pulse-r{
+  0%,100%{box-shadow:0 0 6px rgba(255,68,68,.5)}
+  50%{box-shadow:0 0 18px rgba(255,68,68,.95),0 0 35px rgba(255,68,68,.4)}
+}
+@keyframes lbl-flash{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes wifi-shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-3px)}
+  40%{transform:translateX(3px)}
+  60%{transform:translateX(-1px)}
+  80%{transform:translateX(1px)}
+}
 
-/* Score 4: active side glows, inactive side hidden */
-.wifi-conf-4 .wbr.g{opacity:.08;transition:opacity .3s}
-.wifi-conf-4 .wbr.r{opacity:.08;transition:opacity .3s}
-.wifi-conf-4.conf-bull .wbr.g{opacity:1!important;background:rgba(0,220,90,.55)!important;border-color:#00ff88!important;box-shadow:0 0 8px rgba(0,255,136,.5)}
-.wifi-conf-4.conf-bear .wbr.r{opacity:1!important;background:rgba(210,48,48,.55)!important;border-color:#ff4444!important;box-shadow:0 0 8px rgba(255,68,68,.5)}
-/* Pulse animation on active side */
-@keyframes wifi-pulse-g{0%,100%{box-shadow:0 0 8px rgba(0,255,136,.4)}50%{box-shadow:0 0 20px rgba(0,255,136,.85),0 0 40px rgba(0,255,136,.3)}}
-@keyframes wifi-pulse-r{0%,100%{box-shadow:0 0 8px rgba(255,68,68,.4)}50%{box-shadow:0 0 20px rgba(255,68,68,.85),0 0 40px rgba(255,68,68,.3)}}
-.wifi-conf-4.conf-bull .wbr.g{animation:wifi-pulse-g 1.4s ease-in-out infinite}
-.wifi-conf-4.conf-bear .wbr.r{animation:wifi-pulse-r 1.4s ease-in-out infinite}
+/* ── Score 3: active side turns solid color, opposite dims ── */
+.wifi-conf-3.conf-bull .wbr.g{
+  background:#00bb44!important;
+  border-color:#00ff88!important;
+  opacity:1!important;
+}
+.wifi-conf-3.conf-bull .wbr.r{
+  background:rgba(80,15,15,.15)!important;
+  border-color:rgba(80,15,15,.2)!important;
+  opacity:.3!important;
+}
+.wifi-conf-3.conf-bear .wbr.r{
+  background:#bb2222!important;
+  border-color:#ff4444!important;
+  opacity:1!important;
+}
+.wifi-conf-3.conf-bear .wbr.g{
+  background:rgba(15,40,15,.15)!important;
+  border-color:rgba(15,40,15,.2)!important;
+  opacity:.3!important;
+}
 
-/* Score 5: MAX ALERT — active side blazing, inactive fully hidden */
-.wifi-conf-5 .wbr.g{opacity:0!important;transition:opacity .2s}
-.wifi-conf-5 .wbr.r{opacity:0!important;transition:opacity .2s}
-.wifi-conf-5.conf-bull .wbr.g{opacity:1!important;background:rgba(0,255,100,.8)!important;border-color:#00ff88!important;animation:wifi-pulse-g .8s ease-in-out infinite!important}
-.wifi-conf-5.conf-bear .wbr.r{opacity:1!important;background:rgba(255,60,60,.8)!important;border-color:#ff3333!important;animation:wifi-pulse-r .8s ease-in-out infinite!important}
-/* Label flashes on max alert */
-@keyframes lbl-flash{0%,100%{opacity:1}50%{opacity:.4}}
-.wifi-conf-5 .wifi-lbl-side{animation:lbl-flash .8s ease-in-out infinite}
-/* WiFi container shake on score 5 */
-@keyframes wifi-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-2px)}40%{transform:translateX(2px)}60%{transform:translateX(-1px)}80%{transform:translateX(1px)}}
-.wifi-conf-5{animation:wifi-shake 2.5s ease-in-out infinite}
+/* ── Score 4: bright solid color + pulse glow, opposite nearly gone ── */
+.wifi-conf-4.conf-bull .wbr.g{
+  background:#00ee55!important;
+  border-color:#00ff88!important;
+  opacity:1!important;
+  animation:wifi-pulse-g 1.4s ease-in-out infinite;
+}
+.wifi-conf-4.conf-bull .wbr.r{
+  background:rgba(40,5,5,.1)!important;
+  border-color:transparent!important;
+  opacity:.12!important;
+}
+.wifi-conf-4.conf-bear .wbr.r{
+  background:#ee2222!important;
+  border-color:#ff4444!important;
+  opacity:1!important;
+  animation:wifi-pulse-r 1.4s ease-in-out infinite;
+}
+.wifi-conf-4.conf-bear .wbr.g{
+  background:rgba(5,25,5,.1)!important;
+  border-color:transparent!important;
+  opacity:.12!important;
+}
+
+/* ── Score 5: MAX — blazing full color, opposite invisible ── */
+.wifi-conf-5.conf-bull .wbr.g{
+  background:#00ff66!important;
+  border-color:#00ff88!important;
+  opacity:1!important;
+  animation:wifi-pulse-g .85s ease-in-out infinite!important;
+}
+.wifi-conf-5.conf-bull .wbr.r{
+  opacity:0!important;
+  pointer-events:none;
+}
+.wifi-conf-5.conf-bear .wbr.r{
+  background:#ff2222!important;
+  border-color:#ff5555!important;
+  opacity:1!important;
+  animation:wifi-pulse-r .85s ease-in-out infinite!important;
+}
+.wifi-conf-5.conf-bear .wbr.g{
+  opacity:0!important;
+  pointer-events:none;
+}
+/* Label flash + container shake on score 5 */
+.wifi-conf-5 .wifi-lbl-side{animation:lbl-flash .85s ease-in-out infinite}
+.wifi-conf-5{animation:wifi-shake 2.2s ease-in-out infinite}
 
 .tri-tags{display:flex;justify-content:space-between;margin-top:4px}
 .tri-tags span{font-size:.56em;font-weight:700;letter-spacing:.04em}
