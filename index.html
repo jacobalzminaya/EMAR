@@ -71,6 +71,25 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
   60%{transform:translateX(-1px)}
   80%{transform:translateX(1px)}
 }
+/* ── WiFi outer container background by score ── */
+#wifi-outer.conf-3-bull{background:rgba(0,255,136,.04)!important;border-color:#00ff8822!important;}
+#wifi-outer.conf-3-bear{background:rgba(255,68,68,.04)!important;border-color:#ff444422!important;}
+#wifi-outer.conf-4-bull{background:rgba(0,255,136,.08)!important;border-color:#00ff8844!important;}
+#wifi-outer.conf-4-bear{background:rgba(255,68,68,.08)!important;border-color:#ff444444!important;}
+#wifi-outer.conf-5-bull{background:rgba(0,255,136,.14)!important;border-color:#00ff8877!important;}
+#wifi-outer.conf-5-bear{background:rgba(255,68,68,.14)!important;border-color:#ff444477!important;}
+/* Label color change by confluencia */
+#wifi-outer.conf-3-bull .tri-tags .tag-g,
+#wifi-outer.conf-4-bull .tri-tags .tag-g,
+#wifi-outer.conf-5-bull .tri-tags .tag-g{color:rgba(0,255,136,.85)!important;}
+#wifi-outer.conf-3-bear .tri-tags .tag-r,
+#wifi-outer.conf-4-bear .tri-tags .tag-r,
+#wifi-outer.conf-5-bear .tri-tags .tag-r{color:rgba(255,68,68,.85)!important;}
+/* Title text color hint */
+#wifi-outer.conf-4-bull #wifi-title,
+#wifi-outer.conf-5-bull #wifi-title{color:rgba(0,255,136,.5)!important;}
+#wifi-outer.conf-4-bear #wifi-title,
+#wifi-outer.conf-5-bear #wifi-title{color:rgba(255,68,68,.5)!important;}
 
 /* ── Score 3: active side turns solid color, opposite dims ── */
 .wifi-conf-3.conf-bull .wbr.g{
@@ -610,8 +629,8 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
     </div>
 
     <!-- WiFi selector -->
-    <div style="border-bottom:1px solid #0e0e0e;padding:8px 10px 6px;flex-shrink:0">
-      <div style="font-size:.52em;color:#252525;text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:6px;">⚡ Registrar vela · toca la barra para ver proyección</div>
+    <div id="wifi-outer" style="border-bottom:1px solid #0e0e0e;padding:8px 10px 6px;flex-shrink:0;transition:background .5s,border-color .5s;">
+      <div id="wifi-title" style="font-size:.52em;color:#252525;text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:6px;transition:color .5s;">⚡ Registrar vela · toca la barra para ver proyección</div>
       <div id="wifi-conf-wrap" style="display:flex;align-items:flex-end;justify-content:center;gap:3px;padding-bottom:2px;">
         <!-- GREEN ascending -->
         <div class="tri-side green" id="wg" data-side="G">
@@ -2164,18 +2183,23 @@ hook();
 
   // Clear confluencia state from WiFi bars
   function _clearWifiConf() {
-    var wrap = document.getElementById('wifi-conf-wrap');
-    if (!wrap) return;
-    wrap.classList.remove('wifi-conf-3','wifi-conf-4','wifi-conf-5','conf-bull','conf-bear');
+    var wrap  = document.getElementById('wifi-conf-wrap');
+    var outer = document.getElementById('wifi-outer');
+    if (wrap)  ['wifi-conf-3','wifi-conf-4','wifi-conf-5','conf-bull','conf-bear'].forEach(function(cl){ wrap.classList.remove(cl); });
+    if (outer) ['conf-3-bull','conf-3-bear','conf-4-bull','conf-4-bear','conf-5-bull','conf-5-bear'].forEach(function(cl){ outer.classList.remove(cl); });
   }
 
   function _applyWifiConf(score, dir) {
-    var wrap = document.getElementById('wifi-conf-wrap');
-    if (!wrap) return;
-    // Remove old states
-    wrap.classList.remove('wifi-conf-3','wifi-conf-4','wifi-conf-5','conf-bull','conf-bear');
+    var wrap  = document.getElementById('wifi-conf-wrap');
+    var outer = document.getElementById('wifi-outer');
+    // Remove old states from both elements
+    var removeClasses = ['wifi-conf-3','wifi-conf-4','wifi-conf-5','conf-bull','conf-bear'];
+    var removeOuter   = ['conf-3-bull','conf-3-bear','conf-4-bull','conf-4-bear','conf-5-bull','conf-5-bear'];
+    if (wrap)  removeClasses.forEach(function(cl){ wrap.classList.remove(cl); });
+    if (outer) removeOuter.forEach(function(cl){ outer.classList.remove(cl); });
     if (!dir || score < 3) return;
-    wrap.classList.add('wifi-conf-'+score, 'conf-'+dir);
+    if (wrap)  wrap.classList.add('wifi-conf-'+score, 'conf-'+dir);
+    if (outer) outer.classList.add('conf-'+score+'-'+dir);
   }
 
   // -- Hook logic.js update() -----------------------------------
