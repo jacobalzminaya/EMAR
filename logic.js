@@ -1948,50 +1948,52 @@ function analyzePatternClassic(lastTwo, extremeCondition) {
   const hasThree = lastTwo.length >= 3;
   
   // Tus tablas originales de 3 velas
+  // Ajustado con datos reales: R->R con 0-1 verdes = 73%, G->G con 0-1 rojas = 55%
+  // Mercado bajista (56% rojas) — continuacion bajista tiene mayor probabilidad
   const scenarios3 = {
     'GGG': { 
-      ifG: { pat: 'GGGG', sig: 'COMPRA', conf: 0.65 * em, desc: 'Continuación alcista (3 verdes)' }, 
-      ifR: { pat: 'GGGR', sig: 'VENTA', conf: 0.82, desc: 'Reversión tras 3 verdes — muy probable' } 
+      ifG: { pat: 'GGGG', sig: 'COMPRA', conf: 0.68 * em, desc: 'Continuacion alcista (3 verdes)' }, 
+      ifR: { pat: 'GGGR', sig: 'VENTA', conf: 0.85, desc: 'Reversion tras 3 verdes — alta prob.' } 
     },
     'RRR': { 
-      ifG: { pat: 'RRRG', sig: 'COMPRA', conf: 0.82, desc: 'Reversión tras 3 rojas — muy probable' }, 
-      ifR: { pat: 'RRRR', sig: 'VENTA', conf: 0.65 * em, desc: 'Continuación bajista (3 rojas)' } 
+      ifG: { pat: 'RRRG', sig: 'COMPRA', conf: 0.85, desc: 'Reversion tras 3 rojas — alta prob.' }, 
+      ifR: { pat: 'RRRR', sig: 'VENTA', conf: 0.72 * em, desc: 'Continuacion bajista fuerte (3 rojas)' } 
     },
     'GGR': { 
-      ifG: { pat: 'GGRG', sig: 'COMPRA', conf: 0.60 * em, desc: 'Rebote tras corrección' }, 
-      ifR: { pat: 'GGRR', sig: 'VENTA', conf: 0.78, desc: 'Confirmación bajista fuerte' } 
+      ifG: { pat: 'GGRG', sig: 'COMPRA', conf: 0.62 * em, desc: 'Rebote tras correccion' }, 
+      ifR: { pat: 'GGRR', sig: 'VENTA', conf: 0.80, desc: 'Confirmacion bajista fuerte' } 
     },
     'RRG': { 
-      ifG: { pat: 'RRGG', sig: 'COMPRA', conf: 0.78, desc: 'Confirmación alcista fuerte' }, 
-      ifR: { pat: 'RRGR', sig: 'VENTA', conf: 0.60 * em, desc: 'Rebote fallido — continúa baja' } 
+      ifG: { pat: 'RRGG', sig: 'COMPRA', conf: 0.80, desc: 'Confirmacion alcista fuerte' }, 
+      ifR: { pat: 'RRGR', sig: 'VENTA', conf: 0.65 * em, desc: 'Rebote fallido — continua baja' } 
     },
     'GRG': { 
       ifG: { pat: 'GRGG', sig: 'COMPRA', conf: 0.68, desc: 'Doble suelo — impulso alcista' }, 
-      ifR: { pat: 'GRGR', sig: 'ESPERAR', conf: 0.50, desc: 'Alternancia — sin dirección clara' } 
+      ifR: { pat: 'GRGR', sig: 'ESPERAR', conf: 0.50, desc: 'Alternancia — sin direccion clara' } 
     },
     'RGR': { 
-      ifG: { pat: 'RGRG', sig: 'ESPERAR', conf: 0.50, desc: 'Alternancia — sin dirección clara' }, 
-      ifR: { pat: 'RGRR', sig: 'VENTA', conf: 0.68, desc: 'Doble techo — impulso bajista' } 
+      ifG: { pat: 'RGRG', sig: 'ESPERAR', conf: 0.50, desc: 'Alternancia — sin direccion clara' }, 
+      ifR: { pat: 'RGRR', sig: 'VENTA', conf: 0.70, desc: 'Doble techo — impulso bajista' } 
     },
     'GRR': { 
-      ifG: { pat: 'GRRG', sig: 'COMPRA', conf: 0.72, desc: 'Rebote desde soporte' }, 
-      ifR: { pat: 'GRRR', sig: 'VENTA', conf: 0.70 * em, desc: 'Continuación bajista post-reversión' } 
+      ifG: { pat: 'GRRG', sig: 'COMPRA', conf: 0.70, desc: 'Rebote desde soporte' }, 
+      ifR: { pat: 'GRRR', sig: 'VENTA', conf: 0.73 * em, desc: 'Continuacion bajista (R con 0-1 verdes = 73%)' } 
     },
     'RGG': { 
-      ifG: { pat: 'RGGG', sig: 'COMPRA', conf: 0.70 * em, desc: 'Continuación alcista post-reversión' }, 
-      ifR: { pat: 'RGGR', sig: 'VENTA', conf: 0.72, desc: 'Trampa alcista — atención' } 
+      ifG: { pat: 'RGGG', sig: 'COMPRA', conf: 0.68 * em, desc: 'Continuacion alcista post-reversion' }, 
+      ifR: { pat: 'RGGR', sig: 'VENTA', conf: 0.72, desc: 'Trampa alcista — atencion' } 
     },
   };
 
   // Tus tablas originales de 2 velas
   const scenarios2 = {
     'GG': { 
-      ifG: { pat: 'GGG', sig: 'COMPRA', conf: 0.70 * em, desc: 'Continuación alcista' }, 
-      ifR: { pat: 'GGR', sig: 'VENTA', conf: 0.85, desc: 'Reversión bajista FUERTE' } 
+      ifG: { pat: 'GGG', sig: 'COMPRA', conf: 0.68 * em, desc: 'Continuacion alcista (GG+G = 55%)' }, 
+      ifR: { pat: 'GGR', sig: 'VENTA', conf: 0.82, desc: 'Reversion bajista fuerte' } 
     },
     'RR': { 
-      ifG: { pat: 'RRG', sig: 'COMPRA', conf: 0.85, desc: 'Reversión alcista FUERTE' }, 
-      ifR: { pat: 'RRR', sig: 'VENTA', conf: 0.70 * em, desc: 'Continuación bajista' } 
+      ifG: { pat: 'RRG', sig: 'COMPRA', conf: 0.85, desc: 'Reversion alcista FUERTE' }, 
+      ifR: { pat: 'RRR', sig: 'VENTA', conf: 0.75 * em, desc: 'Continuacion bajista (RR+R = 73% datos reales)' } 
     },
     'GR': { 
       ifG: { pat: 'GRG', sig: 'COMPRA', conf: 0.55 * em, desc: 'Reversión alcista' }, 
@@ -2455,8 +2457,15 @@ function update() {
         finalSignal = 'wait'; signalClass = 'signal-conflict'; signalText = '⚠️ ESPERAR';
         logicText = `⚠️ Conflicto: Agotamiento alcista vs Bull Trap ${Math.round(tc.probability*100)}%. Esperar vela roja fuerte.`;
       } else {
-        finalSignal = 'wait'; signalClass = 'signal-extreme'; signalText = '🚫 NO COMPRAR - EXTREMO';
-        logicText = `🚨 SOBRECOMPRA EXTREMA (${trendMA !== null ? trendMA.toFixed(0) : "?"  }%). Cualquier compra es TRAMPA.`;
+        let _consecG = 0;
+        for (let i = history.length - 1; i >= 0 && history[i] === 'G'; i--) _consecG++;
+        if (_consecG >= 5) {
+          finalSignal = 'wait'; signalClass = 'signal-extreme'; signalText = '⏳ ESPERAR CONFIRMACION';
+          logicText = `🚨 SOBRECOMPRA EXTREMA (${trendMA !== null ? trendMA.toFixed(0) : "?"}%) + racha ${_consecG} verdes activa. Esperar primera roja para confirmar caida.`;
+        } else {
+          finalSignal = 'wait'; signalClass = 'signal-extreme'; signalText = '🚫 NO COMPRAR - EXTREMO';
+          logicText = `🚨 SOBRECOMPRA EXTREMA (${trendMA !== null ? trendMA.toFixed(0) : "?"}%). Cualquier compra es TRAMPA.`;
+        }
       }
     } else {
       const tc = _detectCandleTrap();
@@ -2496,8 +2505,17 @@ function update() {
         finalSignal = 'wait'; signalClass = 'signal-conflict'; signalText = '⚠️ ESPERAR';
         logicText = `⚠️ Conflicto: Agotamiento bajista vs Bear Trap ${Math.round(tc.probability*100)}%. Esperar vela verde fuerte.`;
       } else {
-        finalSignal = 'wait'; signalClass = 'signal-extreme'; signalText = '🚫 NO VENDER - EXTREMO';
-        logicText = `🚨 SOBREVENTA EXTREMA (${trendMA !== null ? trendMA.toFixed(0) : '?'}%). Cualquier venta es TRAMPA.`;
+        // Count consecutive reds to see if streak is still active
+        let _consecR = 0;
+        for (let i = history.length - 1; i >= 0 && history[i] === 'R'; i--) _consecR++;
+        if (_consecR >= 5) {
+          // Active red streak + extreme zone: market still falling — don't predict green yet
+          finalSignal = 'wait'; signalClass = 'signal-extreme'; signalText = '⏳ ESPERAR CONFIRMACION';
+          logicText = `🚨 SOBREVENTA EXTREMA (${trendMA !== null ? trendMA.toFixed(0) : '?'}%) + racha ${_consecR} rojas activa. Esperar primera verde para confirmar rebote.`;
+        } else {
+          finalSignal = 'wait'; signalClass = 'signal-extreme'; signalText = '🚫 NO VENDER - EXTREMO';
+          logicText = `🚨 SOBREVENTA EXTREMA (${trendMA !== null ? trendMA.toFixed(0) : '?'}%). Cualquier venta es TRAMPA.`;
+        }
       }
     }
   }
@@ -2908,7 +2926,30 @@ function update() {
     }
   }
 
-  // ── Safety nets finales ──────────────────────────────────────────────────
+  // ── Death cross context: reduce confidence of buy signals ──────────────────
+  // If last cross was a death cross (within last 10 candles), buy signals are weaker
+  if (lastCrossSnapshot && lastCrossSnapshot.crossType === 'death' && !lastCrossSnapshot.trap) {
+    const _dcAge = history.length - lastCrossDetectedAtLength;
+    if (_dcAge <= 10 && (finalSignal === 'buy' || finalSignal === 'buy-weak')) {
+      // Downgrade buy to buy-weak when death cross is recent context
+      if (finalSignal === 'buy') {
+        finalSignal = 'buy-weak'; signalClass = 'signal-buy-weak';
+        logicText = logicText + ` [Precaucion: Death Cross ${lastCrossSnapshot.pair} activo hace ${_dcAge} velas]`;
+      }
+    }
+  }
+  // If last cross was a golden cross (within last 10 candles), sell signals are weaker
+  if (lastCrossSnapshot && lastCrossSnapshot.crossType === 'golden' && !lastCrossSnapshot.trap) {
+    const _gcAge = history.length - lastCrossDetectedAtLength;
+    if (_gcAge <= 10 && (finalSignal === 'sell' || finalSignal === 'sell-weak')) {
+      if (finalSignal === 'sell') {
+        finalSignal = 'sell-weak'; signalClass = 'signal-sell-weak';
+        logicText = logicText + ` [Precaucion: Golden Cross ${lastCrossSnapshot.pair} activo hace ${_gcAge} velas]`;
+      }
+    }
+  }
+
+// ── Safety nets finales ──────────────────────────────────────────────────
   if (extremeCondition) {
     if (extremeCondition.type === 'extreme_bearish' && finalSignal === 'sell') {
       finalSignal = 'wait'; signalClass = 'signal-extreme'; signalText = '🚫 NO VENDER - EXTREMO';
@@ -2921,9 +2962,19 @@ function update() {
   }
   if (recentTrend.isExtreme && (finalSignal === 'buy' || finalSignal === 'sell')) {
     const rachaDir = recentTrend.trend === 'bullish' ? 'verdes' : 'rojas';
+    const _lastCandleStr = getCandleStrength(history.length - 1) || 2;
     if ((recentTrend.trend === 'bullish' && finalSignal === 'buy') || (recentTrend.trend === 'bearish' && finalSignal === 'sell')) {
       finalSignal = 'wait'; signalClass = 'signal-extreme'; signalText = '🚫 ESPERAR — RACHA EXTREMA';
-      logicText = `🚨 ${recentTrend.strength} ${rachaDir} seguidas. Entrar en dirección de racha extrema tiene alta probabilidad de fallo.`;
+      logicText = `🚨 ${recentTrend.strength} ${rachaDir} seguidas. Entrar en misma direccion tiene alta prob. de fallo.`;
+    }
+    // Reversal signal strength: boost if last candle is weak (F<=2), reduce if strong (F3+)
+    // Strong last candle = momentum may continue; weak = exhaustion confirmed
+    if ((recentTrend.trend === 'bullish' && finalSignal === 'sell') ||
+        (recentTrend.trend === 'bearish' && finalSignal === 'buy')) {
+      if (_lastCandleStr >= 3) {
+        // Last candle strong — streak may not be exhausted yet, mark uncertain
+        logicText = `⚠️ ${recentTrend.strength} ${rachaDir} seguidas pero ultima vela F${_lastCandleStr} (fuerte). Esperar confirmacion.`;
+      }
     }
   }
 
