@@ -1353,7 +1353,12 @@ hook();
     var dir, conf, uncertain = false;
 
     // Priority 1: clear directional signal from logic.js class
-    if (/signal-buy|signal-accumulation|signal-strong-reversal/.test(cls)) {
+    // NEW: REVERSION and CONTINUACION PURA signals get boosted confidence
+    var isReversionBuy  = /REVERSION.*COMPRAR|CONTINUACION PURA.*Verde/i.test(txt);
+    var isReversionSell = /REVERSION.*VENDER|CONTINUACION PURA.*Roja/i.test(txt);
+    if (isReversionBuy)  { dir = 'G'; conf = Math.max(gConf||75, 80); }
+    else if (isReversionSell) { dir = 'R'; conf = Math.max(rConf||75, 80); }
+    else if (/signal-buy|signal-accumulation|signal-strong-reversal/.test(cls)) {
       dir = 'G'; conf = gConf || 65;
     } else if (/signal-sell|signal-distribution/.test(cls)) {
       dir = 'R'; conf = rConf || 65;
@@ -1409,10 +1414,16 @@ hook();
   function _btShowPred(pred) {
     if (!pred) return;
     var isG = pred.direction === 'G';
+    var r   = pred.reason || '';
     var col = isG ? '#00ff88' : '#ff4444';
-    // Uncertain predictions: dimmer color + warning icon
-    if (pred.uncertain) col = isG ? '#006633' : '#661111';
-    var lbl = (pred.uncertain ? '⚠️ ' : '') + (isG ? '🟢 VERDE' : '🔴 ROJA');
+    var prefix = '';
+    // Confirmed pattern signals — bright with pattern badge
+    var isRacha = /RACHA [0-9]+ (VERDE|ROJA)/i.test(r);
+    var isCont  = /CONTINUACION PURA|CONTINUACIÓN PURA/i.test(r);
+    if (isRacha) { prefix = '🔁 '; col = isG ? '#00ff88' : '#ff4444'; }
+    else if (isCont) { prefix = '⚡ '; col = isG ? '#00ff88' : '#ff4444'; }
+    else if (pred.uncertain) { prefix = '⚠️ '; col = isG ? '#006633' : '#661111'; }
+    var lbl = prefix + (isG ? '🟢 VERDE' : '🔴 ROJA');
     var el = document.getElementById('bt-pred-color');
     var cf = document.getElementById('bt-pred-conf');
     var fi = document.getElementById('bt-pred-fill');
@@ -1465,11 +1476,14 @@ hook();
   // -- Categorize a prediction for logging ---------------------
   function _btCategory(pred) {
     if (!pred) return 'skip';
-    var r = pred.reason || '', s = pred.signal || '', c = pred.confidence || 0;
+    var r = pred.reason || '', s = pred.signal || '', conf = pred.confidence || 0;
     if (/Solo [0-9]+ de 10|Registra al menos|insuficientes/i.test(r)) return 'insuf';
-    if (c < 60) return 'low';
+    if (conf < 60) return 'low';
+    // Confirmed patterns always real regardless of uncertain flag
+    if (/RACHA [0-9]+/i.test(r))  return 'real';
+    if (/CONTINUACION PURA|CONTINUACI/i.test(r)) return 'real';
     if (pred.uncertain) return 'uncertain';
-    return 'real'; // confirmed directional signal
+    return 'real';
   }
 
   function _btOnUpdate() {
@@ -1550,13 +1564,21 @@ hook();
         var conf= e.pred.confidence || 0;
 
         // Categorize the failure reason precisely
-        if (cat==='uncertain')
+        if (/RACHA [0-9]+/i.test(r))
+          reasons.push('PATRON 1 (Racha) fallido - revisar si ultima vela era fuerte (F3+)');
+        else if (/CONTINUACION PURA|CONTINUACI/i.test(r))
+          reasons.push('PATRON 2 (Continuacion pura) fallido - mercado revirtio con fuerza inusual');
+        else if (cat==='uncertain')
           reasons.push('Senal incierta - proyecciones de verde y roja muy parejas, sin ventaja clara');
         else if (conf < 70)
           reasons.push('Confianza media ('+conf+'%) - senal válida pero no fuerte');
 
         if (/TRAMPA|TRAP/i.test(r) || /TRAP/i.test(sig))
           reasons.push('Trampa detectada que no se confirmó - el mercado absorbió la presión opuesta');
+        if (/REVERSION.*COMPRAR|REVERSION.*VENDER/i.test(sig))
+          reasons.push('Reversion de racha: verificar si ultima vela era fuerte (F3+) o la racha aun no habia terminado');
+        if (/CONTINUACION PURA/i.test(r))
+          reasons.push('Continuacion pura fallo - posible resistencia imprevista o vela F4 Engulfing contraria');
         if (/EXTREMO|SOBRECOMPRA|SOBREVENTA/i.test(r))
           reasons.push('Extremo extendido - el mercado continuó en sobrecompra/sobreventa más de lo normal');
         if (/MANIPULACION/i.test(r))
@@ -1651,7 +1673,9 @@ hook();
       var cat = e.cat||'real';
 
       // Signal type detection
-      if (/death cross/i.test(r))               addGroup('death_cross',  'Death Cross',         e);
+      if (/reversion.*comprar|reversion.*vender|racha.*rojas.*reversion|racha.*verdes.*reversion/i.test(r)) addGroup('reversion_racha', 'Reversion de Racha (100%)', e);
+      if (/continuacion pura/i.test(r))            addGroup('cont_pura',    'Continuacion Pura (73-76%)', e);
+      if (/death cross/i.test(r))                  addGroup('death_cross',  'Death Cross',         e);
       else if (/golden cross/i.test(r))         addGroup('golden_cross', 'Golden Cross',        e);
       if (/trampa|trap/i.test(r)||/trap/i.test(sig)) addGroup('trap',   'Trampa detectada',    e);
       if (/manipulacion/i.test(r))              addGroup('manip',        'Manipulacion CMD',    e);
