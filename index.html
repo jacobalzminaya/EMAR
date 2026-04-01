@@ -54,6 +54,36 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
 .wbr.g.sel{background:#00dd66;border-color:#00ff88;box-shadow:0 0 10px rgba(0,255,136,.55)}
 .wbr.r.sel{background:#cc2a2a;border-color:#ff3333;box-shadow:0 0 10px rgba(255,68,68,.55)}
 
+/* ── CONFLUENCIA states on WiFi bars ── */
+/* Score 3: dimmed side pulses gently */
+.wifi-conf-3 .wbr.g{opacity:.25;transition:opacity .4s}
+.wifi-conf-3 .wbr.r{opacity:.25;transition:opacity .4s}
+.wifi-conf-3.conf-bull .wbr.g{opacity:1!important;background:rgba(0,200,80,.25);border-color:rgba(0,255,136,.4)}
+.wifi-conf-3.conf-bear .wbr.r{opacity:1!important;background:rgba(200,45,45,.25);border-color:rgba(255,68,68,.4)}
+
+/* Score 4: active side glows, inactive side hidden */
+.wifi-conf-4 .wbr.g{opacity:.08;transition:opacity .3s}
+.wifi-conf-4 .wbr.r{opacity:.08;transition:opacity .3s}
+.wifi-conf-4.conf-bull .wbr.g{opacity:1!important;background:rgba(0,220,90,.55)!important;border-color:#00ff88!important;box-shadow:0 0 8px rgba(0,255,136,.5)}
+.wifi-conf-4.conf-bear .wbr.r{opacity:1!important;background:rgba(210,48,48,.55)!important;border-color:#ff4444!important;box-shadow:0 0 8px rgba(255,68,68,.5)}
+/* Pulse animation on active side */
+@keyframes wifi-pulse-g{0%,100%{box-shadow:0 0 8px rgba(0,255,136,.4)}50%{box-shadow:0 0 20px rgba(0,255,136,.85),0 0 40px rgba(0,255,136,.3)}}
+@keyframes wifi-pulse-r{0%,100%{box-shadow:0 0 8px rgba(255,68,68,.4)}50%{box-shadow:0 0 20px rgba(255,68,68,.85),0 0 40px rgba(255,68,68,.3)}}
+.wifi-conf-4.conf-bull .wbr.g{animation:wifi-pulse-g 1.4s ease-in-out infinite}
+.wifi-conf-4.conf-bear .wbr.r{animation:wifi-pulse-r 1.4s ease-in-out infinite}
+
+/* Score 5: MAX ALERT — active side blazing, inactive fully hidden */
+.wifi-conf-5 .wbr.g{opacity:0!important;transition:opacity .2s}
+.wifi-conf-5 .wbr.r{opacity:0!important;transition:opacity .2s}
+.wifi-conf-5.conf-bull .wbr.g{opacity:1!important;background:rgba(0,255,100,.8)!important;border-color:#00ff88!important;animation:wifi-pulse-g .8s ease-in-out infinite!important}
+.wifi-conf-5.conf-bear .wbr.r{opacity:1!important;background:rgba(255,60,60,.8)!important;border-color:#ff3333!important;animation:wifi-pulse-r .8s ease-in-out infinite!important}
+/* Label flashes on max alert */
+@keyframes lbl-flash{0%,100%{opacity:1}50%{opacity:.4}}
+.wifi-conf-5 .wifi-lbl-side{animation:lbl-flash .8s ease-in-out infinite}
+/* WiFi container shake on score 5 */
+@keyframes wifi-shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-2px)}40%{transform:translateX(2px)}60%{transform:translateX(-1px)}80%{transform:translateX(1px)}}
+.wifi-conf-5{animation:wifi-shake 2.5s ease-in-out infinite}
+
 .tri-tags{display:flex;justify-content:space-between;margin-top:4px}
 .tri-tags span{font-size:.56em;font-weight:700;letter-spacing:.04em}
 .tag-g{color:rgba(0,255,136,.45)}
@@ -523,7 +553,7 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
     <!-- WiFi selector -->
     <div style="border-bottom:1px solid #0e0e0e;padding:8px 10px 6px;flex-shrink:0">
       <div style="font-size:.52em;color:#252525;text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:6px;">⚡ Registrar vela · toca la barra para ver proyección</div>
-      <div style="display:flex;align-items:flex-end;justify-content:center;gap:3px;padding-bottom:2px;">
+      <div id="wifi-conf-wrap" style="display:flex;align-items:flex-end;justify-content:center;gap:3px;padding-bottom:2px;">
         <!-- GREEN ascending -->
         <div class="tri-side green" id="wg" data-side="G">
           <div class="wbr g" data-str="1"   style="height:18px"></div>
@@ -544,9 +574,9 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
         </div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:3px;padding:0 2px;">
-        <span style="font-size:.56em;font-weight:700;color:rgba(0,255,136,.45);">▲ Verde</span>
+        <span class="wifi-lbl-side" style="font-size:.56em;font-weight:700;color:rgba(0,255,136,.45);">▲ Verde</span>
         <span class="wifi-lbl" id="wlbl" style="font-size:.58em;font-weight:700;color:#333;text-align:center;">–</span>
-        <span style="font-size:.56em;font-weight:700;color:rgba(255,68,68,.45);">Roja ▼</span>
+        <span class="wifi-lbl-side" style="font-size:.56em;font-weight:700;color:rgba(255,68,68,.45);">Roja ▼</span>
       </div>
       <div class="fb" id="fb" style="display:none;margin:4px 0 0;">Hover = proyección · Click = registrar</div>
     </div>
@@ -2035,7 +2065,7 @@ hook();
     var box = document.getElementById('confluencia-box');
     if (!box) return;
     var cf = _calcConfluencia();
-    if (cf.score < 3 || !cf.dir) { box.style.display='none'; return; }
+    if (cf.score < 3 || !cf.dir) { box.style.display='none'; _clearWifiConf(); return; }
 
     var isBull = cf.dir==='bull';
     var col    = isBull ? '#00ff88' : '#ff4444';
@@ -2068,6 +2098,25 @@ hook();
         return '+ '+f.label;
       }).join('<br>');
     }
+
+    // ── Update WiFi bars to reflect confluencia ──────────────
+    _applyWifiConf(cf.score, cf.dir);
+  }
+
+  // Clear confluencia state from WiFi bars
+  function _clearWifiConf() {
+    var wrap = document.getElementById('wifi-conf-wrap');
+    if (!wrap) return;
+    wrap.classList.remove('wifi-conf-3','wifi-conf-4','wifi-conf-5','conf-bull','conf-bear');
+  }
+
+  function _applyWifiConf(score, dir) {
+    var wrap = document.getElementById('wifi-conf-wrap');
+    if (!wrap) return;
+    // Remove old states
+    wrap.classList.remove('wifi-conf-3','wifi-conf-4','wifi-conf-5','conf-bull','conf-bear');
+    if (!dir || score < 3) return;
+    wrap.classList.add('wifi-conf-'+score, 'conf-'+dir);
   }
 
   // -- Hook logic.js update() -----------------------------------
