@@ -873,18 +873,18 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
       </div>
       <!-- Row 2: 5-candle momentum indicator -->
       <div id="mom5-row" style="display:none;margin-top:4px;display:flex;align-items:center;gap:4px;">
-        <div style="font-size:.42em;color:#1e1e1e;white-space:nowrap;font-weight:700;">MOM5</div>
+        <div style="font-size:.42em;color:#444;white-space:nowrap;font-weight:700;">MOM5</div>
         <!-- 5 mini candle dots -->
         <div style="display:flex;gap:2px;" id="mom5-dots"></div>
         <!-- Momentum direction label -->
-        <div id="mom5-label" style="font-size:.42em;font-weight:700;color:#222;margin-left:2px;">–</div>
+        <div id="mom5-label" style="font-size:.42em;font-weight:700;color:#555;margin-left:2px;">–</div>
         <!-- Momentum weight bar -->
         <div style="flex:1;height:2px;background:#111;border-radius:1px;overflow:hidden;position:relative;">
-          <div id="mom5-g-fill" style="position:absolute;left:0;top:0;height:100%;width:0%;background:#003311;border-radius:1px;transition:width .4s;"></div>
-          <div id="mom5-r-fill" style="position:absolute;right:0;top:0;height:100%;width:0%;background:#330000;border-radius:1px;transition:width .4s;"></div>
+          <div id="mom5-g-fill" style="position:absolute;left:0;top:0;height:100%;width:0%;background:#00aa44;border-radius:1px;transition:width .4s;"></div>
+          <div id="mom5-r-fill" style="position:absolute;right:0;top:0;height:100%;width:0%;background:#cc2222;border-radius:1px;transition:width .4s;"></div>
         </div>
         <!-- Signal alignment badge -->
-        <div id="mom5-align" style="font-size:.42em;padding:1px 5px;border-radius:4px;background:#111;color:#222;white-space:nowrap;border:1px solid #1a1a1a;">–</div>
+        <div id="mom5-align" style="font-size:.42em;padding:1px 5px;border-radius:4px;background:#111;color:#555;white-space:nowrap;border:1px solid #333;">–</div>
       </div>
     </div>
     <!-- ── CONFLUENCIA: señal exagerada cuando multiples factores se alinean ── -->
@@ -1887,22 +1887,30 @@ hook();
 
     // 5 dots sized by candle strength
     dots.innerHTML = last5.map(function(c){
-      var bg  = c.color==='G' ? '#004422' : '#440000';
-      var bdr = c.color==='G' ? '#006633' : '#660000';
-      var sz  = c.str>=3 ? 7 : c.str>=2 ? 5 : 4;
-      return '<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+bg+';border:1px solid '+bdr+';flex-shrink:0;align-self:center"></div>';
+      var bg  = c.color==='G' ? '#00aa44' : '#cc2222';
+      var bdr = c.color==='G' ? '#00ff88' : '#ff4444';
+      // Stronger = bigger and brighter
+      var sz  = c.str>=3 ? 8 : c.str>=2 ? 6 : 4;
+      var op  = c.str>=3 ? '1' : c.str>=2 ? '.8' : '.5';
+      return '<div style="width:'+sz+'px;height:'+sz+'px;border-radius:50%;background:'+bg+';border:1px solid '+bdr+';flex-shrink:0;align-self:center;opacity:'+op+'"></div>';
     }).join('');
 
     // Label
-    var momCol = momDir==='G' ? '#006622' : '#661111';
+    // Bright colors: green or red clearly visible
+    var momCol = momDir==='G'
+      ? (gPct>=70 ? '#00ff88' : '#00cc55')
+      : (rPct>=70 ? '#ff4444' : '#cc2222');
     var momTxt = momDir==='G'
-      ? (gPct>=70?'VERDE FUERTE':'Verde '+gPct+'%')
-      : (rPct>=70?'ROJA FUERTE' :'Roja ' +rPct+'%');
-    if (lbl) { lbl.textContent=momTxt; lbl.style.color=momCol; }
+      ? (gPct>=70 ? 'VERDE FUERTE' : 'Verde '+gPct+'%')
+      : (rPct>=70 ? 'ROJA FUERTE'  : 'Roja ' +rPct+'%');
+    if (lbl) { lbl.textContent=momTxt; lbl.style.color=momCol;
+               lbl.style.textShadow = gPct>=70||rPct>=70
+                 ? '0 0 8px '+(momDir==='G'?'rgba(0,255,136,.5)':'rgba(255,68,68,.5)')
+                 : 'none'; }
 
-    // Fill bars
-    if (gFil){ gFil.style.width=gPct+'%'; gFil.style.background=gPct>60?'#005522':'#002211'; }
-    if (rFil){ rFil.style.width=rPct+'%'; rFil.style.background=rPct>60?'#550000':'#220000'; }
+    // Fill bars — bright colors
+    if (gFil){ gFil.style.width=gPct+'%'; gFil.style.background=gPct>60?'#00cc44':'#007722'; }
+    if (rFil){ rFil.style.width=rPct+'%'; rFil.style.background=rPct>60?'#dd2222':'#881111'; }
 
     // Alignment badge
     if (aln) {
@@ -1911,9 +1919,9 @@ hook();
         ? (aligned ? '+'+Math.round(diff*0.15)+'pp conf' : '-'+Math.round(diff*0.12)+'pp conf')
         : 'neutro';
       aln.textContent   = aligned ? 'Con tendencia '+adj : 'Contra tendencia '+adj;
-      aln.style.color       = aligned ? '#005522' : '#552200';
-      aln.style.borderColor = aligned ? '#00552255' : '#55220055';
-      aln.style.background  = aligned ? '#001108' : '#110500';
+      aln.style.color       = aligned ? '#00cc55' : '#ff8800';
+      aln.style.borderColor = aligned ? '#00cc5555' : '#ff880055';
+      aln.style.background  = aligned ? '#002211' : '#110800';
     }
   }
 
