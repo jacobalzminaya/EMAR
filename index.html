@@ -2760,64 +2760,43 @@ hook();
     var iaHits  = _iaLog.filter(function(e){return e.result==='hit';}).length;
     var iaAcc   = _iaLog.length>0 ? Math.round(iaHits/_iaLog.length*100)+'%' : 'sin datos';
 
-    return 'Eres un analista experto en price action y Smart Money Concepts (SMC/ICT).
-' +
-      'Analiza esta secuencia de velas de trading binario y predice la SIGUIENTE vela.
-
-' +
-      'FORMATO DE VELAS: [color][fuerza] donde G=verde/alcista, R=roja/bajista, fuerza 1-4
-' +
-      'F1=doji debil, F1.5=pequeña, F2=normal, F2.5=grande, F3=fuerte, F4=engulfing
-
-' +
-      'SECUENCIA COMPLETA (' + histLen + ' velas):
-' + seq + '
-
-' +
-      'ULTIMAS 10 VELAS (contexto inmediato):
-' + last10 + '
-
-' +
-      'ESTADO DEL SISTEMA CMD:
-' +
-      '- MA10: ' + ma10 + ' (>55%=alcista, <45%=bajista)
-' +
-      '- Consolidacion: ' + pC + '
-' +
-      '- Manipulacion (Judas Swing): ' + pM + '
-' +
-      '- Distribucion: ' + pD + '
-' +
-      '- Acumulacion: ' + pA + '
-' +
-      '- Sistema predice: ' + sysDir + ' con ' + sysConf + ' confianza
-' +
-      '- Accuracy sistema hoy: ' + sysAcc + ' (' + realLog.length + ' senales reales)
-' +
-      '- Accuracy IA hasta ahora: ' + iaAcc + ' (' + _iaLog.length + ' predicciones)
-
-' +
-      'INSTRUCCIONES:
-' +
-      '1. Analiza el patron de las ultimas 5-10 velas
-' +
-      '2. Identifica si hay tendencia, rango o manipulacion
-' +
-      '3. Considera el ciclo AMD (Acumulacion-Manipulacion-Distribucion)
-' +
-      '4. Responde EXACTAMENTE en este formato JSON (sin texto adicional):
-
-' +
-      '{"dir":"G","conf":75,"reason":"Razon concisa en español maximo 60 caracteres","action":"COMPRAR"}
-
-' +
-      'dir: G=verde o R=roja
-' +
-      'conf: 50-95 (tu nivel de certeza real, no infles)
-' +
-      'reason: explicacion breve del porque
-' +
-      'action: COMPRAR, VENDER, o ESPERAR';
+    var _lines = [
+      'Eres un analista experto en price action y Smart Money Concepts (SMC/ICT).',
+      'Analiza esta secuencia de velas de trading binario y predice la SIGUIENTE vela.',
+      '',
+      'FORMATO DE VELAS: [color][fuerza] donde G=verde/alcista, R=roja/bajista, fuerza 1-4',
+      'F1=doji debil, F1.5=pequena, F2=normal, F2.5=grande, F3=fuerte, F4=engulfing',
+      '',
+      'SECUENCIA COMPLETA (' + histLen + ' velas):',
+      seq,
+      '',
+      'ULTIMAS 10 VELAS (contexto inmediato):',
+      last10,
+      '',
+      'ESTADO DEL SISTEMA CMD:',
+      '- MA10: ' + ma10 + ' (>55%=alcista, <45%=bajista)',
+      '- Consolidacion: ' + pC,
+      '- Manipulacion (Judas Swing): ' + pM,
+      '- Distribucion: ' + pD,
+      '- Acumulacion: ' + pA,
+      '- Sistema predice: ' + sysDir + ' con ' + sysConf + ' confianza',
+      '- Accuracy sistema hoy: ' + sysAcc + ' (' + realLog.length + ' senales reales)',
+      '- Accuracy IA hasta ahora: ' + iaAcc + ' (' + _iaLog.length + ' predicciones)',
+      '',
+      'INSTRUCCIONES:',
+      '1. Analiza el patron de las ultimas 5-10 velas',
+      '2. Identifica si hay tendencia, rango o manipulacion',
+      '3. Considera el ciclo AMD (Acumulacion-Manipulacion-Distribucion)',
+      '4. Responde EXACTAMENTE en este formato JSON (sin texto adicional):',
+      '',
+      '{"dir":"G","conf":75,"reason":"Razon concisa max 60 chars","action":"COMPRAR"}',
+      '',
+      'dir: G=verde o R=roja',
+      'conf: 50-95 (certeza real, no infles)',
+      'reason: explicacion breve',
+      'action: COMPRAR, VENDER, o ESPERAR'
+    ];
+    return _lines.join('\n');
   }
 
   // ── Llamar a Claude API ─────────────────────────────
