@@ -1358,30 +1358,36 @@ hook();
     } else if (/signal-sell|signal-distribution/.test(cls)) {
       dir = 'R'; conf = rConf || 65;
     } else {
-      // ESPERAR/CONFLICT: use projection branches
+      // ESPERAR/CONFLICT: always uncertain - market direction unclear
       var gIsBuy  = /COMPRA/i.test(gSig);
       var rIsSell = /VENTA/i.test(rSig);
 
-      if (gIsBuy && rIsSell) {
+      if (gIsBuy && rIsSell && Math.abs(gConf - rConf) >= 15) {
+        // Clear margin between branches - use dominant but still uncertain
         if (gConf > rConf) { dir='G'; conf=gConf; }
         else               { dir='R'; conf=rConf; }
-        if (Math.abs(gConf-rConf) < 12) uncertain = true;
-      } else if (gIsBuy) {
-        dir='G'; conf=gConf; uncertain=true;
-      } else if (rIsSell) {
-        dir='R'; conf=rConf; uncertain=true;
       } else {
-        // Both ESPERAR - pick by raw conf value, mark as uncertain
+        // Projections too close or both ESPERAR
         dir = gConf >= rConf ? 'G' : 'R';
         conf = Math.max(gConf, rConf) || 50;
-        uncertain = true;
       }
+      uncertain = true; // ALWAYS uncertain when signal is ESPERAR
     }
 
-    // Datos insuficientes: still show direction but mark uncertain
+    // Datos insuficientes
     if (/insuficientes|Solo [0-9]+ de 10|Registra al menos/i.test(reason)) {
       uncertain = true;
       conf = Math.min(conf||50, 55);
+    }
+
+    // Trampas: siempre inciertas (pueden no confirmarse)
+    if (/BULL TRAP|BEAR TRAP|TRAMPA/i.test(reason) || /TRAP/i.test(txt)) {
+      uncertain = true;
+    }
+
+    // Extremo + no es señal directa: cap confidence
+    if (/EXTREMO|SOBRECOMPRA|SOBREVENTA/i.test(reason) && uncertain) {
+      conf = Math.min(conf, 65);
     }
 
     conf = Math.round(conf) || 50;
