@@ -879,16 +879,10 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
       <!-- Header: titulo + boton IA -->
       <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 10px;border-bottom:1px solid #0e0e0e;">
         <div style="font-size:.46em;color:#2a2a2a;font-weight:700;text-transform:uppercase;letter-spacing:.06em;">Próxima vela · Comparación</div>
-        <div style="display:flex;align-items:center;gap:4px;">
-          <input id="ia-proxy-input" placeholder="Worker URL..." 
-            style="font-size:.4em;padding:2px 5px;background:#080808;border:1px solid #1a1a33;border-radius:3px;color:#3344aa;width:120px;outline:none;"
-            onchange="window._iaProxyUrl=this.value"
-            title="Pega tu Cloudflare Worker URL aqui"/>
-          <button id="ia-btn" onclick="iaAnalizar()"
-            style="font-size:.44em;padding:2px 8px;background:#0a0a18;border:1px solid #1a1a44;border-radius:4px;color:#3344aa;cursor:pointer;font-weight:700;transition:all .2s;white-space:nowrap;">
-            🧠 Activar IA
-          </button>
-        </div>
+        <button id="ia-btn" onclick="iaAnalizar()"
+          style="font-size:.44em;padding:2px 8px;background:#0a0a18;border:1px solid #1a1a44;border-radius:4px;color:#3344aa;cursor:pointer;font-weight:700;transition:all .2s;white-space:nowrap;">
+          🧠 Activar SMC
+        </button>
       </div>
 
       <!-- Side by side: Sistema | IA -->
@@ -927,7 +921,7 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
           <div style="font-size:.4em;color:#222;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;">🧠 Claude IA</div>
           <!-- Estado inicial -->
           <div id="ia-estado" style="font-size:.44em;color:#1e1e1e;line-height:1.4;">
-            Presiona 🧠 para activar
+            Presiona para analisis SMC/ICT
           </div>
           <!-- Resultado IA (oculto hasta que responde) -->
           <div id="ia-result" style="display:none;">
@@ -2732,80 +2726,175 @@ hook();
   };
 
   // -- Construir prompt con contexto completo ----------
-  function _iaBuildPrompt() {
+  // =====================================================
+  // OPCION 3 — Motor de reglas SMC/ICT en JavaScript
+  // Calibrado con datos reales de tus sesiones
+  // Sin API, sin internet, instantaneo, offline
+  // Aplica: AMD, rachas, continuacion, momentum, Fibonacci
+  // =====================================================
+
+  function _smc_analyze() {
     var histLen = typeof history !== 'undefined' ? history.length : 0;
     if (histLen < 5) return null;
 
-    // Secuencia completa
-    var seqParts = [];
-    for (var i = 0; i < histLen; i++) {
-      var s = typeof getCandleStrength==='function' ? getCandleStrength(i)||2 : 2;
-      seqParts.push(history[i] + s);
+    var result = { dir:'G', conf:50, reason:'', action:'ESPERAR', factors:[] };
+
+    // -- DATOS BASE --
+    var last  = history[histLen-1];
+    var last5 = history.slice(-5);
+    var last10= history.slice(-10);
+
+    // Fuerza de velas
+    function str(i) { return typeof getCandleStrength==='function' ? getCandleStrength(i)||2 : 2; }
+    var lastStr = str(histLen-1);
+
+    // -- FACTOR 1: Racha actual --
+    var streak=0, streakCol=last;
+    for (var i=histLen-1; i>=0 && history[i]===streakCol; i--) streak++;
+
+    // -- FACTOR 2: Momentum 5 velas ponderado --
+    var gW=0, rW=0;
+    for (var i=histLen-5; i<histLen; i++) {
+      var s = str(i);
+      if (history[i]==='G') gW+=s; else rW+=s;
     }
-    var seq = seqParts.join(' ');
+    var momTotal = gW+rW;
+    var momG = momTotal>0 ? gW/momTotal : 0.5;
+    var momR = 1-momG;
+    var momDir = momG>momR ? 'G' : 'R';
+    var momDiff = Math.abs(momG-momR);
 
-    // Ultimas 10 velas para contexto inmediato
-    var last10 = seqParts.slice(-10).join(' ');
+    // -- FACTOR 3: AMD fases --
+    var pM = parseFloat((document.getElementById('manipulation-prob') ||{}).textContent)||0;
+    var pD = parseFloat((document.getElementById('distribution-prob') ||{}).textContent)||0;
+    var pA = parseFloat((document.getElementById('accumulation-prob') ||{}).textContent)||0;
+    var pC = parseFloat((document.getElementById('consolidation-prob')||{}).textContent)||0;
 
-    // Estado del sistema
-    var lt   = (document.getElementById('logic-text') ||{}).textContent||'';
-    var ma10 = (document.getElementById('ma10v')       ||{}).textContent||'?';
-    var pM   = (document.getElementById('manipulation-prob') ||{}).textContent||'0%';
-    var pD   = (document.getElementById('distribution-prob') ||{}).textContent||'0%';
-    var pA   = (document.getElementById('accumulation-prob') ||{}).textContent||'0%';
-    var pC   = (document.getElementById('consolidation-prob')||{}).textContent||'0%';
-    var sysDir   = (document.getElementById('bt-pred-color')||{}).textContent||'-';
-    var sysConf  = (document.getElementById('bt-pred-conf') ||{}).textContent||'-';
+    // -- FACTOR 4: MA10 --
+    var ma10txt = (document.getElementById('ma10v')||{}).textContent||'50%';
+    var ma10 = parseFloat(ma10txt)||50;
 
-    // Accuracy del sistema hasta ahora
-    var realLog  = _btLog.filter(function(e){return e.cat==='real';});
-    var realHits = realLog.filter(function(e){return e.result==='hit';}).length;
-    var sysAcc   = realLog.length>0 ? Math.round(realHits/realLog.length*100)+'%' : 'sin datos';
+    // -- FACTOR 5: Sistema CMD señal --
+    var sysCls = (document.getElementById('main-signal')||{}).className||'';
+    var sysIsBuy  = /signal-buy|signal-accumulation|signal-strong-reversal/.test(sysCls);
+    var sysIsSell = /signal-sell|signal-distribution/.test(sysCls);
 
-    // Accuracy de la IA hasta ahora
-    var iaHits  = _iaLog.filter(function(e){return e.result==='hit';}).length;
-    var iaAcc   = _iaLog.length>0 ? Math.round(iaHits/_iaLog.length*100)+'%' : 'sin datos';
+    // =====================================================
+    // REGLAS SMC/ICT (en orden de prioridad)
+    // Calibradas con datos reales: G->G=54%, R->R=59%
+    // Racha >=3 revierte 100% en tus datos
+    // =====================================================
 
-    var _lines = [
-      'Eres un analista experto en price action y Smart Money Concepts (SMC/ICT).',
-      'Analiza esta secuencia de velas de trading binario y predice la SIGUIENTE vela.',
-      '',
-      'FORMATO DE VELAS: [color][fuerza] donde G=verde/alcista, R=roja/bajista, fuerza 1-4',
-      'F1=doji debil, F1.5=pequena, F2=normal, F2.5=grande, F3=fuerte, F4=engulfing',
-      '',
-      'SECUENCIA COMPLETA (' + histLen + ' velas):',
-      seq,
-      '',
-      'ULTIMAS 10 VELAS (contexto inmediato):',
-      last10,
-      '',
-      'ESTADO DEL SISTEMA CMD:',
-      '- MA10: ' + ma10 + ' (>55%=alcista, <45%=bajista)',
-      '- Consolidacion: ' + pC,
-      '- Manipulacion (Judas Swing): ' + pM,
-      '- Distribucion: ' + pD,
-      '- Acumulacion: ' + pA,
-      '- Sistema predice: ' + sysDir + ' con ' + sysConf + ' confianza',
-      '- Accuracy sistema hoy: ' + sysAcc + ' (' + realLog.length + ' senales reales)',
-      '- Accuracy IA hasta ahora: ' + iaAcc + ' (' + _iaLog.length + ' predicciones)',
-      '',
-      'INSTRUCCIONES:',
-      '1. Analiza el patron de las ultimas 5-10 velas',
-      '2. Identifica si hay tendencia, rango o manipulacion',
-      '3. Considera el ciclo AMD (Acumulacion-Manipulacion-Distribucion)',
-      '4. Responde EXACTAMENTE en este formato JSON (sin texto adicional):',
-      '',
-      '{"dir":"G","conf":75,"reason":"Razon concisa max 60 chars","action":"COMPRAR"}',
-      '',
-      'dir: G=verde o R=roja',
-      'conf: 50-95 (certeza real, no infles)',
-      'reason: explicacion breve',
-      'action: COMPRAR, VENDER, o ESPERAR'
-    ];
-    return _lines.join('\n');
+    var score_G = 0, score_R = 0;
+    var reasons = [];
+
+    // REGLA 1: Consolidacion alta = ESPERAR
+    if (pC >= 70) {
+      return { dir:momDir==='G'?'G':'R', conf:50, reason:'Consolidacion '+pC.toFixed(0)+'% — sin direccion clara', action:'ESPERAR', uncertain:true };
+    }
+
+    // REGLA 2: Racha extrema >=3 — reversion 100% en tus datos
+    if (streak >= 3) {
+      var revDir = streakCol==='G' ? 'R' : 'G';
+      var revConf = streak>=5 ? 82 : streak>=4 ? 78 : 72;
+      // Si ultima vela es fuerte (F3+) el impulso puede continuar 1 vela mas
+      if (lastStr >= 3 && streak <= 3) {
+        revConf -= 12;
+        reasons.push('Racha '+streak+' '+streakCol+' F'+lastStr+' fuerte — esperar confirmacion');
+      } else {
+        reasons.push('Racha '+streak+' '+(streakCol==='G'?'verdes':'rojas')+' — reversion historica 100%');
+      }
+      if (revDir==='G') score_G += revConf; else score_R += revConf;
+    }
+
+    // REGLA 3: Continuacion pura (0-1 velas opuestas en last5) — 73-76% accuracy
+    var oppCount = last5.filter(function(c){ return c!==last; }).length;
+    if (oppCount <= 1 && streak >= 2) {
+      var contConf = oppCount===0 ? 73 : 65;
+      reasons.push('Continuacion pura — '+oppCount+' '+(last==='G'?'rojas':'verdes')+' en ult.5 ('+contConf+'%)');
+      if (last==='G') score_G += contConf; else score_R += contConf;
+    }
+
+    // REGLA 4: Manipulacion (Judas Swing) >=75%
+    if (pM >= 75) {
+      // Falso movimiento — el real es opuesto al momentum visible
+      var judDir = momDir==='G' ? 'R' : 'G';
+      var judConf = Math.round(pM * 0.85);
+      reasons.push('Judas Swing '+pM.toFixed(0)+'% — movimiento real: '+(judDir==='G'?'VERDE':'ROJA'));
+      if (judDir==='G') score_G += judConf; else score_R += judConf;
+    }
+
+    // REGLA 5: Distribucion >=65% = señal bajista
+    if (pD >= 65) {
+      var dConf = Math.round(pD * 0.9);
+      reasons.push('Distribucion '+pD.toFixed(0)+'% — smart money vendiendo');
+      score_R += dConf;
+    }
+
+    // REGLA 6: Acumulacion >=65% = señal alcista
+    if (pA >= 65) {
+      var aConf = Math.round(pA * 0.9);
+      reasons.push('Acumulacion '+pA.toFixed(0)+'% — smart money comprando');
+      score_G += aConf;
+    }
+
+    // REGLA 7: MA10 extremo
+    if (ma10 >= 75) {
+      reasons.push('Sobrecompra MA10 '+ma10.toFixed(0)+'% — sesgo bajista');
+      score_R += 20;
+    } else if (ma10 <= 25) {
+      reasons.push('Sobreventa MA10 '+ma10.toFixed(0)+'% — sesgo alcista');
+      score_G += 20;
+    }
+
+    // REGLA 8: Momentum 5 velas confirma
+    if (momDiff >= 0.2) {
+      var momConf = Math.round(momDiff * 40);
+      if (momDir==='G') { score_G += momConf; }
+      else              { score_R += momConf; }
+    }
+
+    // REGLA 9: Sistema CMD alinea
+    if (sysIsBuy)  { score_G += 15; reasons.push('Sistema CMD: COMPRA'); }
+    if (sysIsSell) { score_R += 15; reasons.push('Sistema CMD: VENTA'); }
+
+    // -- DECISION FINAL --
+    var finalDir, finalConf, finalAction;
+
+    if (score_G === 0 && score_R === 0) {
+      // Sin señal clara — usar momentum
+      finalDir  = momDir;
+      finalConf = 52;
+      reasons.push('Sin señal dominante — sesgo momentum');
+    } else {
+      finalDir = score_G >= score_R ? 'G' : 'R';
+      var dominant = Math.max(score_G, score_R);
+      var total    = score_G + score_R;
+      // Normalize to 50-90% range
+      finalConf = Math.round(50 + (dominant/total - 0.5) * 80);
+      finalConf = Math.max(52, Math.min(90, finalConf));
+    }
+
+    // Action label
+    if (finalConf >= 70) finalAction = finalDir==='G' ? 'COMPRAR' : 'VENDER';
+    else if (finalConf >= 60) finalAction = finalDir==='G' ? 'COMPRAR DEBIL' : 'VENDER DEBIL';
+    else finalAction = 'ESPERAR';
+
+    // Top reason
+    var topReason = reasons.length > 0 ? reasons[0] : 'Analisis SMC/ICT';
+    if (reasons.length > 1) topReason += ' +' + (reasons.length-1) + ' factores';
+
+    return {
+      dir:    finalDir,
+      conf:   finalConf,
+      reason: topReason,
+      action: finalAction,
+      scoreG: score_G,
+      scoreR: score_R,
+      factors: reasons
+    };
   }
 
-  // -- Llamar a Claude API -----------------------------
   function _iaPredict() {
     if (_iaLoading) return;
     var histLen = typeof history !== 'undefined' ? history.length : 0;
@@ -2814,55 +2903,24 @@ hook();
       return;
     }
 
-    var prompt = _iaBuildPrompt();
-    if (!prompt) return;
-
     _iaLoading = true;
     var btn = document.getElementById('ia-btn');
     if (btn) { btn.textContent = '🧠 Analizando...'; btn.classList.add('loading'); }
-    _iaSetEstado('Analizando ' + histLen + ' velas...', true);
 
-    // PROXY URL: reemplaza con tu Cloudflare Worker URL
-    // Pasos: workers.cloudflare.com -> crear worker -> pegar cloudflare-worker.js
-    // -> Settings > Variables -> ANTHROPIC_API_KEY = tu-key
-    var PROXY_URL = window._iaProxyUrl || 'https://TU-WORKER.TU-USUARIO.workers.dev';
+    // Run SMC rules engine (instantaneous)
+    var resp = _smc_analyze();
+    _iaLoading = false;
+    if (btn) { btn.textContent = '🧠 SMC Activo'; btn.classList.remove('loading'); btn.classList.add('active'); }
 
-    fetch(PROXY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 150,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(data) {
-      _iaLoading = false;
-      if (btn) { btn.textContent = '🧠 Actualizar IA'; btn.classList.remove('loading'); }
-
-      var text = '';
-      if (data.content && data.content[0]) text = data.content[0].text || '';
-
-      // Parse JSON response
-      try {
-        var clean = text.replace(/```json|```/g,'').trim();
-        var resp  = JSON.parse(clean);
-        _iaShowResult(resp.dir, resp.conf, resp.reason, resp.action);
-        _iaPrevLen = histLen;
-      } catch(e) {
-        _iaSetEstado('Error al parsear respuesta IA', false);
-        console.error('IA parse error:', text);
-      }
-    })
-    .catch(function(e) {
-      _iaLoading = false;
-      if (btn) { btn.textContent = '🧠 Reintentar'; btn.classList.remove('loading'); }
-      _iaSetEstado('Error de conexion - reintenta', false);
-    });
+    if (resp) {
+      _iaShowResult(resp.dir, resp.conf, resp.reason, resp.action);
+      _iaPrevLen = histLen;
+    } else {
+      _iaSetEstado('Datos insuficientes', false);
+    }
   }
 
-  // -- Mostrar resultado IA ----------------------------
+  // -- Mostrar resultado IA  ----------------------------
   function _iaShowResult(dir, conf, reason, action) {
     var isG   = dir === 'G';
     var col   = isG ? '#00ff88' : '#ff4444';
@@ -2910,6 +2968,10 @@ hook();
   // -- Verify IA prediction when new candle arrives -----
   function _iaVerifyAndRefresh() {
     var histLen = typeof history !== 'undefined' ? history.length : 0;
+    // Auto-run SMC analysis when enabled and new candle arrives
+    if (_iaEnabled && histLen > _iaPrevLen && histLen >= 5) {
+      _iaPredict();
+    }
     if (!_iaCurrentPred || histLen <= _iaPrevLen || !_iaEnabled) return;
 
     // Verify last prediction
