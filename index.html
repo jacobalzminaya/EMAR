@@ -46,6 +46,66 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
 .tri-wrap{display:flex;justify-content:center;align-items:flex-end;gap:3px;padding-bottom:2px}
 .tri-side{display:flex;align-items:flex-end;gap:5px}
 .tri-side.red{flex-direction:row-reverse}
+
+/* -- REVERSAL ARROW -- */
+#rev-arrow{
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  width:22px;
+  flex-shrink:0;
+  gap:2px;
+}
+#rev-arrow.show{ display:flex; }
+@keyframes arrow-up{
+  0%{transform:translateY(6px);opacity:0}
+  60%{transform:translateY(-2px);opacity:1}
+  100%{transform:translateY(0);opacity:1}
+}
+@keyframes arrow-down{
+  0%{transform:translateY(-6px);opacity:0}
+  60%{transform:translateY(2px);opacity:1}
+  100%{transform:translateY(0);opacity:1}
+}
+@keyframes arrow-pulse-g{
+  0%,100%{filter:drop-shadow(0 0 3px rgba(0,255,136,.3))}
+  50%{filter:drop-shadow(0 0 10px rgba(0,255,136,.9))}
+}
+@keyframes arrow-pulse-r{
+  0%,100%{filter:drop-shadow(0 0 3px rgba(255,68,68,.3))}
+  50%{filter:drop-shadow(0 0 10px rgba(255,68,68,.9))}
+}
+.rev-arr-seg{
+  width:10px;border-radius:2px;flex-shrink:0;
+  transition:all .3s;
+}
+#rev-arrow.bull .rev-arr-seg{ background:#00ff88; animation:arrow-up 0.5s ease-out, arrow-pulse-g 1.2s ease-in-out infinite; }
+#rev-arrow.bear .rev-arr-seg{ background:#ff4444; animation:arrow-down 0.5s ease-out, arrow-pulse-r 1.2s ease-in-out infinite; }
+#rev-arrow-tip{
+  width:0;height:0;flex-shrink:0;
+  transition:all .3s;
+}
+#rev-arrow.bull #rev-arrow-tip{
+  border-left:7px solid transparent;
+  border-right:7px solid transparent;
+  border-bottom:12px solid #00ff88;
+  filter:drop-shadow(0 0 6px rgba(0,255,136,.8));
+  animation:arrow-pulse-g 1.2s ease-in-out infinite;
+}
+#rev-arrow.bear #rev-arrow-tip{
+  border-left:7px solid transparent;
+  border-right:7px solid transparent;
+  border-top:12px solid #ff4444;
+  filter:drop-shadow(0 0 6px rgba(255,68,68,.8));
+  animation:arrow-pulse-r 1.2s ease-in-out infinite;
+}
+#rev-label{
+  font-size:7px;font-weight:900;letter-spacing:.04em;
+  text-align:center;line-height:1.2;margin-top:2px;
+}
+#rev-arrow.bull #rev-label{ color:#00ff88; }
+#rev-arrow.bear #rev-label{ color:#ff4444; }
 .wbr{width:28px;border-radius:4px 4px 0 0;cursor:pointer;transition:transform .1s,box-shadow .1s,background .08s}
 .wbr.g{background:rgba(0,180,65,.12);border:1px solid rgba(0,180,65,.2)}
 .wbr.r{background:rgba(180,45,45,.12);border:1px solid rgba(180,45,45,.2)}
@@ -753,9 +813,20 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
     <!-- WiFi selector -->
     <div id="wifi-outer" style="border-bottom:1px solid #0e0e0e;padding:8px 10px 6px;flex-shrink:0;transition:background .5s,border-color .5s;">
       <div id="wifi-title" style="font-size:.52em;color:#252525;text-transform:uppercase;letter-spacing:.07em;font-weight:700;margin-bottom:6px;transition:color .5s;">⚡ Registrar vela · toca la barra para ver proyección</div>
-      <div id="wifi-conf-wrap" style="display:flex;align-items:flex-end;justify-content:center;gap:3px;padding-bottom:2px;">
-        <!-- GREEN ascending -->
-        <div class="tri-side green" id="wg" data-side="G">
+      <div style="display:flex;align-items:flex-end;gap:6px;">
+
+        <!-- REVERSAL ARROW (left side) -->
+        <div id="rev-arrow">
+          <div id="rev-arrow-tip"></div>
+          <div class="rev-arr-seg" style="height:18px;"></div>
+          <div class="rev-arr-seg" style="height:14px;opacity:.7"></div>
+          <div class="rev-arr-seg" style="height:10px;opacity:.4"></div>
+          <div id="rev-label">REV</div>
+        </div>
+
+        <div id="wifi-conf-wrap" style="display:flex;align-items:flex-end;justify-content:center;gap:3px;padding-bottom:2px;">
+          <!-- GREEN ascending -->
+          <div class="tri-side green" id="wg" data-side="G">
           <div class="wbr g" data-str="1"   style="height:18px"></div>
           <div class="wbr g" data-str="1.5" style="height:29px"></div>
           <div class="wbr g" data-str="2"   style="height:42px"></div>
@@ -771,6 +842,7 @@ body{background:#070707;color:#b0b0b0;font-family:'Segoe UI',system-ui,sans-seri
           <div class="wbr r" data-str="2.5" style="height:56px"></div>
           <div class="wbr r" data-str="3"   style="height:70px"></div>
           <div class="wbr r" data-str="4"   style="height:86px"></div>
+          </div>
         </div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-top:3px;padding:0 2px;">
@@ -1781,7 +1853,46 @@ function fillPanels(side, str) {
   }
 }
 
-function upAll(){upSig();upProj();upMA10();upCMD();upPri();upHist();
+function _updateRevArrow(){
+  var arrow = document.getElementById('rev-arrow');
+  var label = document.getElementById('rev-label');
+  if (!arrow) return;
+
+  var cls = (document.getElementById('main-signal')||{}).className||'';
+  var lt  = (document.getElementById('logic-text') ||{}).textContent||'';
+
+  // Detect reversal signals
+  var isBullRev = /signal-strong-reversal/.test(cls) ||
+                  /REVERSION.*ALCISTA|COMPRAR.*REVERSION|REVERSION.*COMPRAR|REBOTE|SOBREVENTA.*TRAMPA/i.test(lt) ||
+                  /signal-accumulation/.test(cls);
+
+  var isBearRev = /REVERSION.*BAJISTA|VENDER.*REVERSION|REVERSION.*VENDER|SOBRECOMPRA.*TRAMPA/i.test(lt) ||
+                  /signal-distribution/.test(cls);
+
+  // Also show for strong streak reversals (racha >=3)
+  var histLen = typeof history !== 'undefined' ? history.length : 0;
+  if (histLen >= 3) {
+    var last = history[histLen-1];
+    var streak = 0;
+    for (var i=histLen-1;i>=0&&history[i]===last;i--) streak++;
+    if (streak >= 3) {
+      if (last==='G') isBearRev = true;  // 3+ greens -> expect red reversal
+      if (last==='R') isBullRev = true;  // 3+ reds   -> expect green reversal
+    }
+  }
+
+  if (isBullRev && !isBearRev) {
+    arrow.className = 'show bull';
+    if (label) label.textContent = 'ALZA';
+  } else if (isBearRev && !isBullRev) {
+    arrow.className = 'show bear';
+    if (label) label.textContent = 'BAJA';
+  } else {
+    arrow.className = '';  // hide
+  }
+}
+
+function upAll(){upSig();upProj();upMA10();upCMD();upPri();upHist();_updateRevArrow();
   // Keep swing panel fresh on every update (using last selected side)
   if(typeof _lastWifiSide!=='undefined'&&_lastWifiSide) fillPanels(_lastWifiSide, _lastWifiStr||2);
   if($('logdrawer')?.classList.contains('open'))buildLog();}
